@@ -7,7 +7,7 @@ export const COLORS: Color[] = ['W', 'U', 'B', 'R', 'G'];
 export interface Cost { generic: number; W?: number; U?: number; B?: number; R?: number; G?: number }
 export type EffectKind = 'draw' | 'gainLife' | 'damageAny' | 'destroyCreature' | 'drainOpponents' | 'damageOpponents' | 'pump' | 'rampLand' | 'anthem' | 'upkeepLife';
 export interface Effect { kind: EffectKind; amount: number }
-export interface CardDef { id: string; name: string; types: string[]; legendary?: boolean; basic?: boolean; cost: Cost; colors: Color[]; power?: number; toughness?: number; keywords?: string[]; effect?: Effect; produces?: ManaSym[]; text: string }
+export interface CardDef { id: string; name: string; types: string[]; legendary?: boolean; basic?: boolean; cost: Cost; colors: Color[]; power?: number; toughness?: number; keywords?: string[]; effect?: Effect; produces?: ManaSym[]; text: string; typeLine?: string; img?: string; art?: string; scryfall?: string }
 export interface DeckDef { id: string; name: string; commander: string; cards: string[] }
 export const CARDS: Record<string, CardDef> = Object.fromEntries((cardData as unknown as CardDef[]).map(c => [c.id, c]));
 export const DECKS = deckData as DeckDef[];
@@ -174,7 +174,7 @@ function resolveEffect(g: Game, pid: number, d: CardDef, t?: Target) {
     case 'damageAny': if (tc) { tc.damage += n; log(g, `${d.name} deals ${n} to ${def(tc).name}.`); } else if (t?.player !== undefined) { g.players[t.player].life -= n; log(g, `${d.name} deals ${n} to ${g.players[t.player].name}.`); } break;
     case 'destroyCreature': if (tc) destroy(g, tc); break;
     case 'pump': if (tc) tc.pump += n; break;
-    case 'drainOpponents': for (const o of opponents(g, pid)) o.life -= n; p.life += n; break;
+    case 'drainOpponents': { const os = opponents(g, pid); for (const o of os) o.life -= n; p.life += n * os.length; break; }
     case 'damageOpponents': for (const o of opponents(g, pid)) o.life -= n; break;
     case 'rampLand': for (let i = 0; i < n; i++) { const l = p.library.find(c => def(c).basic && def(c).produces!.some(s => p.identity.includes(s as Color))); if (!l) break; p.library = p.library.filter(x => x !== l); l.tapped = true; p.battlefield.push(l); shuffle(g, p.library); } break;
     default: break;
