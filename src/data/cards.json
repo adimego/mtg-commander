@@ -1,0 +1,3337 @@
+[
+ {
+  "id": "dawn-cleric",
+  "name": "Dawn Cleric",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 1,
+  "toughness": 1,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "sunlit-lancer",
+  "name": "Sunlit Lancer",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 1,
+  "toughness": 1,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "gilded-templar",
+  "name": "Gilded Templar",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "valiant-paladin",
+  "name": "Valiant Paladin",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 2,
+  "toughness": 2,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "radiant-griffin",
+  "name": "Radiant Griffin",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "halo-knight",
+  "name": "Halo Knight",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 1,
+  "toughness": 2,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "dawn-sentinel",
+  "name": "Dawn Sentinel",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 3,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "sunlit-warden",
+  "name": "Sunlit Warden",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 2,
+  "toughness": 3,
+  "keywords": [
+   "first strike"
+  ],
+  "text": "first strike"
+ },
+ {
+  "id": "gilded-cleric",
+  "name": "Gilded Cleric",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 3,
+  "toughness": 2,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "valiant-lancer",
+  "name": "Valiant Lancer",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 3,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "radiant-templar",
+  "name": "Radiant Templar",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 3,
+  "toughness": 2,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "halo-paladin",
+  "name": "Halo Paladin",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 3,
+  "toughness": 4,
+  "keywords": [
+   "first strike"
+  ],
+  "text": "first strike"
+ },
+ {
+  "id": "dawn-griffin",
+  "name": "Dawn Griffin",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 4,
+  "toughness": 4,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "sunlit-knight",
+  "name": "Sunlit Knight",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 3,
+  "toughness": 4,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "gilded-sentinel",
+  "name": "Gilded Sentinel",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 4,
+  "toughness": 3,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "valiant-warden",
+  "name": "Valiant Warden",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 6,
+  "toughness": 6,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "radiant-cleric",
+  "name": "Radiant Cleric",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 6,
+  "toughness": 5,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "halo-lancer",
+  "name": "Halo Lancer",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 5,
+  "toughness": 6,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "dawn-templar",
+  "name": "Dawn Templar",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "W": 3
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 7,
+  "toughness": 7,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "sunlit-paladin",
+  "name": "Sunlit Paladin",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "W": 3
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 6,
+  "toughness": 7,
+  "keywords": [
+   "first strike"
+  ],
+  "text": "first strike"
+ },
+ {
+  "id": "gilded-griffin",
+  "name": "Gilded Griffin",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "valiant-knight",
+  "name": "Valiant Knight",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 3,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "radiant-sentinel",
+  "name": "Radiant Sentinel",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 4,
+  "toughness": 3,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "halo-warden",
+  "name": "Halo Warden",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 4,
+   "W": 3
+  },
+  "colors": [
+   "W"
+  ],
+  "power": 7,
+  "toughness": 8,
+  "keywords": [
+   "first strike"
+  ],
+  "text": "first strike"
+ },
+ {
+  "id": "sudden-renewal",
+  "name": "Sudden Renewal",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "effect": {
+   "kind": "gainLife",
+   "amount": 5
+  },
+  "text": "You gain 5 life."
+ },
+ {
+  "id": "banishing-light-rite",
+  "name": "Banishing Light Rite",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "effect": {
+   "kind": "destroyCreature",
+   "amount": 0
+  },
+  "text": "Destroy target creature."
+ },
+ {
+  "id": "banner-of-the-host",
+  "name": "Banner of the Host",
+  "types": [
+   "Enchantment"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "effect": {
+   "kind": "anthem",
+   "amount": 1
+  },
+  "text": "Creatures you control get +1/+1."
+ },
+ {
+  "id": "font-of-mercy",
+  "name": "Font of Mercy",
+  "types": [
+   "Enchantment"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "effect": {
+   "kind": "upkeepLife",
+   "amount": 1
+  },
+  "text": "At the beginning of your upkeep, gain 1 life."
+ },
+ {
+  "id": "shining-verdict",
+  "name": "Shining Verdict",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "effect": {
+   "kind": "damageAny",
+   "amount": 2
+  },
+  "text": "Deal 2 damage to any target."
+ },
+ {
+  "id": "inspired-charge",
+  "name": "Inspired Charge",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "effect": {
+   "kind": "pump",
+   "amount": 2
+  },
+  "text": "Target creature gets +2/+2 until end of turn."
+ },
+ {
+  "id": "hymn-of-plenty",
+  "name": "Hymn of Plenty",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 2,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "effect": {
+   "kind": "gainLife",
+   "amount": 8
+  },
+  "text": "You gain 8 life."
+ },
+ {
+  "id": "holy-rebuke",
+  "name": "Holy Rebuke",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 2,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "effect": {
+   "kind": "destroyCreature",
+   "amount": 0
+  },
+  "text": "Destroy target creature."
+ },
+ {
+  "id": "tide-drake",
+  "name": "Tide Drake",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 1,
+  "toughness": 1,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "misty-wisp",
+  "name": "Misty Wisp",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 1,
+  "toughness": 1,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "azure-djinn",
+  "name": "Azure Djinn",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 1,
+  "toughness": 1,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "cloud-sphinx",
+  "name": "Cloud Sphinx",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 1,
+  "toughness": 2,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "mirror-leviathan",
+  "name": "Mirror Leviathan",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 1,
+  "toughness": 1,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "deep-sage",
+  "name": "Deep Sage",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 1,
+  "toughness": 2,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "tide-illusionist",
+  "name": "Tide Illusionist",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 2,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "misty-scholar",
+  "name": "Misty Scholar",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 1,
+  "toughness": 3,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "azure-drake",
+  "name": "Azure Drake",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 2,
+  "toughness": 2,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "cloud-wisp",
+  "name": "Cloud Wisp",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 2,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "mirror-djinn",
+  "name": "Mirror Djinn",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 2,
+  "toughness": 2,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "deep-sphinx",
+  "name": "Deep Sphinx",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 2,
+  "toughness": 4,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "tide-leviathan",
+  "name": "Tide Leviathan",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 3,
+  "toughness": 4,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "misty-sage",
+  "name": "Misty Sage",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 2,
+  "toughness": 4,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "azure-illusionist",
+  "name": "Azure Illusionist",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 3,
+  "toughness": 3,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "cloud-scholar",
+  "name": "Cloud Scholar",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 5,
+  "toughness": 6,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "mirror-drake",
+  "name": "Mirror Drake",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 5,
+  "toughness": 5,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "deep-wisp",
+  "name": "Deep Wisp",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 4,
+  "toughness": 6,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "tide-djinn",
+  "name": "Tide Djinn",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "U": 3
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 6,
+  "toughness": 7,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "misty-sphinx",
+  "name": "Misty Sphinx",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "U": 3
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 5,
+  "toughness": 7,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "azure-leviathan",
+  "name": "Azure Leviathan",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 1,
+  "toughness": 1,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "cloud-sage",
+  "name": "Cloud Sage",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 2,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "mirror-illusionist",
+  "name": "Mirror Illusionist",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 3,
+  "toughness": 3,
+  "keywords": [
+   "flying"
+  ],
+  "text": "flying"
+ },
+ {
+  "id": "deep-scholar",
+  "name": "Deep Scholar",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 4,
+   "U": 3
+  },
+  "colors": [
+   "U"
+  ],
+  "power": 6,
+  "toughness": 8,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "quick-study",
+  "name": "Quick Study",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "effect": {
+   "kind": "draw",
+   "amount": 2
+  },
+  "text": "Draw 2 cards."
+ },
+ {
+  "id": "tome-of-tides",
+  "name": "Tome of Tides",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 2,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "effect": {
+   "kind": "draw",
+   "amount": 3
+  },
+  "text": "Draw 3 cards."
+ },
+ {
+  "id": "arcane-insight",
+  "name": "Arcane Insight",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "effect": {
+   "kind": "draw",
+   "amount": 2
+  },
+  "text": "Draw 2 cards."
+ },
+ {
+  "id": "brainstorm-surge",
+  "name": "Brainstorm Surge",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "effect": {
+   "kind": "draw",
+   "amount": 2
+  },
+  "text": "Draw 2 cards."
+ },
+ {
+  "id": "static-bolt",
+  "name": "Static Bolt",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "effect": {
+   "kind": "damageAny",
+   "amount": 3
+  },
+  "text": "Deal 3 damage to any target."
+ },
+ {
+  "id": "library-vision",
+  "name": "Library Vision",
+  "types": [
+   "Enchantment"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "effect": {
+   "kind": "upkeepLife",
+   "amount": 1
+  },
+  "text": "At the beginning of your upkeep, gain 1 life."
+ },
+ {
+  "id": "wave-of-clarity",
+  "name": "Wave of Clarity",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 4,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "effect": {
+   "kind": "draw",
+   "amount": 4
+  },
+  "text": "Draw 4 cards."
+ },
+ {
+  "id": "mind-spike",
+  "name": "Mind Spike",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "effect": {
+   "kind": "damageAny",
+   "amount": 1
+  },
+  "text": "Deal 1 damage to any target."
+ },
+ {
+  "id": "grave-wraith",
+  "name": "Grave Wraith",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 1,
+  "toughness": 1,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "dusk-horror",
+  "name": "Dusk Horror",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 1,
+  "toughness": 1,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "hollow-bat",
+  "name": "Hollow Bat",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "deathtouch"
+  ],
+  "text": "deathtouch"
+ },
+ {
+  "id": "bone-cultist",
+  "name": "Bone Cultist",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 2,
+  "toughness": 2,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "shade-reaper",
+  "name": "Shade Reaper",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "rot-ghoul",
+  "name": "Rot Ghoul",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 1,
+  "toughness": 2,
+  "keywords": [
+   "deathtouch"
+  ],
+  "text": "deathtouch"
+ },
+ {
+  "id": "grave-vampire",
+  "name": "Grave Vampire",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 3,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "dusk-lich",
+  "name": "Dusk Lich",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 2,
+  "toughness": 3,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "hollow-wraith",
+  "name": "Hollow Wraith",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 3,
+  "toughness": 2,
+  "keywords": [
+   "deathtouch"
+  ],
+  "text": "deathtouch"
+ },
+ {
+  "id": "bone-horror",
+  "name": "Bone Horror",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 3,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "shade-bat",
+  "name": "Shade Bat",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 3,
+  "toughness": 2,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "rot-cultist",
+  "name": "Rot Cultist",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 3,
+  "toughness": 4,
+  "keywords": [
+   "deathtouch"
+  ],
+  "text": "deathtouch"
+ },
+ {
+  "id": "grave-reaper",
+  "name": "Grave Reaper",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 4,
+  "toughness": 4,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "dusk-ghoul",
+  "name": "Dusk Ghoul",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 3,
+  "toughness": 4,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "hollow-vampire",
+  "name": "Hollow Vampire",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 4,
+  "toughness": 3,
+  "keywords": [
+   "deathtouch"
+  ],
+  "text": "deathtouch"
+ },
+ {
+  "id": "bone-lich",
+  "name": "Bone Lich",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 6,
+  "toughness": 6,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "shade-wraith",
+  "name": "Shade Wraith",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 6,
+  "toughness": 5,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "rot-horror",
+  "name": "Rot Horror",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 5,
+  "toughness": 6,
+  "keywords": [
+   "deathtouch"
+  ],
+  "text": "deathtouch"
+ },
+ {
+  "id": "grave-bat",
+  "name": "Grave Bat",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "B": 3
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 7,
+  "toughness": 7,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "dusk-cultist",
+  "name": "Dusk Cultist",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "B": 3
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 6,
+  "toughness": 7,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "hollow-reaper",
+  "name": "Hollow Reaper",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "deathtouch"
+  ],
+  "text": "deathtouch"
+ },
+ {
+  "id": "bone-ghoul",
+  "name": "Bone Ghoul",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 3,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "shade-vampire",
+  "name": "Shade Vampire",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 4,
+  "toughness": 3,
+  "keywords": [
+   "lifelink"
+  ],
+  "text": "lifelink"
+ },
+ {
+  "id": "rot-lich",
+  "name": "Rot Lich",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 4,
+   "B": 3
+  },
+  "colors": [
+   "B"
+  ],
+  "power": 7,
+  "toughness": 8,
+  "keywords": [
+   "deathtouch"
+  ],
+  "text": "deathtouch"
+ },
+ {
+  "id": "final-breath",
+  "name": "Final Breath",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "effect": {
+   "kind": "destroyCreature",
+   "amount": 0
+  },
+  "text": "Destroy target creature."
+ },
+ {
+  "id": "siphon-souls",
+  "name": "Siphon Souls",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 2,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "effect": {
+   "kind": "drainOpponents",
+   "amount": 2
+  },
+  "text": "Each opponent loses 2 life. You gain 2 life."
+ },
+ {
+  "id": "dark-bargain",
+  "name": "Dark Bargain",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "effect": {
+   "kind": "draw",
+   "amount": 2
+  },
+  "text": "Draw 2 cards."
+ },
+ {
+  "id": "night-feast",
+  "name": "Night Feast",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 4,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "effect": {
+   "kind": "drainOpponents",
+   "amount": 4
+  },
+  "text": "Each opponent loses 4 life. You gain 4 life."
+ },
+ {
+  "id": "grim-pact",
+  "name": "Grim Pact",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "effect": {
+   "kind": "draw",
+   "amount": 1
+  },
+  "text": "Draw 1 card."
+ },
+ {
+  "id": "shadow-throne",
+  "name": "Shadow Throne",
+  "types": [
+   "Enchantment"
+  ],
+  "cost": {
+   "generic": 2,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "effect": {
+   "kind": "anthem",
+   "amount": 1
+  },
+  "text": "Creatures you control get +1/+1."
+ },
+ {
+  "id": "necrotic-touch",
+  "name": "Necrotic Touch",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "effect": {
+   "kind": "destroyCreature",
+   "amount": 0
+  },
+  "text": "Destroy target creature."
+ },
+ {
+  "id": "blood-tithe",
+  "name": "Blood Tithe",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "effect": {
+   "kind": "drainOpponents",
+   "amount": 1
+  },
+  "text": "Each opponent loses 1 life. You gain 1 life."
+ },
+ {
+  "id": "ember-berserker",
+  "name": "Ember Berserker",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 2,
+  "toughness": 1,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "cinder-elemental",
+  "name": "Cinder Elemental",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "first strike"
+  ],
+  "text": "first strike"
+ },
+ {
+  "id": "blaze-imp",
+  "name": "Blaze Imp",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 3,
+  "toughness": 1,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "storm-dragon",
+  "name": "Storm Dragon",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 3,
+  "toughness": 1,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "ash-hellion",
+  "name": "Ash Hellion",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 3,
+  "toughness": 1,
+  "keywords": [
+   "haste"
+  ],
+  "text": "haste"
+ },
+ {
+  "id": "molten-goblin",
+  "name": "Molten Goblin",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "first strike"
+  ],
+  "text": "first strike"
+ },
+ {
+  "id": "ember-raider",
+  "name": "Ember Raider",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 4,
+  "toughness": 2,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "cinder-shaman",
+  "name": "Cinder Shaman",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 3,
+  "toughness": 2,
+  "keywords": [
+   "haste"
+  ],
+  "text": "haste"
+ },
+ {
+  "id": "blaze-berserker",
+  "name": "Blaze Berserker",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 4,
+  "toughness": 1,
+  "keywords": [
+   "haste"
+  ],
+  "text": "haste"
+ },
+ {
+  "id": "storm-elemental",
+  "name": "Storm Elemental",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 4,
+  "toughness": 2,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "ash-imp",
+  "name": "Ash Imp",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 4,
+  "toughness": 1,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "molten-dragon",
+  "name": "Molten Dragon",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 4,
+  "toughness": 3,
+  "keywords": [
+   "haste"
+  ],
+  "text": "haste"
+ },
+ {
+  "id": "ember-hellion",
+  "name": "Ember Hellion",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 5,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "cinder-goblin",
+  "name": "Cinder Goblin",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 4,
+  "toughness": 3,
+  "keywords": [
+   "first strike"
+  ],
+  "text": "first strike"
+ },
+ {
+  "id": "blaze-raider",
+  "name": "Blaze Raider",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 5,
+  "toughness": 2,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "storm-shaman",
+  "name": "Storm Shaman",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 7,
+  "toughness": 5,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "ash-berserker",
+  "name": "Ash Berserker",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 7,
+  "toughness": 4,
+  "keywords": [
+   "haste"
+  ],
+  "text": "haste"
+ },
+ {
+  "id": "molten-elemental",
+  "name": "Molten Elemental",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 6,
+  "toughness": 5,
+  "keywords": [
+   "first strike"
+  ],
+  "text": "first strike"
+ },
+ {
+  "id": "ember-imp",
+  "name": "Ember Imp",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "R": 3
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 8,
+  "toughness": 6,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "cinder-dragon",
+  "name": "Cinder Dragon",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "R": 3
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 7,
+  "toughness": 6,
+  "keywords": [
+   "haste"
+  ],
+  "text": "haste"
+ },
+ {
+  "id": "blaze-hellion",
+  "name": "Blaze Hellion",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 3,
+  "toughness": 1,
+  "keywords": [
+   "haste"
+  ],
+  "text": "haste"
+ },
+ {
+  "id": "storm-goblin",
+  "name": "Storm Goblin",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 4,
+  "toughness": 2,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "ash-raider",
+  "name": "Ash Raider",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 5,
+  "toughness": 2,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "molten-shaman",
+  "name": "Molten Shaman",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 4,
+   "R": 3
+  },
+  "colors": [
+   "R"
+  ],
+  "power": 8,
+  "toughness": 7,
+  "keywords": [
+   "haste"
+  ],
+  "text": "haste"
+ },
+ {
+  "id": "flame-lash",
+  "name": "Flame Lash",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "effect": {
+   "kind": "damageAny",
+   "amount": 2
+  },
+  "text": "Deal 2 damage to any target."
+ },
+ {
+  "id": "searing-blast",
+  "name": "Searing Blast",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "effect": {
+   "kind": "damageAny",
+   "amount": 4
+  },
+  "text": "Deal 4 damage to any target."
+ },
+ {
+  "id": "fire-rain",
+  "name": "Fire Rain",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 2,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "effect": {
+   "kind": "damageOpponents",
+   "amount": 3
+  },
+  "text": "Deal 3 damage to each opponent."
+ },
+ {
+  "id": "rage-surge",
+  "name": "Rage Surge",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "effect": {
+   "kind": "pump",
+   "amount": 3
+  },
+  "text": "Target creature gets +3/+3 until end of turn."
+ },
+ {
+  "id": "war-drums",
+  "name": "War Drums",
+  "types": [
+   "Enchantment"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "effect": {
+   "kind": "anthem",
+   "amount": 1
+  },
+  "text": "Creatures you control get +1/+1."
+ },
+ {
+  "id": "volcanic-spray",
+  "name": "Volcanic Spray",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "effect": {
+   "kind": "damageOpponents",
+   "amount": 1
+  },
+  "text": "Deal 1 damage to each opponent."
+ },
+ {
+  "id": "meteor-call",
+  "name": "Meteor Call",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 4,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "effect": {
+   "kind": "damageAny",
+   "amount": 7
+  },
+  "text": "Deal 7 damage to any target."
+ },
+ {
+  "id": "spark-bolt",
+  "name": "Spark Bolt",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "effect": {
+   "kind": "damageAny",
+   "amount": 3
+  },
+  "text": "Deal 3 damage to any target."
+ },
+ {
+  "id": "moss-wurm",
+  "name": "Moss Wurm",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 1,
+  "toughness": 2,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "wild-treefolk",
+  "name": "Wild Treefolk",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 1,
+  "toughness": 2,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "thorn-spider",
+  "name": "Thorn Spider",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 2,
+  "toughness": 2,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "elder-bear",
+  "name": "Elder Bear",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 2,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "grove-druid",
+  "name": "Grove Druid",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 2,
+  "toughness": 2,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "feral-elf",
+  "name": "Feral Elf",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 1,
+  "toughness": 3,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "moss-hydra",
+  "name": "Moss Hydra",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 3,
+  "toughness": 4,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "wild-beast",
+  "name": "Wild Beast",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 2,
+  "toughness": 4,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "thorn-wurm",
+  "name": "Thorn Wurm",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 3,
+  "toughness": 3,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "elder-treefolk",
+  "name": "Elder Treefolk",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 3,
+  "toughness": 4,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "grove-spider",
+  "name": "Grove Spider",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 3,
+  "toughness": 3,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "feral-bear",
+  "name": "Feral Bear",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 3,
+  "toughness": 5,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "moss-druid",
+  "name": "Moss Druid",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 4,
+  "toughness": 5,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "wild-elf",
+  "name": "Wild Elf",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 3,
+  "toughness": 5,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "thorn-hydra",
+  "name": "Thorn Hydra",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 4,
+  "toughness": 4,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "elder-beast",
+  "name": "Elder Beast",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 6,
+  "toughness": 7,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "grove-wurm",
+  "name": "Grove Wurm",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 6,
+  "toughness": 6,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "feral-treefolk",
+  "name": "Feral Treefolk",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 5,
+  "toughness": 7,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "moss-spider",
+  "name": "Moss Spider",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "G": 3
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 7,
+  "toughness": 8,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "wild-bear",
+  "name": "Wild Bear",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "G": 3
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 6,
+  "toughness": 8,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "thorn-druid",
+  "name": "Thorn Druid",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 2,
+  "toughness": 2,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "elder-elf",
+  "name": "Elder Elf",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 3,
+  "toughness": 4,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "grove-hydra",
+  "name": "Grove Hydra",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 4,
+  "toughness": 4,
+  "keywords": [
+   "vigilance"
+  ],
+  "text": "vigilance"
+ },
+ {
+  "id": "feral-beast",
+  "name": "Feral Beast",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 4,
+   "G": 3
+  },
+  "colors": [
+   "G"
+  ],
+  "power": 7,
+  "toughness": 9,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "rampant-growth-rite",
+  "name": "Rampant Growth Rite",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "effect": {
+   "kind": "rampLand",
+   "amount": 1
+  },
+  "text": "Put 1 basic land from your library onto the battlefield tapped."
+ },
+ {
+  "id": "wild-might",
+  "name": "Wild Might",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "effect": {
+   "kind": "pump",
+   "amount": 3
+  },
+  "text": "Target creature gets +3/+3 until end of turn."
+ },
+ {
+  "id": "seek-the-wilds",
+  "name": "Seek the Wilds",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "effect": {
+   "kind": "rampLand",
+   "amount": 1
+  },
+  "text": "Put 1 basic land from your library onto the battlefield tapped."
+ },
+ {
+  "id": "verdant-hymn",
+  "name": "Verdant Hymn",
+  "types": [
+   "Enchantment"
+  ],
+  "cost": {
+   "generic": 2,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "effect": {
+   "kind": "anthem",
+   "amount": 1
+  },
+  "text": "Creatures you control get +1/+1."
+ },
+ {
+  "id": "forest-bounty",
+  "name": "Forest Bounty",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "effect": {
+   "kind": "draw",
+   "amount": 2
+  },
+  "text": "Draw 2 cards."
+ },
+ {
+  "id": "titanic-surge",
+  "name": "Titanic Surge",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "effect": {
+   "kind": "pump",
+   "amount": 4
+  },
+  "text": "Target creature gets +4/+4 until end of turn."
+ },
+ {
+  "id": "natural-order-rite",
+  "name": "Natural Order Rite",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 3,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "effect": {
+   "kind": "rampLand",
+   "amount": 2
+  },
+  "text": "Put 2 basic lands from your library onto the battlefield tapped."
+ },
+ {
+  "id": "roots-of-life",
+  "name": "Roots of Life",
+  "types": [
+   "Enchantment"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "effect": {
+   "kind": "upkeepLife",
+   "amount": 1
+  },
+  "text": "At the beginning of your upkeep, gain 1 life."
+ },
+ {
+  "id": "prism-signet",
+  "name": "Prism Signet",
+  "types": [
+   "Artifact"
+  ],
+  "cost": {
+   "generic": 2
+  },
+  "colors": [],
+  "produces": [
+   "ANY"
+  ],
+  "text": "T: Add one mana of any color in your commander's color identity."
+ },
+ {
+  "id": "worn-mana-stone",
+  "name": "Worn Mana Stone",
+  "types": [
+   "Artifact"
+  ],
+  "cost": {
+   "generic": 2
+  },
+  "colors": [],
+  "produces": [
+   "C"
+  ],
+  "text": "T: Add C."
+ },
+ {
+  "id": "clay-golem",
+  "name": "Clay Golem",
+  "types": [
+   "Artifact",
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3
+  },
+  "colors": [],
+  "power": 3,
+  "toughness": 3,
+  "keywords": [],
+  "text": ""
+ },
+ {
+  "id": "iron-colossus",
+  "name": "Iron Colossus",
+  "types": [
+   "Artifact",
+   "Creature"
+  ],
+  "cost": {
+   "generic": 6
+  },
+  "colors": [],
+  "power": 6,
+  "toughness": 6,
+  "keywords": [
+   "trample"
+  ],
+  "text": "trample"
+ },
+ {
+  "id": "plains",
+  "name": "Plains",
+  "types": [
+   "Land"
+  ],
+  "basic": true,
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "produces": [
+   "W"
+  ],
+  "text": "T: Add W."
+ },
+ {
+  "id": "island",
+  "name": "Island",
+  "types": [
+   "Land"
+  ],
+  "basic": true,
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "produces": [
+   "U"
+  ],
+  "text": "T: Add U."
+ },
+ {
+  "id": "swamp",
+  "name": "Swamp",
+  "types": [
+   "Land"
+  ],
+  "basic": true,
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "produces": [
+   "B"
+  ],
+  "text": "T: Add B."
+ },
+ {
+  "id": "mountain",
+  "name": "Mountain",
+  "types": [
+   "Land"
+  ],
+  "basic": true,
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "produces": [
+   "R"
+  ],
+  "text": "T: Add R."
+ },
+ {
+  "id": "forest",
+  "name": "Forest",
+  "types": [
+   "Land"
+  ],
+  "basic": true,
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "produces": [
+   "G"
+  ],
+  "text": "T: Add G."
+ },
+ {
+  "id": "command-tower",
+  "name": "Command Tower",
+  "types": [
+   "Land"
+  ],
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "produces": [
+   "ANY"
+  ],
+  "text": "T: Add one mana of any color in your commander's color identity."
+ },
+ {
+  "id": "calis-seraph-admiral",
+  "name": "Calis, Seraph Admiral",
+  "types": [
+   "Creature"
+  ],
+  "legendary": true,
+  "cost": {
+   "generic": 3,
+   "W": 1,
+   "U": 1
+  },
+  "colors": [
+   "W",
+   "U"
+  ],
+  "power": 4,
+  "toughness": 4,
+  "keywords": [
+   "flying",
+   "vigilance"
+  ],
+  "text": "flying, vigilance"
+ },
+ {
+  "id": "vessk-ember-tyrant",
+  "name": "Vessk, Ember Tyrant",
+  "types": [
+   "Creature"
+  ],
+  "legendary": true,
+  "cost": {
+   "generic": 2,
+   "B": 1,
+   "R": 1
+  },
+  "colors": [
+   "B",
+   "R"
+  ],
+  "power": 4,
+  "toughness": 3,
+  "keywords": [
+   "haste",
+   "deathtouch"
+  ],
+  "text": "haste, deathtouch"
+ },
+ {
+  "id": "grukk-wildfire-chief",
+  "name": "Grukk, Wildfire Chief",
+  "types": [
+   "Creature"
+  ],
+  "legendary": true,
+  "cost": {
+   "generic": 3,
+   "R": 1,
+   "G": 1
+  },
+  "colors": [
+   "R",
+   "G"
+  ],
+  "power": 6,
+  "toughness": 5,
+  "keywords": [
+   "trample",
+   "haste"
+  ],
+  "text": "trample, haste"
+ },
+ {
+  "id": "thalla-grove-marshal",
+  "name": "Thalla, Grove Marshal",
+  "types": [
+   "Creature"
+  ],
+  "legendary": true,
+  "cost": {
+   "generic": 2,
+   "G": 1,
+   "W": 1
+  },
+  "colors": [
+   "G",
+   "W"
+  ],
+  "power": 4,
+  "toughness": 5,
+  "keywords": [
+   "vigilance",
+   "lifelink"
+  ],
+  "text": "vigilance, lifelink"
+ }
+]
