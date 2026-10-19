@@ -65,3 +65,20 @@ Turn on **Hold priority** in the header to stop at every priority point, includi
 - If Judith dies at the same moment as other creatures, the other deaths don't trigger her.
 - A commander that is bounced goes to its owner's hand; there's no choice to send it to the command zone.
 - Triggers you control go on the stack in a fixed order; you can't reorder them.
+
+## Desktop UI & controls
+
+Built for PC, full screen (tuned for 1920×1080; checked at 1440×900 and 2560×1440). The page never scrolls. Opponents sit across the top and your battlefield fills the bottom, in creature, noncreature and land rows. Your hand fans out and lifts when you hover it. Hovering any card shows a large preview with a keyword glossary. The stack appears in the centre, and the main action button is at the bottom right.
+
+| Key | Action |
+|---|---|
+| Space | Primary action (pass / resolve / next step / confirm) |
+| Enter | Confirm (keep hand, attacks, blocks) |
+| Esc | Close dialog / clear selection |
+| E | End turn |
+| A | Attack with everything at the chosen player |
+| F | Toggle full screen |
+| L | Toggle log |
+| ? / H | Help overlay |
+
+Attacking: click an opponent's panel to pick who you attack, then click creatures or drag them onto a player. Targets glow while you are choosing. ⚙ Settings has AI speed, smart auto-pass, hold priority and animations, and can show the first-game tips again. Click 🪦 or ⛔ on any player to view their graveyard or exile.
