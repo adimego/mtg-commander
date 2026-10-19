@@ -1,5 +1,2167 @@
 [
  {
+  "id": "sol-ring",
+  "name": "Sol Ring",
+  "types": [
+   "Artifact"
+  ],
+  "cost": {
+   "generic": 1
+  },
+  "colors": [],
+  "typeLine": "Artifact",
+  "text": "{T}: Add {C}{C}.",
+  "img": "https://cards.scryfall.io/normal/front/8/e/8ee443cc-e17a-493b-9c93-1f9e141a30e4.jpg?1789644446",
+  "art": "https://cards.scryfall.io/art_crop/front/8/e/8ee443cc-e17a-493b-9c93-1f9e141a30e4.jpg?1789644446",
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "C",
+     "C"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "arcane-signet",
+  "name": "Arcane Signet",
+  "types": [
+   "Artifact"
+  ],
+  "cost": {
+   "generic": 2
+  },
+  "colors": [],
+  "typeLine": "Artifact",
+  "text": "{T}: Add one mana of any color in your commander's color identity.",
+  "img": "https://cards.scryfall.io/normal/front/c/6/c6b6117c-faab-4bbb-b851-07bd8061ef03.jpg?1789644435",
+  "art": "https://cards.scryfall.io/art_crop/front/c/6/c6b6117c-faab-4bbb-b851-07bd8061ef03.jpg?1789644435",
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "IDENTITY"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "mind-stone",
+  "name": "Mind Stone",
+  "types": [
+   "Artifact"
+  ],
+  "cost": {
+   "generic": 2
+  },
+  "colors": [],
+  "typeLine": "Artifact",
+  "text": "{T}: Add {C}.\n{1}, {T}, Sacrifice this artifact: Draw a card.",
+  "img": "https://cards.scryfall.io/normal/front/b/3/b30a8f92-ce42-4b27-a893-bcf97fde228d.jpg?1785759375",
+  "art": "https://cards.scryfall.io/art_crop/front/b/3/b30a8f92-ce42-4b27-a893-bcf97fde228d.jpg?1785759375",
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "C"
+    ]
+   }
+  ],
+  "abilities": [
+   {
+    "label": "Draw a card",
+    "mana": {
+     "generic": 1
+    },
+    "tap": true,
+    "sac": true,
+    "effects": [
+     {
+      "op": "draw",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "commander-s-sphere",
+  "name": "Commander's Sphere",
+  "types": [
+   "Artifact"
+  ],
+  "cost": {
+   "generic": 3
+  },
+  "colors": [],
+  "typeLine": "Artifact",
+  "text": "{T}: Add one mana of any color in your commander's color identity.\nSacrifice this artifact: Draw a card.",
+  "img": "https://cards.scryfall.io/normal/front/a/0/a0d50603-e31f-4cd7-b4b6-49847d99eb2e.jpg?1783904531",
+  "art": "https://cards.scryfall.io/art_crop/front/a/0/a0d50603-e31f-4cd7-b4b6-49847d99eb2e.jpg?1783904531",
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "IDENTITY"
+    ]
+   }
+  ],
+  "abilities": [
+   {
+    "label": "Draw a card",
+    "sac": true,
+    "effects": [
+     {
+      "op": "draw",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "wayfarer-s-bauble",
+  "name": "Wayfarer's Bauble",
+  "types": [
+   "Artifact"
+  ],
+  "cost": {
+   "generic": 1
+  },
+  "colors": [],
+  "typeLine": "Artifact",
+  "text": "{2}, {T}, Sacrifice this artifact: Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+  "img": "https://cards.scryfall.io/normal/front/a/0/a0eac775-5652-406e-9a06-8d20d693098c.jpg?1791939236",
+  "art": "https://cards.scryfall.io/art_crop/front/a/0/a0eac775-5652-406e-9a06-8d20d693098c.jpg?1791939236",
+  "keywords": [],
+  "abilities": [
+   {
+    "label": "Fetch basic land",
+    "mana": {
+     "generic": 2
+    },
+    "tap": true,
+    "sac": true,
+    "effects": [
+     {
+      "op": "searchBasic",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "burnished-hart",
+  "name": "Burnished Hart",
+  "types": [
+   "Artifact",
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3
+  },
+  "colors": [],
+  "typeLine": "Artifact Creature — Elk",
+  "text": "{3}, Sacrifice this creature: Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
+  "img": "https://cards.scryfall.io/normal/front/6/5/65ebbff0-fbe6-4310-a33f-e00bb2534979.jpg?1783909049",
+  "art": "https://cards.scryfall.io/art_crop/front/6/5/65ebbff0-fbe6-4310-a33f-e00bb2534979.jpg?1783909049",
+  "power": 2,
+  "toughness": 2,
+  "keywords": [],
+  "abilities": [
+   {
+    "label": "Fetch 2 basic lands",
+    "mana": {
+     "generic": 3
+    },
+    "sac": true,
+    "effects": [
+     {
+      "op": "searchBasic",
+      "n": 2
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "solemn-simulacrum",
+  "name": "Solemn Simulacrum",
+  "types": [
+   "Artifact",
+   "Creature"
+  ],
+  "cost": {
+   "generic": 4
+  },
+  "colors": [],
+  "typeLine": "Artifact Creature — Golem",
+  "text": "When this creature enters, you may search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.\nWhen this creature dies, you may draw a card.",
+  "img": "https://cards.scryfall.io/normal/front/d/a/daafd816-f7c1-4630-9e5c-a1e5db570a35.jpg?1783903212",
+  "art": "https://cards.scryfall.io/art_crop/front/d/a/daafd816-f7c1-4630-9e5c-a1e5db570a35.jpg?1783903212",
+  "power": 2,
+  "toughness": 2,
+  "keywords": [],
+  "triggers": [
+   {
+    "on": "etb",
+    "label": "fetch a basic land",
+    "effects": [
+     {
+      "op": "searchBasic",
+      "n": 1
+     }
+    ]
+   },
+   {
+    "on": "dies",
+    "label": "draw a card",
+    "effects": [
+     {
+      "op": "draw",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "perilous-myr",
+  "name": "Perilous Myr",
+  "types": [
+   "Artifact",
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2
+  },
+  "colors": [],
+  "typeLine": "Artifact Creature — Phyrexian Myr",
+  "text": "When this creature dies, it deals 2 damage to any target.",
+  "img": "https://cards.scryfall.io/normal/front/5/a/5a15c8ef-04ad-4aab-a7f1-c7a90c10eb50.jpg?1783928750",
+  "art": "https://cards.scryfall.io/art_crop/front/5/a/5a15c8ef-04ad-4aab-a7f1-c7a90c10eb50.jpg?1783928750",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [],
+  "triggers": [
+   {
+    "on": "dies",
+    "label": "2 damage to any target",
+    "target": "any",
+    "effects": [
+     {
+      "op": "damage",
+      "n": 2
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "swords-to-plowshares",
+  "name": "Swords to Plowshares",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Instant",
+  "text": "Exile target creature. Its controller gains life equal to its power.",
+  "img": "https://cards.scryfall.io/normal/front/f/7/f7e12477-d59f-442b-a678-1be746d0b7be.jpg?1789599810",
+  "art": "https://cards.scryfall.io/art_crop/front/f/7/f7e12477-d59f-442b-a678-1be746d0b7be.jpg?1789599810",
+  "keywords": [],
+  "spell": {
+   "target": "creature",
+   "effects": [
+    {
+     "op": "exileGainPower"
+    }
+   ]
+  }
+ },
+ {
+  "id": "path-to-exile",
+  "name": "Path to Exile",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Instant",
+  "text": "Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+  "img": "https://cards.scryfall.io/normal/front/2/2/22e08a78-55b7-46b0-bd1a-a51548fc1861.jpg?1789599789",
+  "art": "https://cards.scryfall.io/art_crop/front/2/2/22e08a78-55b7-46b0-bd1a-a51548fc1861.jpg?1789599789",
+  "keywords": [],
+  "spell": {
+   "target": "creature",
+   "effects": [
+    {
+     "op": "exilePath"
+    }
+   ]
+  }
+ },
+ {
+  "id": "wall-of-omens",
+  "name": "Wall of Omens",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Creature — Wall",
+  "text": "Defender\nWhen this creature enters, draw a card.",
+  "img": "https://cards.scryfall.io/normal/front/3/d/3d134bb2-17ec-4e65-976e-f06fa983f3fb.jpg?1783907116",
+  "art": "https://cards.scryfall.io/art_crop/front/3/d/3d134bb2-17ec-4e65-976e-f06fa983f3fb.jpg?1783907116",
+  "power": 0,
+  "toughness": 4,
+  "keywords": [
+   "defender"
+  ],
+  "triggers": [
+   {
+    "on": "etb",
+    "label": "draw a card",
+    "effects": [
+     {
+      "op": "draw",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "fencing-ace",
+  "name": "Fencing Ace",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Creature — Human Soldier",
+  "text": "Double strike (This creature deals both first-strike and regular combat damage.)",
+  "img": "https://cards.scryfall.io/normal/front/9/9/994094f8-e175-4e2e-aa39-c096f0ed9e6a.jpg?1783915723",
+  "art": "https://cards.scryfall.io/art_crop/front/9/9/994094f8-e175-4e2e-aa39-c096f0ed9e6a.jpg?1783915723",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [
+   "double strike"
+  ]
+ },
+ {
+  "id": "glorious-anthem",
+  "name": "Glorious Anthem",
+  "types": [
+   "Enchantment"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Enchantment",
+  "text": "Creatures you control get +1/+1.",
+  "img": "https://cards.scryfall.io/normal/front/1/7/17d154d3-7ae5-43ff-9978-d974285e2c89.jpg?1783930741",
+  "art": "https://cards.scryfall.io/art_crop/front/1/7/17d154d3-7ae5-43ff-9978-d974285e2c89.jpg?1783930741",
+  "keywords": [],
+  "static": {
+   "p": 1,
+   "t": 1
+  }
+ },
+ {
+  "id": "sacred-nectar",
+  "name": "Sacred Nectar",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Sorcery",
+  "text": "You gain 4 life.",
+  "img": "https://cards.scryfall.io/normal/front/b/c/bcdd5e1c-47db-4960-860c-2af14b734b59.jpg?1783944087",
+  "art": "https://cards.scryfall.io/art_crop/front/b/c/bcdd5e1c-47db-4960-860c-2af14b734b59.jpg?1783944087",
+  "keywords": [],
+  "spell": {
+   "effects": [
+    {
+     "op": "gainLife",
+     "n": 4
+    }
+   ]
+  }
+ },
+ {
+  "id": "counterspell",
+  "name": "Counterspell",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "typeLine": "Instant",
+  "text": "Counter target spell.",
+  "img": "https://cards.scryfall.io/normal/front/4/f/4f616706-ec97-4923-bb1e-11a69fbaa1f8.jpg?1783909630",
+  "art": "https://cards.scryfall.io/art_crop/front/4/f/4f616706-ec97-4923-bb1e-11a69fbaa1f8.jpg?1783909630",
+  "keywords": [],
+  "spell": {
+   "target": "spell",
+   "effects": [
+    {
+     "op": "counter"
+    }
+   ]
+  }
+ },
+ {
+  "id": "cancel",
+  "name": "Cancel",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "typeLine": "Instant",
+  "text": "Counter target spell.",
+  "img": "https://cards.scryfall.io/normal/front/4/7/475bff39-220a-4490-9c2e-d311e306a6db.jpg?1783908966",
+  "art": "https://cards.scryfall.io/art_crop/front/4/7/475bff39-220a-4490-9c2e-d311e306a6db.jpg?1783908966",
+  "keywords": [],
+  "spell": {
+   "target": "spell",
+   "effects": [
+    {
+     "op": "counter"
+    }
+   ]
+  }
+ },
+ {
+  "id": "negate",
+  "name": "Negate",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "typeLine": "Instant",
+  "text": "Counter target noncreature spell.",
+  "img": "https://cards.scryfall.io/normal/front/5/2/52d58fe4-6070-4022-9cd7-c35a11b44525.jpg?1783904112",
+  "art": "https://cards.scryfall.io/art_crop/front/5/2/52d58fe4-6070-4022-9cd7-c35a11b44525.jpg?1783904112",
+  "keywords": [],
+  "spell": {
+   "target": "noncreatureSpell",
+   "effects": [
+    {
+     "op": "counter"
+    }
+   ]
+  }
+ },
+ {
+  "id": "essence-scatter",
+  "name": "Essence Scatter",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "typeLine": "Instant",
+  "text": "Counter target creature spell.",
+  "img": "https://cards.scryfall.io/normal/front/3/2/32840097-0531-4c43-b6a8-e76c17420b04.jpg?1783903696",
+  "art": "https://cards.scryfall.io/art_crop/front/3/2/32840097-0531-4c43-b6a8-e76c17420b04.jpg?1783903696",
+  "keywords": [],
+  "spell": {
+   "target": "creatureSpell",
+   "effects": [
+    {
+     "op": "counter"
+    }
+   ]
+  }
+ },
+ {
+  "id": "dovin-s-veto",
+  "name": "Dovin's Veto",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "W": 1,
+   "U": 1
+  },
+  "colors": [
+   "U",
+   "W"
+  ],
+  "typeLine": "Instant",
+  "text": "This spell can't be countered.\nCounter target noncreature spell.",
+  "img": "https://cards.scryfall.io/normal/front/5/d/5d6b5054-2224-4f68-9d82-3ed17c5dacc4.jpg?1783933400",
+  "art": "https://cards.scryfall.io/art_crop/front/5/d/5d6b5054-2224-4f68-9d82-3ed17c5dacc4.jpg?1783933400",
+  "keywords": [],
+  "spell": {
+   "target": "noncreatureSpell",
+   "effects": [
+    {
+     "op": "counter"
+    }
+   ]
+  },
+  "uncounterable": true
+ },
+ {
+  "id": "unsummon",
+  "name": "Unsummon",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "typeLine": "Instant",
+  "text": "Return target creature to its owner's hand.",
+  "img": "https://cards.scryfall.io/normal/front/d/d/ddad9f16-52d5-49de-82b0-b1a5294a9c44.jpg?1789556722",
+  "art": "https://cards.scryfall.io/art_crop/front/d/d/ddad9f16-52d5-49de-82b0-b1a5294a9c44.jpg?1789556722",
+  "keywords": [],
+  "spell": {
+   "target": "creature",
+   "effects": [
+    {
+     "op": "bounce"
+    }
+   ]
+  }
+ },
+ {
+  "id": "man-o-war",
+  "name": "Man-o'-War",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "typeLine": "Creature — Jellyfish",
+  "text": "When this creature enters, return target creature to its owner's hand.",
+  "img": "https://cards.scryfall.io/normal/front/a/1/a1ef40d5-c287-4229-8059-3505d9f251ca.jpg?1783918492",
+  "art": "https://cards.scryfall.io/art_crop/front/a/1/a1ef40d5-c287-4229-8059-3505d9f251ca.jpg?1783918492",
+  "power": 2,
+  "toughness": 2,
+  "keywords": [],
+  "triggers": [
+   {
+    "on": "etb",
+    "label": "bounce target creature",
+    "target": "creature",
+    "effects": [
+     {
+      "op": "bounce"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "thieving-magpie",
+  "name": "Thieving Magpie",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "typeLine": "Creature — Bird",
+  "text": "Flying (This creature can't be blocked except by creatures with flying or reach.)\nWhenever this creature deals damage to an opponent, draw a card.",
+  "img": "https://cards.scryfall.io/normal/front/1/f/1f9a1760-d681-471d-b3a2-ca5051b8bed3.jpg?1783918486",
+  "art": "https://cards.scryfall.io/art_crop/front/1/f/1f9a1760-d681-471d-b3a2-ca5051b8bed3.jpg?1783918486",
+  "power": 1,
+  "toughness": 3,
+  "keywords": [
+   "flying"
+  ],
+  "triggers": [
+   {
+    "on": "damageOpponent",
+    "label": "draw a card",
+    "effects": [
+     {
+      "op": "draw",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "divination",
+  "name": "Divination",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 2,
+   "U": 1
+  },
+  "colors": [
+   "U"
+  ],
+  "typeLine": "Sorcery",
+  "text": "Draw two cards.",
+  "img": "https://cards.scryfall.io/normal/front/c/b/cb3b35b8-f321-46d8-a441-6b9a6efa9021.jpg?1783934590",
+  "art": "https://cards.scryfall.io/art_crop/front/c/b/cb3b35b8-f321-46d8-a441-6b9a6efa9021.jpg?1783934590",
+  "keywords": [],
+  "spell": {
+   "effects": [
+    {
+     "op": "draw",
+     "n": 2
+    }
+   ]
+  }
+ },
+ {
+  "id": "concentrate",
+  "name": "Concentrate",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 2,
+   "U": 2
+  },
+  "colors": [
+   "U"
+  ],
+  "typeLine": "Sorcery",
+  "text": "Draw three cards.",
+  "img": "https://cards.scryfall.io/normal/front/5/a/5aca3338-30a6-4ce4-b74c-a18144b6efc9.jpg?1783935617",
+  "art": "https://cards.scryfall.io/art_crop/front/5/a/5aca3338-30a6-4ce4-b74c-a18144b6efc9.jpg?1783935617",
+  "keywords": [],
+  "spell": {
+   "effects": [
+    {
+     "op": "draw",
+     "n": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "murder",
+  "name": "Murder",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Instant",
+  "text": "Destroy target creature.",
+  "img": "https://cards.scryfall.io/normal/front/2/c/2c249609-9cf7-46f1-b94c-9329add966bb.jpg?1783909477",
+  "art": "https://cards.scryfall.io/art_crop/front/2/c/2c249609-9cf7-46f1-b94c-9329add966bb.jpg?1783909477",
+  "keywords": [],
+  "spell": {
+   "target": "creature",
+   "effects": [
+    {
+     "op": "destroy"
+    }
+   ]
+  }
+ },
+ {
+  "id": "doom-blade",
+  "name": "Doom Blade",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Instant",
+  "text": "Destroy target nonblack creature.",
+  "img": "https://cards.scryfall.io/normal/front/5/d/5dcd0c4e-4047-47a2-8969-c62616d457c2.jpg?1783903090",
+  "art": "https://cards.scryfall.io/art_crop/front/5/d/5dcd0c4e-4047-47a2-8969-c62616d457c2.jpg?1783903090",
+  "keywords": [],
+  "spell": {
+   "target": "nonblackCreature",
+   "effects": [
+    {
+     "op": "destroy"
+    }
+   ]
+  }
+ },
+ {
+  "id": "go-for-the-throat",
+  "name": "Go for the Throat",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Instant",
+  "text": "Destroy target nonartifact creature.",
+  "img": "https://cards.scryfall.io/normal/front/5/4/5446e1ba-c745-45b2-ad05-b22abf04daec.jpg?1783917160",
+  "art": "https://cards.scryfall.io/art_crop/front/5/4/5446e1ba-c745-45b2-ad05-b22abf04daec.jpg?1783917160",
+  "keywords": [],
+  "spell": {
+   "target": "nonartifactCreature",
+   "effects": [
+    {
+     "op": "destroy"
+    }
+   ]
+  }
+ },
+ {
+  "id": "ravenous-chupacabra",
+  "name": "Ravenous Chupacabra",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Creature — Beast Horror",
+  "text": "When this creature enters, destroy target creature an opponent controls.",
+  "img": "https://cards.scryfall.io/normal/front/a/4/a4dfbac0-1849-41c5-853a-1fee108d0b01.jpg?1783913009",
+  "art": "https://cards.scryfall.io/art_crop/front/a/4/a4dfbac0-1849-41c5-853a-1fee108d0b01.jpg?1783913009",
+  "power": 2,
+  "toughness": 2,
+  "keywords": [],
+  "triggers": [
+   {
+    "on": "etb",
+    "label": "destroy target creature an opponent controls",
+    "target": "oppCreature",
+    "effects": [
+     {
+      "op": "destroy"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "royal-assassin",
+  "name": "Royal Assassin",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Creature — Human Assassin",
+  "text": "{T}: Destroy target tapped creature.",
+  "img": "https://cards.scryfall.io/normal/front/6/7/67ef9842-7142-4c63-8aea-fa73f02722a5.jpg?1783918471",
+  "art": "https://cards.scryfall.io/art_crop/front/6/7/67ef9842-7142-4c63-8aea-fa73f02722a5.jpg?1783918471",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [],
+  "abilities": [
+   {
+    "label": "Destroy target tapped creature",
+    "tap": true,
+    "target": "tappedCreature",
+    "effects": [
+     {
+      "op": "destroy"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "phyrexian-arena",
+  "name": "Phyrexian Arena",
+  "types": [
+   "Enchantment"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 2
+  },
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Enchantment",
+  "text": "At the beginning of your upkeep, you draw a card and lose 1 life.",
+  "img": "https://cards.scryfall.io/normal/front/0/7/0784b6f0-9ebf-43d2-ba0f-a6bc93ba0c48.jpg?1783909072",
+  "art": "https://cards.scryfall.io/art_crop/front/0/7/0784b6f0-9ebf-43d2-ba0f-a6bc93ba0c48.jpg?1783909072",
+  "keywords": [],
+  "triggers": [
+   {
+    "on": "upkeep",
+    "label": "draw a card, lose 1 life",
+    "effects": [
+     {
+      "op": "draw",
+      "n": 1
+     },
+     {
+      "op": "loseLife",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "night-s-whisper",
+  "name": "Night's Whisper",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Sorcery",
+  "text": "You draw two cards and lose 2 life.",
+  "img": "https://cards.scryfall.io/normal/front/e/8/e8399c2e-ecc8-41c9-a690-a0eeafb27f77.jpg?1785497515",
+  "art": "https://cards.scryfall.io/art_crop/front/e/8/e8399c2e-ecc8-41c9-a690-a0eeafb27f77.jpg?1785497515",
+  "keywords": [],
+  "spell": {
+   "effects": [
+    {
+     "op": "draw",
+     "n": 2
+    },
+    {
+     "op": "loseLife",
+     "n": 2
+    }
+   ]
+  }
+ },
+ {
+  "id": "blood-tithe",
+  "name": "Blood Tithe",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 3,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Sorcery",
+  "text": "Each opponent loses 3 life. You gain life equal to the life lost this way.",
+  "img": "https://cards.scryfall.io/normal/front/c/f/cf166294-3359-4da4-84d0-006c75c183fd.jpg?1783941819",
+  "art": "https://cards.scryfall.io/art_crop/front/c/f/cf166294-3359-4da4-84d0-006c75c183fd.jpg?1783941819",
+  "keywords": [],
+  "spell": {
+   "effects": [
+    {
+     "op": "drain",
+     "n": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "lightning-bolt",
+  "name": "Lightning Bolt",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Instant",
+  "text": "Lightning Bolt deals 3 damage to any target.",
+  "img": "https://cards.scryfall.io/normal/front/7/6/7673784e-db4b-43a1-8d55-1bb9fc1e284f.jpg?1783903008",
+  "art": "https://cards.scryfall.io/art_crop/front/7/6/7673784e-db4b-43a1-8d55-1bb9fc1e284f.jpg?1783903008",
+  "keywords": [],
+  "spell": {
+   "target": "any",
+   "effects": [
+    {
+     "op": "damage",
+     "n": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "searing-spear",
+  "name": "Searing Spear",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Instant",
+  "text": "Searing Spear deals 3 damage to any target.",
+  "img": "https://cards.scryfall.io/normal/front/4/4/44c5f884-d071-40c2-bb2c-925dc2197ea3.jpg?1783936148",
+  "art": "https://cards.scryfall.io/art_crop/front/4/4/44c5f884-d071-40c2-bb2c-925dc2197ea3.jpg?1783936148",
+  "keywords": [],
+  "spell": {
+   "target": "any",
+   "effects": [
+    {
+     "op": "damage",
+     "n": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "lightning-strike",
+  "name": "Lightning Strike",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Instant",
+  "text": "Lightning Strike deals 3 damage to any target.",
+  "img": "https://cards.scryfall.io/normal/front/8/8/88b13bc0-da54-4c3b-917c-7c8345a329f5.jpg?1783902927",
+  "art": "https://cards.scryfall.io/art_crop/front/8/8/88b13bc0-da54-4c3b-917c-7c8345a329f5.jpg?1783902927",
+  "keywords": [],
+  "spell": {
+   "target": "any",
+   "effects": [
+    {
+     "op": "damage",
+     "n": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "flametongue-kavu",
+  "name": "Flametongue Kavu",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Kavu",
+  "text": "When this creature enters, it deals 4 damage to target creature.",
+  "img": "https://cards.scryfall.io/normal/front/1/b/1b3a5139-3341-409e-be33-184897c7398e.jpg?1783918462",
+  "art": "https://cards.scryfall.io/art_crop/front/1/b/1b3a5139-3341-409e-be33-184897c7398e.jpg?1783918462",
+  "power": 4,
+  "toughness": 2,
+  "keywords": [],
+  "triggers": [
+   {
+    "on": "etb",
+    "label": "4 damage to target creature",
+    "target": "creature",
+    "effects": [
+     {
+      "op": "damage",
+      "n": 4
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "prodigal-pyromancer",
+  "name": "Prodigal Pyromancer",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Human Wizard",
+  "text": "{T}: This creature deals 1 damage to any target.",
+  "img": "https://cards.scryfall.io/normal/front/c/f/cf16600a-c2a5-49e4-89e2-260cfaf58b52.jpg?1783927792",
+  "art": "https://cards.scryfall.io/art_crop/front/c/f/cf16600a-c2a5-49e4-89e2-260cfaf58b52.jpg?1783927792",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [],
+  "abilities": [
+   {
+    "label": "1 damage to any target",
+    "tap": true,
+    "target": "any",
+    "effects": [
+     {
+      "op": "damage",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "monastery-swiftspear",
+  "name": "Monastery Swiftspear",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Human Monk",
+  "text": "Haste\nProwess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)",
+  "img": "https://cards.scryfall.io/normal/front/d/6/d6bfa227-4309-40ed-952c-279595eab17e.jpg?1783920066",
+  "art": "https://cards.scryfall.io/art_crop/front/d/6/d6bfa227-4309-40ed-952c-279595eab17e.jpg?1783920066",
+  "power": 1,
+  "toughness": 2,
+  "keywords": [
+   "prowess",
+   "haste"
+  ]
+ },
+ {
+  "id": "guttersnipe",
+  "name": "Guttersnipe",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Goblin Shaman",
+  "text": "Whenever you cast an instant or sorcery spell, this creature deals 2 damage to each opponent.",
+  "img": "https://cards.scryfall.io/normal/front/f/6/f6bb1ffc-2251-4655-b8f9-4c8047dd5d5f.jpg?1785497556",
+  "art": "https://cards.scryfall.io/art_crop/front/f/6/f6bb1ffc-2251-4655-b8f9-4c8047dd5d5f.jpg?1785497556",
+  "power": 2,
+  "toughness": 2,
+  "keywords": [],
+  "triggers": [
+   {
+    "on": "youCast",
+    "filter": "instantSorcery",
+    "label": "2 damage to each opponent",
+    "effects": [
+     {
+      "op": "damageEachOpp",
+      "n": 2
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "seal-of-fire",
+  "name": "Seal of Fire",
+  "types": [
+   "Enchantment"
+  ],
+  "cost": {
+   "generic": 0,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Enchantment",
+  "text": "Sacrifice this enchantment: It deals 2 damage to any target.",
+  "img": "https://cards.scryfall.io/normal/front/2/1/210f4f5a-4a36-4f2f-8821-d04f3f52c8db.jpg?1783938737",
+  "art": "https://cards.scryfall.io/art_crop/front/2/1/210f4f5a-4a36-4f2f-8821-d04f3f52c8db.jpg?1783938737",
+  "keywords": [],
+  "abilities": [
+   {
+    "label": "2 damage to any target",
+    "sac": true,
+    "target": "any",
+    "effects": [
+     {
+      "op": "damage",
+      "n": 2
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "boggart-brute",
+  "name": "Boggart Brute",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Goblin Warrior",
+  "text": "Menace (This creature can't be blocked except by two or more creatures.)",
+  "img": "https://cards.scryfall.io/normal/front/3/d/3d6de3a7-30a7-49d7-8e39-494355c6edae.jpg?1783930402",
+  "art": "https://cards.scryfall.io/art_crop/front/3/d/3d6de3a7-30a7-49d7-8e39-494355c6edae.jpg?1783930402",
+  "power": 3,
+  "toughness": 2,
+  "keywords": [
+   "menace"
+  ]
+ },
+ {
+  "id": "ridgetop-raptor",
+  "name": "Ridgetop Raptor",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Dinosaur Beast",
+  "text": "Double strike (This creature deals both first-strike and regular combat damage.)",
+  "img": "https://cards.scryfall.io/normal/front/7/2/720a0e44-0675-488e-bfa5-ae557337e9c4.jpg?1783918456",
+  "art": "https://cards.scryfall.io/art_crop/front/7/2/720a0e44-0675-488e-bfa5-ae557337e9c4.jpg?1783918456",
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "double strike"
+  ]
+ },
+ {
+  "id": "brute-force",
+  "name": "Brute Force",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Instant",
+  "text": "Target creature gets +3/+3 until end of turn.",
+  "img": "https://cards.scryfall.io/normal/front/8/9/89db7256-3bd0-4c1d-9c6f-de81f7d3c1a2.jpg?1783927801",
+  "art": "https://cards.scryfall.io/art_crop/front/8/9/89db7256-3bd0-4c1d-9c6f-de81f7d3c1a2.jpg?1783927801",
+  "keywords": [],
+  "spell": {
+   "target": "creature",
+   "effects": [
+    {
+     "op": "pump",
+     "n": 3,
+     "m": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "llanowar-elves",
+  "name": "Llanowar Elves",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Elf Druid",
+  "text": "{T}: Add {G}.",
+  "img": "https://cards.scryfall.io/normal/front/6/a/6a0b230b-d391-4998-a3f7-7b158a0ec2cd.jpg?1783909057",
+  "art": "https://cards.scryfall.io/art_crop/front/6/a/6a0b230b-d391-4998-a3f7-7b158a0ec2cd.jpg?1783909057",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "G"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "elvish-mystic",
+  "name": "Elvish Mystic",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Elf Druid",
+  "text": "{T}: Add {G}.",
+  "img": "https://cards.scryfall.io/normal/front/0/8/08b9a296-3b76-4f8f-9d71-7c9af92bb3b4.jpg?1785647413",
+  "art": "https://cards.scryfall.io/art_crop/front/0/8/08b9a296-3b76-4f8f-9d71-7c9af92bb3b4.jpg?1785647413",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "G"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "fyndhorn-elves",
+  "name": "Fyndhorn Elves",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Elf Druid",
+  "text": "{T}: Add {G}.",
+  "img": "https://cards.scryfall.io/normal/front/4/5/450744cf-7eba-491b-97b0-ca80c6368bbb.jpg?1783928794",
+  "art": "https://cards.scryfall.io/art_crop/front/4/5/450744cf-7eba-491b-97b0-ca80c6368bbb.jpg?1783928794",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "G"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "birds-of-paradise",
+  "name": "Birds of Paradise",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Bird",
+  "text": "Flying\n{T}: Add one mana of any color.",
+  "img": "https://cards.scryfall.io/normal/front/4/9/492c2f9a-51e7-4e0f-9899-23bf43ea988b.jpg?1783903230",
+  "art": "https://cards.scryfall.io/art_crop/front/4/9/492c2f9a-51e7-4e0f-9899-23bf43ea988b.jpg?1783903230",
+  "power": 0,
+  "toughness": 1,
+  "keywords": [
+   "flying"
+  ],
+  "mana": [
+   {
+    "add": [
+     "ANY"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "sakura-tribe-elder",
+  "name": "Sakura-Tribe Elder",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Snake Shaman",
+  "text": "Sacrifice this creature: Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+  "img": "https://cards.scryfall.io/normal/front/7/a/7a8b1c49-8594-426d-b585-41140235bb0e.jpg?1783903761",
+  "art": "https://cards.scryfall.io/art_crop/front/7/a/7a8b1c49-8594-426d-b585-41140235bb0e.jpg?1783903761",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [],
+  "abilities": [
+   {
+    "label": "Fetch basic land",
+    "sac": true,
+    "effects": [
+     {
+      "op": "searchBasic",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "elvish-visionary",
+  "name": "Elvish Visionary",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Elf Shaman",
+  "text": "When this creature enters, draw a card.",
+  "img": "https://cards.scryfall.io/normal/front/6/d/6d2f4a37-453f-4a2c-bfba-2d1227394c90.jpg?1785497604",
+  "art": "https://cards.scryfall.io/art_crop/front/6/d/6d2f4a37-453f-4a2c-bfba-2d1227394c90.jpg?1785497604",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [],
+  "triggers": [
+   {
+    "on": "etb",
+    "label": "draw a card",
+    "effects": [
+     {
+      "op": "draw",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "llanowar-visionary",
+  "name": "Llanowar Visionary",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Elf Druid",
+  "text": "When this creature enters, draw a card.\n{T}: Add {G}.",
+  "img": "https://cards.scryfall.io/normal/front/d/6/d6e23afa-7e08-4049-baf0-d4d0134ba2c8.jpg?1783930671",
+  "art": "https://cards.scryfall.io/art_crop/front/d/6/d6e23afa-7e08-4049-baf0-d4d0134ba2c8.jpg?1783930671",
+  "power": 2,
+  "toughness": 2,
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "G"
+    ]
+   }
+  ],
+  "triggers": [
+   {
+    "on": "etb",
+    "label": "draw a card",
+    "effects": [
+     {
+      "op": "draw",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "rampant-growth",
+  "name": "Rampant Growth",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Sorcery",
+  "text": "Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+  "img": "https://cards.scryfall.io/normal/front/b/7/b7c47024-5e08-4b17-b41a-7647f8b814b9.jpg?1783907042",
+  "art": "https://cards.scryfall.io/art_crop/front/b/7/b7c47024-5e08-4b17-b41a-7647f8b814b9.jpg?1783907042",
+  "keywords": [],
+  "spell": {
+   "effects": [
+    {
+     "op": "searchBasic",
+     "n": 1
+    }
+   ]
+  }
+ },
+ {
+  "id": "cultivate",
+  "name": "Cultivate",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 2,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Sorcery",
+  "text": "Search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle.",
+  "img": "https://cards.scryfall.io/normal/front/e/6/e60deb92-f7dd-4f4e-9036-e47dd586f985.jpg?1783903229",
+  "art": "https://cards.scryfall.io/art_crop/front/e/6/e60deb92-f7dd-4f4e-9036-e47dd586f985.jpg?1783903229",
+  "keywords": [],
+  "spell": {
+   "effects": [
+    {
+     "op": "searchBasic",
+     "n": 1
+    },
+    {
+     "op": "searchBasic",
+     "n": 1,
+     "toHand": true
+    }
+   ]
+  }
+ },
+ {
+  "id": "kodama-s-reach",
+  "name": "Kodama's Reach",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 2,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Sorcery — Arcane",
+  "text": "Search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle.",
+  "img": "https://cards.scryfall.io/normal/front/9/0/90c423cc-1264-4067-9c50-e7c88c68ef2d.jpg?1783904544",
+  "art": "https://cards.scryfall.io/art_crop/front/9/0/90c423cc-1264-4067-9c50-e7c88c68ef2d.jpg?1783904544",
+  "keywords": [],
+  "spell": {
+   "effects": [
+    {
+     "op": "searchBasic",
+     "n": 1
+    },
+    {
+     "op": "searchBasic",
+     "n": 1,
+     "toHand": true
+    }
+   ]
+  }
+ },
+ {
+  "id": "explosive-vegetation",
+  "name": "Explosive Vegetation",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 3,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Sorcery",
+  "text": "Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
+  "img": "https://cards.scryfall.io/normal/front/8/d/8de3fdf8-d55e-4ffc-8f8b-6314d4d467ce.jpg?1783909606",
+  "art": "https://cards.scryfall.io/art_crop/front/8/d/8de3fdf8-d55e-4ffc-8f8b-6314d4d467ce.jpg?1783909606",
+  "keywords": [],
+  "spell": {
+   "effects": [
+    {
+     "op": "searchBasic",
+     "n": 2
+    }
+   ]
+  }
+ },
+ {
+  "id": "harmonize",
+  "name": "Harmonize",
+  "types": [
+   "Sorcery"
+  ],
+  "cost": {
+   "generic": 2,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Sorcery",
+  "text": "Draw three cards.",
+  "img": "https://cards.scryfall.io/normal/front/b/d/bd7138fb-6aa7-455e-b1f7-ca08d747277d.jpg?1783903229",
+  "art": "https://cards.scryfall.io/art_crop/front/b/d/bd7138fb-6aa7-455e-b1f7-ca08d747277d.jpg?1783903229",
+  "keywords": [],
+  "spell": {
+   "effects": [
+    {
+     "op": "draw",
+     "n": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "giant-growth",
+  "name": "Giant Growth",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 0,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Instant",
+  "text": "Target creature gets +3/+3 until end of turn.",
+  "img": "https://cards.scryfall.io/normal/front/f/d/fd1f95bf-48ea-455a-8a6c-0249b11c8900.jpg?1783902918",
+  "art": "https://cards.scryfall.io/art_crop/front/f/d/fd1f95bf-48ea-455a-8a6c-0249b11c8900.jpg?1783902918",
+  "keywords": [],
+  "spell": {
+   "target": "creature",
+   "effects": [
+    {
+     "op": "pump",
+     "n": 3,
+     "m": 3
+    }
+   ]
+  }
+ },
+ {
+  "id": "titanic-growth",
+  "name": "Titanic Growth",
+  "types": [
+   "Instant"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Instant",
+  "text": "Target creature gets +4/+4 until end of turn.",
+  "img": "https://cards.scryfall.io/normal/front/4/6/46917de3-5e98-4dd6-8950-fc10338515df.jpg?1783915076",
+  "art": "https://cards.scryfall.io/art_crop/front/4/6/46917de3-5e98-4dd6-8950-fc10338515df.jpg?1783915076",
+  "keywords": [],
+  "spell": {
+   "target": "creature",
+   "effects": [
+    {
+     "op": "pump",
+     "n": 4,
+     "m": 4
+    }
+   ]
+  }
+ },
+ {
+  "id": "giant-spider",
+  "name": "Giant Spider",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Spider",
+  "text": "Reach (This creature can block creatures with flying.)",
+  "img": "https://cards.scryfall.io/normal/front/2/1/213c9202-b6f4-43ab-b57f-b97a1da5e263.jpg?1783918443",
+  "art": "https://cards.scryfall.io/art_crop/front/2/1/213c9202-b6f4-43ab-b57f-b97a1da5e263.jpg?1783918443",
+  "power": 2,
+  "toughness": 4,
+  "keywords": [
+   "reach"
+  ]
+ },
+ {
+  "id": "ambush-viper",
+  "name": "Ambush Viper",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Snake",
+  "text": "Flash\nDeathtouch",
+  "img": "https://cards.scryfall.io/normal/front/3/7/37f9be6b-ae6e-4708-9749-83bebd351102.jpg?1783908103",
+  "art": "https://cards.scryfall.io/art_crop/front/3/7/37f9be6b-ae6e-4708-9749-83bebd351102.jpg?1783908103",
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "flash",
+   "deathtouch"
+  ]
+ },
+ {
+  "id": "owlbear-shepherd",
+  "name": "Owlbear Shepherd",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Goblin Druid",
+  "text": "At the beginning of your end step, if creatures you control have total power 8 or greater, draw a card.",
+  "img": "https://cards.scryfall.io/normal/front/0/a/0a4813b2-3fd7-4a2b-b87a-9ce5bb18bdd4.jpg?1783922706",
+  "art": "https://cards.scryfall.io/art_crop/front/0/a/0a4813b2-3fd7-4a2b-b87a-9ce5bb18bdd4.jpg?1783922706",
+  "power": 1,
+  "toughness": 4,
+  "keywords": [],
+  "triggers": [
+   {
+    "on": "endStep",
+    "cond": "totalPower8",
+    "label": "draw a card (total power 8+)",
+    "effects": [
+     {
+      "op": "draw",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "drumhunter",
+  "name": "Drumhunter",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Human Druid Warrior",
+  "text": "At the beginning of your end step, if you control a creature with power 5 or greater, you may draw a card.\n{T}: Add {C}.",
+  "img": "https://cards.scryfall.io/normal/front/3/4/343ef398-576a-43b6-a32b-f916ccd63579.jpg?1783939662",
+  "art": "https://cards.scryfall.io/art_crop/front/3/4/343ef398-576a-43b6-a32b-f916ccd63579.jpg?1783939662",
+  "power": 2,
+  "toughness": 2,
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "C"
+    ]
+   }
+  ],
+  "triggers": [
+   {
+    "on": "endStep",
+    "cond": "power5",
+    "label": "draw a card (power 5+ creature)",
+    "effects": [
+     {
+      "op": "draw",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "gaea-s-anthem",
+  "name": "Gaea's Anthem",
+  "types": [
+   "Enchantment"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Enchantment",
+  "text": "Creatures you control get +1/+1.",
+  "img": "https://cards.scryfall.io/normal/front/4/3/43febc63-597d-4392-b8ea-a00841148c45.jpg?1783927781",
+  "art": "https://cards.scryfall.io/art_crop/front/4/3/43febc63-597d-4392-b8ea-a00841148c45.jpg?1783927781",
+  "keywords": [],
+  "static": {
+   "p": 1,
+   "t": 1
+  }
+ },
+ {
+  "id": "isperia-supreme-judge",
+  "name": "Isperia, Supreme Judge",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "W": 2,
+   "U": 2
+  },
+  "colors": [
+   "U",
+   "W"
+  ],
+  "typeLine": "Legendary Creature — Sphinx",
+  "text": "Flying\nWhenever a creature attacks you or a planeswalker you control, you may draw a card.",
+  "img": "https://cards.scryfall.io/normal/front/1/e/1e3b82a7-ebef-4190-9f50-40b992ba89c9.jpg?1783931147",
+  "art": "https://cards.scryfall.io/art_crop/front/1/e/1e3b82a7-ebef-4190-9f50-40b992ba89c9.jpg?1783931147",
+  "legendary": true,
+  "power": 6,
+  "toughness": 4,
+  "keywords": [
+   "flying"
+  ],
+  "triggers": [
+   {
+    "on": "creatureAttacksYou",
+    "label": "draw a card",
+    "effects": [
+     {
+      "op": "draw",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "judith-the-scourge-diva",
+  "name": "Judith, the Scourge Diva",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "B": 1,
+   "R": 1
+  },
+  "colors": [
+   "B",
+   "R"
+  ],
+  "typeLine": "Legendary Creature — Human Shaman",
+  "text": "Other creatures you control get +1/+0.\nWhenever a nontoken creature you control dies, Judith deals 1 damage to any target.",
+  "img": "https://cards.scryfall.io/normal/front/d/6/d6fb929c-1b8d-4d1d-aa69-ac6189cd7ebf.jpg?1783915614",
+  "art": "https://cards.scryfall.io/art_crop/front/d/6/d6fb929c-1b8d-4d1d-aa69-ac6189cd7ebf.jpg?1783915614",
+  "legendary": true,
+  "power": 2,
+  "toughness": 2,
+  "keywords": [],
+  "static": {
+   "p": 1,
+   "t": 0,
+   "others": true
+  },
+  "triggers": [
+   {
+    "on": "yourCreatureDies",
+    "label": "1 damage to any target",
+    "target": "any",
+    "effects": [
+     {
+      "op": "damage",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "ruric-thar-the-unbowed",
+  "name": "Ruric Thar, the Unbowed",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 4,
+   "R": 1,
+   "G": 1
+  },
+  "colors": [
+   "G",
+   "R"
+  ],
+  "typeLine": "Legendary Creature — Ogre Warrior",
+  "text": "Reach, vigilance\nRuric Thar attacks each combat if able.\nWhenever a player casts a noncreature spell, Ruric Thar deals 6 damage to that player.",
+  "img": "https://cards.scryfall.io/normal/front/a/a/aa828bdc-221e-4e81-9e71-6f288690ddcd.jpg?1783921807",
+  "art": "https://cards.scryfall.io/art_crop/front/a/a/aa828bdc-221e-4e81-9e71-6f288690ddcd.jpg?1783921807",
+  "legendary": true,
+  "power": 6,
+  "toughness": 6,
+  "keywords": [
+   "reach",
+   "vigilance"
+  ],
+  "mustAttack": true,
+  "triggers": [
+   {
+    "on": "anyCastNoncreature",
+    "label": "6 damage to that player",
+    "effects": [
+     {
+      "op": "damageEventPlayer",
+      "n": 6
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "sergeant-john-benton",
+  "name": "Sergeant John Benton",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1,
+   "W": 1
+  },
+  "colors": [
+   "G",
+   "W"
+  ],
+  "typeLine": "Legendary Creature — Human Soldier",
+  "text": "Trample, haste\nShare Intelligence — Whenever Sergeant John Benton deals combat damage to a player, you and that player each draw that many cards.",
+  "img": "https://cards.scryfall.io/normal/front/0/1/01f40e07-f565-4b9e-87a5-5b28b4e9fb0b.jpg?1783914623",
+  "art": "https://cards.scryfall.io/art_crop/front/0/1/01f40e07-f565-4b9e-87a5-5b28b4e9fb0b.jpg?1783914623",
+  "legendary": true,
+  "power": 2,
+  "toughness": 4,
+  "keywords": [
+   "haste",
+   "trample"
+  ],
+  "triggers": [
+   {
+    "on": "combatDamagePlayer",
+    "label": "you and that player each draw that many",
+    "effects": [
+     {
+      "op": "drawEventAmount"
+     },
+     {
+      "op": "eventPlayerDrawsEventAmount"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "plains",
+  "name": "Plains",
+  "types": [
+   "Land"
+  ],
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "typeLine": "Basic Land — Plains",
+  "text": "({T}: Add {W}.)",
+  "img": "https://cards.scryfall.io/normal/front/0/9/09ac862f-0a51-44dd-b86f-9412b8218b13.jpg?1791578423",
+  "art": "https://cards.scryfall.io/art_crop/front/0/9/09ac862f-0a51-44dd-b86f-9412b8218b13.jpg?1791578423",
+  "basic": true,
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "W"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "island",
+  "name": "Island",
+  "types": [
+   "Land"
+  ],
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "typeLine": "Basic Land — Island",
+  "text": "({T}: Add {U}.)",
+  "img": "https://cards.scryfall.io/normal/front/1/3/1335d293-3dd2-4f13-bd2c-22181f4528ee.jpg?1791578424",
+  "art": "https://cards.scryfall.io/art_crop/front/1/3/1335d293-3dd2-4f13-bd2c-22181f4528ee.jpg?1791578424",
+  "basic": true,
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "U"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "swamp",
+  "name": "Swamp",
+  "types": [
+   "Land"
+  ],
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "typeLine": "Basic Land — Swamp",
+  "text": "({T}: Add {B}.)",
+  "img": "https://cards.scryfall.io/normal/front/b/2/b233b117-9369-45c1-80c5-cc857386b6be.jpg?1791578437",
+  "art": "https://cards.scryfall.io/art_crop/front/b/2/b233b117-9369-45c1-80c5-cc857386b6be.jpg?1791578437",
+  "basic": true,
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "B"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "mountain",
+  "name": "Mountain",
+  "types": [
+   "Land"
+  ],
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "typeLine": "Basic Land — Mountain",
+  "text": "({T}: Add {R}.)",
+  "img": "https://cards.scryfall.io/normal/front/8/5/85177bd7-6c50-48da-b692-ae5fe7bd357c.jpg?1791578439",
+  "art": "https://cards.scryfall.io/art_crop/front/8/5/85177bd7-6c50-48da-b692-ae5fe7bd357c.jpg?1791578439",
+  "basic": true,
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "R"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "forest",
+  "name": "Forest",
+  "types": [
+   "Land"
+  ],
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "typeLine": "Basic Land — Forest",
+  "text": "({T}: Add {G}.)",
+  "img": "https://cards.scryfall.io/normal/front/2/e/2e781bfd-f8cb-4d20-b977-4359f3a21311.jpg?1791578317",
+  "art": "https://cards.scryfall.io/art_crop/front/2/e/2e781bfd-f8cb-4d20-b977-4359f3a21311.jpg?1791578317",
+  "basic": true,
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "G"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "command-tower",
+  "name": "Command Tower",
+  "types": [
+   "Land"
+  ],
+  "cost": {
+   "generic": 0
+  },
+  "colors": [],
+  "typeLine": "Land",
+  "text": "{T}: Add one mana of any color in your commander's color identity.",
+  "img": "https://cards.scryfall.io/normal/front/1/a/1ac6cb62-45da-4e9a-84c6-09e6eacf0664.jpg?1789644465",
+  "art": "https://cards.scryfall.io/art_crop/front/1/a/1ac6cb62-45da-4e9a-84c6-09e6eacf0664.jpg?1789644465",
+  "keywords": [],
+  "mana": [
+   {
+    "add": [
+     "IDENTITY"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "healer-s-hawk",
+  "name": "Healer's Hawk",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Creature — Bird",
+  "text": "Flying\nLifelink (Damage dealt by this creature also causes you to gain that much life.)",
+  "img": "https://cards.scryfall.io/normal/front/0/6/069cfaa5-bba4-4503-b54e-b98fa9f0a0fc.jpg?1787563133",
+  "art": "https://cards.scryfall.io/art_crop/front/0/6/069cfaa5-bba4-4503-b54e-b98fa9f0a0fc.jpg?1787563133",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [
+   "flying",
+   "lifelink"
+  ]
+ },
+ {
   "id": "indomitable-ancients",
   "name": "Indomitable Ancients",
   "types": [
@@ -16,10 +2178,34 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/a/4/a4e20d78-8c01-40ed-bc69-89d4d5028552.jpg?1783907123",
   "art": "https://cards.scryfall.io/art_crop/front/a/4/a4e20d78-8c01-40ed-bc69-89d4d5028552.jpg?1783907123",
-  "scryfall": "https://scryfall.com/card/tdc/121/indomitable-ancients?utm_source=api",
   "power": 2,
   "toughness": 10,
   "keywords": []
+ },
+ {
+  "id": "shrike-force",
+  "name": "Shrike Force",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Creature — Bird Knight",
+  "text": "Flying, double strike, vigilance",
+  "img": "https://cards.scryfall.io/normal/front/3/0/306fec2c-d8b7-4f4b-8f58-10e3b9f3158f.jpg?1783910856",
+  "art": "https://cards.scryfall.io/art_crop/front/3/0/306fec2c-d8b7-4f4b-8f58-10e3b9f3158f.jpg?1783910856",
+  "power": 1,
+  "toughness": 3,
+  "keywords": [
+   "flying",
+   "vigilance",
+   "double strike"
+  ]
  },
  {
   "id": "segovian-angel",
@@ -38,7 +2224,6 @@
   "text": "Flying, vigilance",
   "img": "https://cards.scryfall.io/normal/front/b/5/b5dbaec5-502d-48c2-9e71-c12cd0bccc6a.jpg?1783933157",
   "art": "https://cards.scryfall.io/art_crop/front/b/5/b5dbaec5-502d-48c2-9e71-c12cd0bccc6a.jpg?1783933157",
-  "scryfall": "https://scryfall.com/card/mh1/25/segovian-angel?utm_source=api",
   "power": 1,
   "toughness": 1,
   "keywords": [
@@ -63,7 +2248,6 @@
   "text": "Flying, first strike",
   "img": "https://cards.scryfall.io/normal/front/3/8/389f0045-218d-41cd-bdca-8a9a0ab1b31b.jpg?1783928290",
   "art": "https://cards.scryfall.io/art_crop/front/3/8/389f0045-218d-41cd-bdca-8a9a0ab1b31b.jpg?1783928290",
-  "scryfall": "https://scryfall.com/card/khm/3/battlefield-raptor?utm_source=api",
   "power": 1,
   "toughness": 2,
   "keywords": [
@@ -86,7 +2270,6 @@
   "text": "Flying, vigilance",
   "img": "https://cards.scryfall.io/normal/front/9/5/95e4e445-8333-4cb4-b4fb-80957fae0b97.jpg?1783941296",
   "art": "https://cards.scryfall.io/art_crop/front/9/5/95e4e445-8333-4cb4-b4fb-80957fae0b97.jpg?1783941296",
-  "scryfall": "https://scryfall.com/card/nph/138/hovermyr?utm_source=api",
   "power": 1,
   "toughness": 2,
   "keywords": [
@@ -111,12 +2294,35 @@
   "text": "Flying, vigilance, lifelink",
   "img": "https://cards.scryfall.io/normal/front/8/8/8833065e-5022-4f48-b2fd-6fe5647c0a07.jpg?1783931207",
   "art": "https://cards.scryfall.io/art_crop/front/8/8/8833065e-5022-4f48-b2fd-6fe5647c0a07.jpg?1783931207",
-  "scryfall": "https://scryfall.com/card/c20/72/aerial-responder?utm_source=api",
   "power": 2,
   "toughness": 3,
   "keywords": [
    "flying",
    "lifelink",
+   "vigilance"
+  ]
+ },
+ {
+  "id": "serra-angel",
+  "name": "Serra Angel",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Creature — Angel",
+  "text": "Flying\nVigilance (Attacking doesn't cause this creature to tap.)",
+  "img": "https://cards.scryfall.io/normal/front/b/8/b8c5e74c-96e7-4a1f-93b7-14d776fe4b2d.jpg?1787563091",
+  "art": "https://cards.scryfall.io/art_crop/front/b/8/b8c5e74c-96e7-4a1f-93b7-14d776fe4b2d.jpg?1787563091",
+  "power": 4,
+  "toughness": 4,
+  "keywords": [
+   "flying",
    "vigilance"
   ]
  },
@@ -137,34 +2343,77 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/c/7/c7f2014a-fbc9-447c-a440-e06d01066bb9.jpg?1783909083",
   "art": "https://cards.scryfall.io/art_crop/front/c/7/c7f2014a-fbc9-447c-a440-e06d01066bb9.jpg?1783909083",
-  "scryfall": "https://scryfall.com/card/fdn/150/aegis-turtle?utm_source=api",
   "power": 0,
   "toughness": 5,
   "keywords": []
  },
  {
-  "id": "swooping-lookout",
-  "name": "Swooping Lookout",
+  "id": "iron-giant",
+  "name": "Iron Giant",
   "types": [
    "Artifact",
    "Creature"
   ],
   "cost": {
-   "generic": 0,
+   "generic": 7
+  },
+  "colors": [],
+  "typeLine": "Artifact Creature — Demon",
+  "text": "Reach, vigilance, trample",
+  "img": "https://cards.scryfall.io/normal/front/e/4/e48cf6d5-4d32-4b66-80be-3495ecd3e906.jpg?1783906556",
+  "art": "https://cards.scryfall.io/art_crop/front/e/4/e48cf6d5-4d32-4b66-80be-3495ecd3e906.jpg?1783906556",
+  "power": 6,
+  "toughness": 6,
+  "keywords": [
+   "reach",
+   "vigilance",
+   "trample"
+  ]
+ },
+ {
+  "id": "skyhunter-skirmisher",
+  "name": "Skyhunter Skirmisher",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Creature — Cat Knight",
+  "text": "Flying, double strike",
+  "img": "https://cards.scryfall.io/normal/front/a/d/adbf772f-ebdf-4c04-996f-0dbf1826049b.jpg?1783938424",
+  "art": "https://cards.scryfall.io/art_crop/front/a/d/adbf772f-ebdf-4c04-996f-0dbf1826049b.jpg?1783938424",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [
+   "flying",
+   "double strike"
+  ]
+ },
+ {
+  "id": "alpine-watchdog",
+  "name": "Alpine Watchdog",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
    "W": 1
   },
   "colors": [
    "W"
   ],
-  "typeLine": "Artifact Creature — Phyrexian Construct",
-  "text": "Flying, vigilance",
-  "img": "https://cards.scryfall.io/normal/front/b/6/b62c740d-260d-4dfa-b6b3-9a1527538f89.jpg?1783918072",
-  "art": "https://cards.scryfall.io/art_crop/front/b/6/b62c740d-260d-4dfa-b6b3-9a1527538f89.jpg?1783918072",
-  "scryfall": "https://scryfall.com/card/one/35/swooping-lookout?utm_source=api",
-  "power": 1,
+  "typeLine": "Creature — Dog",
+  "text": "Vigilance (Attacking doesn't cause this creature to tap.)",
+  "img": "https://cards.scryfall.io/normal/front/c/3/c392a7e5-6ff5-4c2f-9590-f8811a724f44.jpg?1783930747",
+  "art": "https://cards.scryfall.io/art_crop/front/c/3/c392a7e5-6ff5-4c2f-9590-f8811a724f44.jpg?1783930747",
+  "power": 2,
   "toughness": 2,
   "keywords": [
-   "flying",
    "vigilance"
   ]
  },
@@ -185,12 +2434,57 @@
   "text": "First strike, lifelink",
   "img": "https://cards.scryfall.io/normal/front/d/f/df7fea2e-7414-4bc8-adb0-9342e174c009.jpg?1783910865",
   "art": "https://cards.scryfall.io/art_crop/front/d/f/df7fea2e-7414-4bc8-adb0-9342e174c009.jpg?1783910865",
-  "scryfall": "https://scryfall.com/card/blb/4/brightblade-stoat?utm_source=api",
   "power": 2,
   "toughness": 2,
   "keywords": [
    "lifelink",
    "first strike"
+  ]
+ },
+ {
+  "id": "ajani-s-sunstriker",
+  "name": "Ajani's Sunstriker",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "W": 2
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Creature — Cat Cleric",
+  "text": "Lifelink (Damage dealt by this creature also causes you to gain that much life.)",
+  "img": "https://cards.scryfall.io/normal/front/3/7/373d6799-e031-4043-8437-ed4880be0de9.jpg?1783939367",
+  "art": "https://cards.scryfall.io/art_crop/front/3/7/373d6799-e031-4043-8437-ed4880be0de9.jpg?1783939367",
+  "power": 2,
+  "toughness": 2,
+  "keywords": [
+   "lifelink"
+  ]
+ },
+ {
+  "id": "mesa-unicorn",
+  "name": "Mesa Unicorn",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Creature — Unicorn",
+  "text": "Lifelink (Damage dealt by this creature also causes you to gain that much life.)",
+  "img": "https://cards.scryfall.io/normal/front/e/3/e321bbb0-1660-4452-a9b7-d41674f7f743.jpg?1783930466",
+  "art": "https://cards.scryfall.io/art_crop/front/e/3/e321bbb0-1660-4452-a9b7-d41674f7f743.jpg?1783930466",
+  "power": 2,
+  "toughness": 2,
+  "keywords": [
+   "lifelink"
   ]
  },
  {
@@ -210,7 +2504,6 @@
   "text": "Flying, first strike, vigilance, lifelink",
   "img": "https://cards.scryfall.io/normal/front/4/0/407041c4-0154-42ee-a736-7815024d1719.jpg?1783915710",
   "art": "https://cards.scryfall.io/art_crop/front/4/0/407041c4-0154-42ee-a736-7815024d1719.jpg?1783915710",
-  "scryfall": "https://scryfall.com/card/cmm/61/sunblade-angel?utm_source=api",
   "power": 3,
   "toughness": 3,
   "keywords": [
@@ -237,9 +2530,32 @@
   "text": "Flying, lifelink",
   "img": "https://cards.scryfall.io/normal/front/6/4/64bf33ea-2d2d-476d-ab1d-fba204fd034b.jpg?1783928874",
   "art": "https://cards.scryfall.io/art_crop/front/6/4/64bf33ea-2d2d-476d-ab1d-fba204fd034b.jpg?1783928874",
-  "scryfall": "https://scryfall.com/card/cmr/44/seraph-of-dawn?utm_source=api",
   "power": 2,
   "toughness": 4,
+  "keywords": [
+   "flying",
+   "lifelink"
+  ]
+ },
+ {
+  "id": "sungrace-pegasus",
+  "name": "Sungrace Pegasus",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Creature — Pegasus",
+  "text": "Flying\nLifelink (Damage dealt by this creature also causes you to gain that much life.)",
+  "img": "https://cards.scryfall.io/normal/front/5/2/52d851b9-c290-4fcc-860d-a3250923b850.jpg?1783939197",
+  "art": "https://cards.scryfall.io/art_crop/front/5/2/52d851b9-c290-4fcc-860d-a3250923b850.jpg?1783939197",
+  "power": 1,
+  "toughness": 2,
   "keywords": [
    "flying",
    "lifelink"
@@ -262,7 +2578,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/4/5/45385c8e-fff9-46e7-97e8-f946306b5147.jpg?1783934840",
   "art": "https://cards.scryfall.io/art_crop/front/4/5/45385c8e-fff9-46e7-97e8-f946306b5147.jpg?1783934840",
-  "scryfall": "https://scryfall.com/card/bbd/102/raptor-companion?utm_source=api",
   "power": 3,
   "toughness": 1,
   "keywords": []
@@ -282,7 +2597,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/f/3/f3f792d7-75be-429e-8f62-0b563b103642.jpg?1783944529",
   "art": "https://cards.scryfall.io/art_crop/front/f/3/f3f792d7-75be-429e-8f62-0b563b103642.jpg?1783944529",
-  "scryfall": "https://scryfall.com/card/mrd/142/alpha-myr?utm_source=api",
   "power": 2,
   "toughness": 1,
   "keywords": []
@@ -304,56 +2618,57 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/5/7/57bea4c2-7a15-4f31-938d-c4c906e4ebe7.jpg?1783937821",
   "art": "https://cards.scryfall.io/art_crop/front/5/7/57bea4c2-7a15-4f31-938d-c4c906e4ebe7.jpg?1783937821",
-  "scryfall": "https://scryfall.com/card/soi/14/devilthorn-fox?utm_source=api",
   "power": 3,
   "toughness": 1,
   "keywords": []
  },
  {
-  "id": "leonin-skyhunter",
-  "name": "Leonin Skyhunter",
+  "id": "iguana-parrot",
+  "name": "Iguana Parrot",
   "types": [
    "Creature"
   ],
   "cost": {
-   "generic": 0,
-   "W": 2
+   "generic": 2,
+   "U": 1
   },
   "colors": [
-   "W"
+   "U"
   ],
-  "typeLine": "Creature — Cat Knight",
-  "text": "Flying",
-  "img": "https://cards.scryfall.io/normal/front/1/5/15d6476c-1944-48e8-9af6-6db78edd58e5.jpg?1783941350",
-  "art": "https://cards.scryfall.io/art_crop/front/1/5/15d6476c-1944-48e8-9af6-6db78edd58e5.jpg?1783941350",
-  "scryfall": "https://scryfall.com/card/ddg/7/leonin-skyhunter?utm_source=api",
+  "typeLine": "Creature — Lizard Bird Pirate",
+  "text": "Flying, vigilance\nProwess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)",
+  "img": "https://cards.scryfall.io/normal/front/7/f/7faa3e3d-c08a-4908-85ef-1370d3f90815.jpg?1783904987",
+  "art": "https://cards.scryfall.io/art_crop/front/7/f/7faa3e3d-c08a-4908-85ef-1370d3f90815.jpg?1783904987",
   "power": 2,
   "toughness": 2,
   "keywords": [
-   "flying"
+   "flying",
+   "prowess",
+   "vigilance"
   ]
  },
  {
-  "id": "blade-of-the-sixth-pride",
-  "name": "Blade of the Sixth Pride",
+  "id": "crystacean",
+  "name": "Crystacean",
   "types": [
    "Creature"
   ],
   "cost": {
-   "generic": 1,
-   "W": 1
+   "generic": 3,
+   "U": 1
   },
   "colors": [
-   "W"
+   "U"
   ],
-  "typeLine": "Creature — Cat Rebel",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/d/8/d8b1b493-2dec-4816-a427-4813a00ca3e9.jpg?1783927883",
-  "art": "https://cards.scryfall.io/art_crop/front/d/8/d8b1b493-2dec-4816-a427-4813a00ca3e9.jpg?1783927883",
-  "scryfall": "https://scryfall.com/card/tsr/9/blade-of-the-sixth-pride?utm_source=api",
-  "power": 3,
-  "toughness": 1,
-  "keywords": []
+  "typeLine": "Creature — Crab",
+  "text": "Flash (You may cast this spell any time you could cast an instant.)",
+  "img": "https://cards.scryfall.io/normal/front/3/2/32afec8a-dbae-446e-919a-3efb556f5cb1.jpg?1783931076",
+  "art": "https://cards.scryfall.io/art_crop/front/3/2/32afec8a-dbae-446e-919a-3efb556f5cb1.jpg?1783931076",
+  "power": 1,
+  "toughness": 6,
+  "keywords": [
+   "flash"
+  ]
  },
  {
   "id": "ancient-crab",
@@ -372,53 +2687,8 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/7/c/7c2ca68b-15fb-4691-b549-268df92ca413.jpg?1783936527",
   "art": "https://cards.scryfall.io/art_crop/front/7/c/7c2ca68b-15fb-4691-b549-268df92ca413.jpg?1783936527",
-  "scryfall": "https://scryfall.com/card/akh/40/ancient-crab?utm_source=api",
   "power": 1,
   "toughness": 5,
-  "keywords": []
- },
- {
-  "id": "savai-sabertooth",
-  "name": "Savai Sabertooth",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 1,
-   "W": 1
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Creature — Cat",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/d/4/d46702b0-7e10-462a-9aac-7564efe91804.jpg?1783931085",
-  "art": "https://cards.scryfall.io/art_crop/front/d/4/d46702b0-7e10-462a-9aac-7564efe91804.jpg?1783931085",
-  "scryfall": "https://scryfall.com/card/iko/29/savai-sabertooth?utm_source=api",
-  "power": 3,
-  "toughness": 1,
-  "keywords": []
- },
- {
-  "id": "oreskos-swiftclaw",
-  "name": "Oreskos Swiftclaw",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 1,
-   "W": 1
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Creature — Cat Warrior",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/0/e/0ea1dfb4-1983-41f7-956c-f2a1d1489b54.jpg?1783934600",
-  "art": "https://cards.scryfall.io/art_crop/front/0/e/0ea1dfb4-1983-41f7-956c-f2a1d1489b54.jpg?1783934600",
-  "scryfall": "https://scryfall.com/card/m19/31/oreskos-swiftclaw?utm_source=api",
-  "power": 3,
-  "toughness": 1,
   "keywords": []
  },
  {
@@ -438,7 +2708,6 @@
   "text": "Flying, lifelink",
   "img": "https://cards.scryfall.io/normal/front/b/9/b93b5429-8512-4ab6-9ecd-fa270e0144f3.jpg?1783926891",
   "art": "https://cards.scryfall.io/art_crop/front/b/9/b93b5429-8512-4ab6-9ecd-fa270e0144f3.jpg?1783926891",
-  "scryfall": "https://scryfall.com/card/mh2/16/healers-flock?utm_source=api",
   "power": 3,
   "toughness": 3,
   "keywords": [
@@ -461,9 +2730,27 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/e/1/e148c1bf-84a2-48cd-882e-ad0fd74b8f0f.jpg?1783934513",
   "art": "https://cards.scryfall.io/art_crop/front/e/1/e148c1bf-84a2-48cd-882e-ad0fd74b8f0f.jpg?1783934513",
-  "scryfall": "https://scryfall.com/card/m19/234/field-creeper?utm_source=api",
   "power": 2,
   "toughness": 1,
+  "keywords": []
+ },
+ {
+  "id": "omega-myr",
+  "name": "Omega Myr",
+  "types": [
+   "Artifact",
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2
+  },
+  "colors": [],
+  "typeLine": "Artifact Creature — Myr",
+  "text": "",
+  "img": "https://cards.scryfall.io/normal/front/d/d/ddaa5c60-054f-4397-a110-21df58264caf.jpg?1783944509",
+  "art": "https://cards.scryfall.io/art_crop/front/d/d/ddaa5c60-054f-4397-a110-21df58264caf.jpg?1783944509",
+  "power": 1,
+  "toughness": 2,
   "keywords": []
  },
  {
@@ -483,7 +2770,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/c/f/cfcff1c6-0db6-4ff6-b4af-d7048b426368.jpg?1783935797",
   "art": "https://cards.scryfall.io/art_crop/front/c/f/cfcff1c6-0db6-4ff6-b4af-d7048b426368.jpg?1783935797",
-  "scryfall": "https://scryfall.com/card/xln/23/looming-altisaur?utm_source=api",
   "power": 1,
   "toughness": 7,
   "keywords": []
@@ -505,10 +2791,33 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/3/2/324681da-a28e-47ec-9810-5678de53e494.jpg?1783933011",
   "art": "https://cards.scryfall.io/art_crop/front/3/2/324681da-a28e-47ec-9810-5678de53e494.jpg?1783933011",
-  "scryfall": "https://scryfall.com/card/m20/60/fortress-crab?utm_source=api",
   "power": 1,
   "toughness": 6,
   "keywords": []
+ },
+ {
+  "id": "golden-tail-disciple",
+  "name": "Golden-Tail Disciple",
+  "types": [
+   "Enchantment",
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Enchantment Creature — Fox Monk",
+  "text": "Lifelink (Damage dealt by this creature also causes you to gain that much life.)",
+  "img": "https://cards.scryfall.io/normal/front/d/6/d631e7da-bd71-424a-a349-9bce0fd16b1f.jpg?1783923923",
+  "art": "https://cards.scryfall.io/art_crop/front/d/6/d631e7da-bd71-424a-a349-9bce0fd16b1f.jpg?1783923923",
+  "power": 2,
+  "toughness": 3,
+  "keywords": [
+   "lifelink"
+  ]
  },
  {
   "id": "wishcoin-crab",
@@ -527,7 +2836,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/3/4/348955a0-e988-48d7-a6a0-a8045fcffd25.jpg?1783930713",
   "art": "https://cards.scryfall.io/art_crop/front/3/4/348955a0-e988-48d7-a6a0-a8045fcffd25.jpg?1783930713",
-  "scryfall": "https://scryfall.com/card/m21/86/wishcoin-crab?utm_source=api",
   "power": 2,
   "toughness": 5,
   "keywords": []
@@ -547,11 +2855,34 @@
   "text": "Flying",
   "img": "https://cards.scryfall.io/normal/front/a/9/a950d8be-dcf7-4253-a3cc-c040ba632355.jpg?1783922678",
   "art": "https://cards.scryfall.io/art_crop/front/a/9/a950d8be-dcf7-4253-a3cc-c040ba632355.jpg?1783922678",
-  "scryfall": "https://scryfall.com/card/clb/306/chardalyn-dragon?utm_source=api",
   "power": 4,
   "toughness": 4,
   "keywords": [
    "flying"
+  ]
+ },
+ {
+  "id": "griffin-sentinel",
+  "name": "Griffin Sentinel",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "W": 1
+  },
+  "colors": [
+   "W"
+  ],
+  "typeLine": "Creature — Griffin",
+  "text": "Flying\nVigilance (Attacking doesn't cause this creature to tap.)",
+  "img": "https://cards.scryfall.io/normal/front/c/b/cb13aaa4-d40a-4fb2-9fd6-62bf76db6a13.jpg?1783933026",
+  "art": "https://cards.scryfall.io/art_crop/front/c/b/cb13aaa4-d40a-4fb2-9fd6-62bf76db6a13.jpg?1783933026",
+  "power": 1,
+  "toughness": 3,
+  "keywords": [
+   "flying",
+   "vigilance"
   ]
  },
  {
@@ -571,10 +2902,31 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/4/2/422fe3bd-d92e-4c91-8c30-3b5aec00201a.jpg?1783944103",
   "art": "https://cards.scryfall.io/art_crop/front/4/2/422fe3bd-d92e-4c91-8c30-3b5aec00201a.jpg?1783944103",
-  "scryfall": "https://scryfall.com/card/9ed/24/kami-of-old-stone?utm_source=api",
   "power": 1,
   "toughness": 7,
   "keywords": []
+ },
+ {
+  "id": "anvilwrought-raptor",
+  "name": "Anvilwrought Raptor",
+  "types": [
+   "Artifact",
+   "Creature"
+  ],
+  "cost": {
+   "generic": 4
+  },
+  "colors": [],
+  "typeLine": "Artifact Creature — Bird",
+  "text": "Flying\nFirst strike (This creature deals combat damage before creatures without first strike.)",
+  "img": "https://cards.scryfall.io/normal/front/a/a/aa6d7bbe-0418-4a58-a97b-13b50eb0b642.jpg?1783932947",
+  "art": "https://cards.scryfall.io/art_crop/front/a/a/aa6d7bbe-0418-4a58-a97b-13b50eb0b642.jpg?1783932947",
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "flying",
+   "first strike"
+  ]
  },
  {
   "id": "glass-golem",
@@ -591,7 +2943,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/1/b/1b87dc27-3cea-4101-aec5-ca0b96978476.jpg?1783943598",
   "art": "https://cards.scryfall.io/art_crop/front/1/b/1b87dc27-3cea-4101-aec5-ca0b96978476.jpg?1783943598",
-  "scryfall": "https://scryfall.com/card/rav/261/glass-golem?utm_source=api",
   "power": 6,
   "toughness": 2,
   "keywords": []
@@ -613,7 +2964,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/0/4/04129038-3b02-418a-862a-229e9dde339b.jpg?1783941995",
   "art": "https://cards.scryfall.io/art_crop/front/0/4/04129038-3b02-418a-862a-229e9dde339b.jpg?1783941995",
-  "scryfall": "https://scryfall.com/card/roe/73/jwari-scuttler?utm_source=api",
   "power": 2,
   "toughness": 3,
   "keywords": []
@@ -635,7 +2985,6 @@
   "text": "Flying, vigilance",
   "img": "https://cards.scryfall.io/normal/front/b/f/bfeb0854-87e7-4236-9791-8fe601704200.jpg?1783944846",
   "art": "https://cards.scryfall.io/art_crop/front/b/f/bfeb0854-87e7-4236-9791-8fe601704200.jpg?1783944846",
-  "scryfall": "https://scryfall.com/card/8ed/17/diving-griffin?utm_source=api",
   "power": 2,
   "toughness": 2,
   "keywords": [
@@ -658,61 +3007,11 @@
   "text": "Flying, haste",
   "img": "https://cards.scryfall.io/normal/front/5/2/52b0ba0d-078e-4f54-81da-88f86227df4f.jpg?1783933968",
   "art": "https://cards.scryfall.io/art_crop/front/5/2/52b0ba0d-078e-4f54-81da-88f86227df4f.jpg?1783933968",
-  "scryfall": "https://scryfall.com/card/gnt/57/snare-thopter?utm_source=api",
   "power": 3,
   "toughness": 2,
   "keywords": [
    "flying",
    "haste"
-  ]
- },
- {
-  "id": "abbey-griffin",
-  "name": "Abbey Griffin",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "W": 1
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Creature — Griffin",
-  "text": "Flying, vigilance",
-  "img": "https://cards.scryfall.io/normal/front/b/f/bf87803b-e7c6-4122-add4-72e596167b7e.jpg?1783941000",
-  "art": "https://cards.scryfall.io/art_crop/front/b/f/bf87803b-e7c6-4122-add4-72e596167b7e.jpg?1783941000",
-  "scryfall": "https://scryfall.com/card/isd/1/abbey-griffin?utm_source=api",
-  "power": 2,
-  "toughness": 2,
-  "keywords": [
-   "flying",
-   "vigilance"
-  ]
- },
- {
-  "id": "sunspire-griffin",
-  "name": "Sunspire Griffin",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 1,
-   "W": 2
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Creature — Griffin",
-  "text": "Flying",
-  "img": "https://cards.scryfall.io/normal/front/1/3/1388ce6e-8199-46c1-8ee3-71266b0929bf.jpg?1783940373",
-  "art": "https://cards.scryfall.io/art_crop/front/1/3/1388ce6e-8199-46c1-8ee3-71266b0929bf.jpg?1783940373",
-  "scryfall": "https://scryfall.com/card/rtr/25/sunspire-griffin?utm_source=api",
-  "power": 2,
-  "toughness": 3,
-  "keywords": [
-   "flying"
   ]
  },
  {
@@ -732,7 +3031,6 @@
   "text": "Flying",
   "img": "https://cards.scryfall.io/normal/front/3/7/374cddb8-b360-4c7b-8911-a6a1b401ffdd.jpg?1783915698",
   "art": "https://cards.scryfall.io/art_crop/front/3/7/374cddb8-b360-4c7b-8911-a6a1b401ffdd.jpg?1783915698",
-  "scryfall": "https://scryfall.com/card/cmm/99/goliath-sphinx?utm_source=api",
   "power": 8,
   "toughness": 7,
   "keywords": [
@@ -740,412 +3038,96 @@
   ]
  },
  {
-  "id": "wicker-witch",
-  "name": "Wicker Witch",
-  "types": [
-   "Artifact",
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3
-  },
-  "colors": [],
-  "typeLine": "Artifact Creature — Scarecrow",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/a/e/ae115587-012d-40ff-a20d-270fabf2f8c6.jpg?1783937699",
-  "art": "https://cards.scryfall.io/art_crop/front/a/e/ae115587-012d-40ff-a20d-270fabf2f8c6.jpg?1783937699",
-  "scryfall": "https://scryfall.com/card/soi/268/wicker-witch?utm_source=api",
-  "power": 3,
-  "toughness": 1,
-  "keywords": []
- },
- {
-  "id": "armored-griffin",
-  "name": "Armored Griffin",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "W": 1
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Creature — Griffin",
-  "text": "Flying, vigilance",
-  "img": "https://cards.scryfall.io/normal/front/1/a/1af85ada-7d0c-4b0c-bbff-d294318d3d9f.jpg?1783936847",
-  "art": "https://cards.scryfall.io/art_crop/front/1/a/1af85ada-7d0c-4b0c-bbff-d294318d3d9f.jpg?1783936847",
-  "scryfall": "https://scryfall.com/card/pca/1/armored-griffin?utm_source=api",
-  "power": 2,
-  "toughness": 3,
-  "keywords": [
-   "flying",
-   "vigilance"
-  ]
- },
- {
-  "id": "armored-cancrix",
-  "name": "Armored Cancrix",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "U": 1
-  },
-  "colors": [
-   "U"
-  ],
-  "typeLine": "Creature — Crab",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/3/b/3b455b0f-a69c-43b4-bbf5-605ed41f10e0.jpg?1783939937",
-  "art": "https://cards.scryfall.io/art_crop/front/3/b/3b455b0f-a69c-43b4-bbf5-605ed41f10e0.jpg?1783939937",
-  "scryfall": "https://scryfall.com/card/m14/44/armored-cancrix?utm_source=api",
-  "power": 2,
-  "toughness": 5,
-  "keywords": []
- },
- {
-  "id": "wild-griffin",
-  "name": "Wild Griffin",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "W": 1
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Creature — Griffin",
-  "text": "Flying",
-  "img": "https://cards.scryfall.io/normal/front/e/0/e0494fcd-ec49-43fd-b83f-60aba735bd69.jpg?1783937329",
-  "art": "https://cards.scryfall.io/art_crop/front/e/0/e0494fcd-ec49-43fd-b83f-60aba735bd69.jpg?1783937329",
-  "scryfall": "https://scryfall.com/card/cn2/99/wild-griffin?utm_source=api",
-  "power": 2,
-  "toughness": 2,
-  "keywords": [
-   "flying"
-  ]
- },
- {
-  "id": "archangel",
-  "name": "Archangel",
+  "id": "cold-water-snapper",
+  "name": "Cold-Water Snapper",
   "types": [
    "Creature"
   ],
   "cost": {
    "generic": 5,
-   "W": 2
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Creature — Angel",
-  "text": "Flying, vigilance",
-  "img": "https://cards.scryfall.io/normal/front/8/5/85160859-9a2d-470b-a924-4b1b4caba860.jpg?1783939692",
-  "art": "https://cards.scryfall.io/art_crop/front/8/5/85160859-9a2d-470b-a924-4b1b4caba860.jpg?1783939692",
-  "scryfall": "https://scryfall.com/card/c13/5/archangel?utm_source=api",
-  "power": 5,
-  "toughness": 5,
-  "keywords": [
-   "flying",
-   "vigilance"
-  ]
- },
- {
-  "id": "prizefighter-construct",
-  "name": "Prizefighter Construct",
-  "types": [
-   "Artifact",
-   "Creature"
-  ],
-  "cost": {
-   "generic": 5
-  },
-  "colors": [],
-  "typeLine": "Artifact Creature — Construct",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/8/e/8e389c92-b54b-46b3-a7ab-b8a5a2a7d380.jpg?1783936720",
-  "art": "https://cards.scryfall.io/art_crop/front/8/e/8e389c92-b54b-46b3-a7ab-b8a5a2a7d380.jpg?1783936720",
-  "scryfall": "https://scryfall.com/card/aer/172/prizefighter-construct?utm_source=api",
-  "power": 6,
-  "toughness": 2,
-  "keywords": []
- },
- {
-  "id": "armored-whirl-turtle",
-  "name": "Armored Whirl Turtle",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
    "U": 1
   },
   "colors": [
    "U"
   ],
   "typeLine": "Creature — Turtle",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/f/c/fcc87fdf-6473-4b91-a8b9-2986e57dc071.jpg?1783934633",
-  "art": "https://cards.scryfall.io/art_crop/front/f/c/fcc87fdf-6473-4b91-a8b9-2986e57dc071.jpg?1783934633",
-  "scryfall": "https://scryfall.com/card/gs1/7/armored-whirl-turtle?utm_source=api",
-  "power": 0,
+  "text": "Hexproof (This creature can't be the target of spells or abilities your opponents control.)",
+  "img": "https://cards.scryfall.io/normal/front/c/f/cf339549-4325-40c6-adde-0cd31bb738e0.jpg?1783935027",
+  "art": "https://cards.scryfall.io/art_crop/front/c/f/cf339549-4325-40c6-adde-0cd31bb738e0.jpg?1783935027",
+  "power": 4,
   "toughness": 5,
-  "keywords": []
+  "keywords": [
+   "hexproof"
+  ]
  },
  {
-  "id": "scion-of-ugin",
-  "name": "Scion of Ugin",
+  "id": "arachnoid",
+  "name": "Arachnoid",
   "types": [
+   "Artifact",
    "Creature"
   ],
   "cost": {
    "generic": 6
   },
   "colors": [],
-  "typeLine": "Creature — Dragon Spirit",
-  "text": "Flying",
-  "img": "https://cards.scryfall.io/normal/front/2/9/2904aaaa-cd25-4c05-9d57-4c5a951ac6d9.jpg?1783935561",
-  "art": "https://cards.scryfall.io/art_crop/front/2/9/2904aaaa-cd25-4c05-9d57-4c5a951ac6d9.jpg?1783935561",
-  "scryfall": "https://scryfall.com/card/ima/1/scion-of-ugin?utm_source=api",
-  "power": 4,
-  "toughness": 4,
+  "typeLine": "Artifact Creature — Spider",
+  "text": "Reach (This creature can block creatures with flying.)",
+  "img": "https://cards.scryfall.io/normal/front/8/3/836d5ce6-d5c9-4fb5-8302-53d25b5531b5.jpg?1783944386",
+  "art": "https://cards.scryfall.io/art_crop/front/8/3/836d5ce6-d5c9-4fb5-8302-53d25b5531b5.jpg?1783944386",
+  "power": 2,
+  "toughness": 6,
   "keywords": [
-   "flying"
+   "reach"
   ]
  },
  {
-  "id": "air-elemental",
-  "name": "Air Elemental",
+  "id": "vampire-nighthawk",
+  "name": "Vampire Nighthawk",
   "types": [
    "Creature"
   ],
   "cost": {
-   "generic": 3,
-   "U": 2
+   "generic": 1,
+   "B": 2
   },
   "colors": [
-   "U"
+   "B"
   ],
-  "typeLine": "Creature — Elemental",
-  "text": "Flying",
-  "img": "https://cards.scryfall.io/normal/front/a/2/a27efec0-40c4-48bc-a21a-3af28a6529b5.jpg?1783933018",
-  "art": "https://cards.scryfall.io/art_crop/front/a/2/a27efec0-40c4-48bc-a21a-3af28a6529b5.jpg?1783933018",
-  "scryfall": "https://scryfall.com/card/m20/44/air-elemental?utm_source=api",
-  "power": 4,
-  "toughness": 4,
-  "keywords": [
-   "flying"
-  ]
- },
- {
-  "id": "sliver-construct",
-  "name": "Sliver Construct",
-  "types": [
-   "Artifact",
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3
-  },
-  "colors": [],
-  "typeLine": "Artifact Creature — Sliver Construct",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/3/1/3129645a-221c-4eb5-88fd-12cc742a1dfe.jpg?1783939893",
-  "art": "https://cards.scryfall.io/art_crop/front/3/1/3129645a-221c-4eb5-88fd-12cc742a1dfe.jpg?1783939893",
-  "scryfall": "https://scryfall.com/card/m14/218/sliver-construct?utm_source=api",
+  "typeLine": "Creature — Vampire Shaman",
+  "text": "Flying\nDeathtouch (Any amount of damage this deals to a creature is enough to destroy it.)\nLifelink (Damage dealt by this creature also causes you to gain that much life.)",
+  "img": "https://cards.scryfall.io/normal/front/7/a/7aff07f9-9528-4149-9af0-f4e3c66c9dc5.jpg?1787562825",
+  "art": "https://cards.scryfall.io/art_crop/front/7/a/7aff07f9-9528-4149-9af0-f4e3c66c9dc5.jpg?1787562825",
   "power": 2,
-  "toughness": 2,
-  "keywords": []
- },
- {
-  "id": "horned-turtle",
-  "name": "Horned Turtle",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "U": 1
-  },
-  "colors": [
-   "U"
-  ],
-  "typeLine": "Creature — Turtle",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/f/8/f8f2b7c1-9f2a-481d-94ee-04728828f7df.jpg?1783938499",
-  "art": "https://cards.scryfall.io/art_crop/front/f/8/f8f2b7c1-9f2a-481d-94ee-04728828f7df.jpg?1783938499",
-  "scryfall": "https://scryfall.com/card/tpr/53/horned-turtle?utm_source=api",
-  "power": 1,
-  "toughness": 4,
-  "keywords": []
- },
- {
-  "id": "ekundu-griffin",
-  "name": "Ekundu Griffin",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "W": 1
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Creature — Griffin",
-  "text": "Flying, first strike",
-  "img": "https://cards.scryfall.io/normal/front/a/1/a1eec4ac-7d28-4f76-a1d5-a0a19c142514.jpg?1783946212",
-  "art": "https://cards.scryfall.io/art_crop/front/a/1/a1eec4ac-7d28-4f76-a1d5-a0a19c142514.jpg?1783946212",
-  "scryfall": "https://scryfall.com/card/6ed/18/ekundu-griffin?utm_source=api",
-  "power": 2,
-  "toughness": 2,
-  "keywords": [
-   "flying",
-   "first strike"
-  ]
- },
- {
-  "id": "pearled-unicorn",
-  "name": "Pearled Unicorn",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "W": 1
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Creature — Unicorn",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/c/e/ce33ef5b-a0ff-459c-a9d4-a0a00ac66b31.jpg?1783946958",
-  "art": "https://cards.scryfall.io/art_crop/front/c/e/ce33ef5b-a0ff-459c-a9d4-a0a00ac66b31.jpg?1783946958",
-  "scryfall": "https://scryfall.com/card/5ed/50/pearled-unicorn?utm_source=api",
-  "power": 2,
-  "toughness": 2,
-  "keywords": []
- },
- {
-  "id": "shepherd-of-the-lost",
-  "name": "Shepherd of the Lost",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "W": 1
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Creature — Angel",
-  "text": "Flying, first strike, vigilance",
-  "img": "https://cards.scryfall.io/normal/front/f/f/ff23b1c2-7b99-4504-8944-ada264725524.jpg?1783942168",
-  "art": "https://cards.scryfall.io/art_crop/front/f/f/ff23b1c2-7b99-4504-8944-ada264725524.jpg?1783942168",
-  "scryfall": "https://scryfall.com/card/zen/34/shepherd-of-the-lost?utm_source=api",
-  "power": 3,
   "toughness": 3,
   "keywords": [
+   "deathtouch",
    "flying",
-   "vigilance",
-   "first strike"
+   "lifelink"
   ]
  },
  {
-  "id": "ancient-carp",
-  "name": "Ancient Carp",
+  "id": "vampire-of-the-dire-moon",
+  "name": "Vampire of the Dire Moon",
   "types": [
    "Creature"
   ],
   "cost": {
-   "generic": 4,
-   "U": 1
+   "generic": 0,
+   "B": 1
   },
   "colors": [
-   "U"
+   "B"
   ],
-  "typeLine": "Creature — Fish",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/1/f/1fef6e95-e7f1-4646-be5e-130c8b5a3ca6.jpg?1783938611",
-  "art": "https://cards.scryfall.io/art_crop/front/1/f/1fef6e95-e7f1-4646-be5e-130c8b5a3ca6.jpg?1783938611",
-  "scryfall": "https://scryfall.com/card/dtk/44/ancient-carp?utm_source=api",
-  "power": 2,
-  "toughness": 5,
-  "keywords": []
- },
- {
-  "id": "phyrexian-hulk",
-  "name": "Phyrexian Hulk",
-  "types": [
-   "Artifact",
-   "Creature"
-  ],
-  "cost": {
-   "generic": 6
-  },
-  "colors": [],
-  "typeLine": "Artifact Creature — Phyrexian Golem",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/3/0/304bc0a2-0cf4-4609-a0fc-de933402c64a.jpg?1783938446",
-  "art": "https://cards.scryfall.io/art_crop/front/3/0/304bc0a2-0cf4-4609-a0fc-de933402c64a.jpg?1783938446",
-  "scryfall": "https://scryfall.com/card/tpr/230/phyrexian-hulk?utm_source=api",
-  "power": 5,
-  "toughness": 4,
-  "keywords": []
- },
- {
-  "id": "serra-sphinx",
-  "name": "Serra Sphinx",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "U": 2
-  },
-  "colors": [
-   "U"
-  ],
-  "typeLine": "Creature — Sphinx",
-  "text": "Flying, vigilance",
-  "img": "https://cards.scryfall.io/normal/front/4/f/4fb01cf8-9bca-4446-9e56-62777c6dfbe8.jpg?1783930191",
-  "art": "https://cards.scryfall.io/art_crop/front/4/f/4fb01cf8-9bca-4446-9e56-62777c6dfbe8.jpg?1783930191",
-  "scryfall": "https://scryfall.com/card/2xm/68/serra-sphinx?utm_source=api",
-  "power": 4,
-  "toughness": 4,
+  "typeLine": "Creature — Vampire",
+  "text": "Deathtouch (Any amount of damage this deals to a creature is enough to destroy it.)\nLifelink (Damage dealt by this creature also causes you to gain that much life.)",
+  "img": "https://cards.scryfall.io/normal/front/b/3/b3c185b9-5d97-4a5a-af0b-8b9c44dcd235.jpg?1783932986",
+  "art": "https://cards.scryfall.io/art_crop/front/b/3/b3c185b9-5d97-4a5a-af0b-8b9c44dcd235.jpg?1783932986",
+  "power": 1,
+  "toughness": 1,
   "keywords": [
-   "flying",
-   "vigilance"
-  ]
- },
- {
-  "id": "shining-aerosaur",
-  "name": "Shining Aerosaur",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "W": 1
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Creature — Dinosaur",
-  "text": "Flying",
-  "img": "https://cards.scryfall.io/normal/front/8/e/8e900d0d-6f35-4e5d-9365-6ade227d218d.jpg?1783935791",
-  "art": "https://cards.scryfall.io/art_crop/front/8/e/8e900d0d-6f35-4e5d-9365-6ade227d218d.jpg?1783935791",
-  "scryfall": "https://scryfall.com/card/xln/36/shining-aerosaur?utm_source=api",
-  "power": 3,
-  "toughness": 4,
-  "keywords": [
-   "flying"
+   "lifelink",
+   "deathtouch"
   ]
  },
  {
@@ -1165,11 +3147,33 @@
   "text": "Deathtouch, lifelink",
   "img": "https://cards.scryfall.io/normal/front/8/6/8644d4d1-8499-40a8-a01f-68172c82bf58.jpg?1783930423",
   "art": "https://cards.scryfall.io/art_crop/front/8/6/8644d4d1-8499-40a8-a01f-68172c82bf58.jpg?1783930423",
-  "scryfall": "https://scryfall.com/card/jmp/239/gifted-aetherborn?utm_source=api",
   "power": 2,
   "toughness": 3,
   "keywords": [
    "lifelink",
+   "deathtouch"
+  ]
+ },
+ {
+  "id": "typhoid-rats",
+  "name": "Typhoid Rats",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 0,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Creature — Rat",
+  "text": "Deathtouch (Any amount of damage this deals to a creature is enough to destroy it.)",
+  "img": "https://cards.scryfall.io/normal/front/d/1/d13cb90b-50c3-46ef-83f8-812dfb7ff881.jpg?1783938691",
+  "art": "https://cards.scryfall.io/art_crop/front/d/1/d13cb90b-50c3-46ef-83f8-812dfb7ff881.jpg?1783938691",
+  "power": 1,
+  "toughness": 1,
+  "keywords": [
    "deathtouch"
   ]
  },
@@ -1190,7 +3194,6 @@
   "text": "Flying, first strike, haste",
   "img": "https://cards.scryfall.io/normal/front/6/e/6e068e80-ab5d-41b8-add9-bd49905e4992.jpg?1783912548",
   "art": "https://cards.scryfall.io/art_crop/front/6/e/6e068e80-ab5d-41b8-add9-bd49905e4992.jpg?1783912548",
-  "scryfall": "https://scryfall.com/card/clu/113/gurmag-swiftwing?utm_source=api",
   "power": 1,
   "toughness": 2,
   "keywords": [
@@ -1216,7 +3219,6 @@
   "text": "Lifelink, haste",
   "img": "https://cards.scryfall.io/normal/front/b/9/b9e03567-c95a-40b8-a75a-971076093f57.jpg?1783933451",
   "art": "https://cards.scryfall.io/art_crop/front/b/9/b9e03567-c95a-40b8-a75a-971076093f57.jpg?1783933451",
-  "scryfall": "https://scryfall.com/card/war/77/banehound?utm_source=api",
   "power": 1,
   "toughness": 1,
   "keywords": [
@@ -1242,7 +3244,6 @@
   "text": "Deathtouch",
   "img": "https://cards.scryfall.io/normal/front/8/1/817b5b18-beb5-48c8-aa45-0515ff9ca5da.jpg?1783905965",
   "art": "https://cards.scryfall.io/art_crop/front/8/1/817b5b18-beb5-48c8-aa45-0515ff9ca5da.jpg?1783905965",
-  "scryfall": "https://scryfall.com/card/eoe/105/hullcarver?utm_source=api",
   "power": 1,
   "toughness": 1,
   "keywords": [
@@ -1250,49 +3251,27 @@
   ]
  },
  {
-  "id": "dwarven-trader",
-  "name": "Dwarven Trader",
+  "id": "midnight-assassin",
+  "name": "Midnight Assassin",
   "types": [
    "Creature"
   ],
   "cost": {
-   "generic": 0,
-   "R": 1
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Creature — Dwarf",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/4/d/4db9aa47-f42b-41e9-948c-8b012c3809fb.jpg?1783947283",
-  "art": "https://cards.scryfall.io/art_crop/front/4/d/4db9aa47-f42b-41e9-948c-8b012c3809fb.jpg?1783947283",
-  "scryfall": "https://scryfall.com/card/hml/72a/dwarven-trader?utm_source=api",
-  "power": 1,
-  "toughness": 1,
-  "keywords": []
- },
- {
-  "id": "hired-poisoner",
-  "name": "Hired Poisoner",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 0,
+   "generic": 2,
    "B": 1
   },
   "colors": [
    "B"
   ],
-  "typeLine": "Creature — Human Assassin",
-  "text": "Deathtouch",
-  "img": "https://cards.scryfall.io/normal/front/b/f/bf97e572-90d6-46fc-81c3-956a7ef88983.jpg?1783934175",
-  "art": "https://cards.scryfall.io/art_crop/front/b/f/bf97e572-90d6-46fc-81c3-956a7ef88983.jpg?1783934175",
-  "scryfall": "https://scryfall.com/card/grn/72/hired-poisoner?utm_source=api",
+  "typeLine": "Creature — Vampire Assassin",
+  "text": "Flying\nDeathtouch (Any amount of damage this deals to a creature is enough to destroy it.)",
+  "img": "https://cards.scryfall.io/normal/front/0/2/02a4a5b3-0477-4709-8bce-3e01f54001b6.jpg?1783923128",
+  "art": "https://cards.scryfall.io/art_crop/front/0/2/02a4a5b3-0477-4709-8bce-3e01f54001b6.jpg?1783923128",
   "power": 1,
-  "toughness": 1,
+  "toughness": 2,
   "keywords": [
-   "deathtouch"
+   "deathtouch",
+   "flying"
   ]
  },
  {
@@ -1312,11 +3291,58 @@
   "text": "Lifelink",
   "img": "https://cards.scryfall.io/normal/front/3/8/3887af00-a87d-4396-b82b-38b88c084e8e.jpg?1783930429",
   "art": "https://cards.scryfall.io/art_crop/front/3/8/3887af00-a87d-4396-b82b-38b88c084e8e.jpg?1783930429",
-  "scryfall": "https://scryfall.com/card/jmp/218/child-of-night?utm_source=api",
   "power": 2,
   "toughness": 1,
   "keywords": [
    "lifelink"
+  ]
+ },
+ {
+  "id": "goblin-trailblazer",
+  "name": "Goblin Trailblazer",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Goblin Pirate",
+  "text": "Menace (This creature can't be blocked except by two or more creatures.)",
+  "img": "https://cards.scryfall.io/normal/front/c/a/ca382425-2454-4300-b903-fdefd31582d3.jpg?1783928813",
+  "art": "https://cards.scryfall.io/art_crop/front/c/a/ca382425-2454-4300-b903-fdefd31582d3.jpg?1783928813",
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "menace"
+  ]
+ },
+ {
+  "id": "quaketusk-boar",
+  "name": "Quaketusk Boar",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Elemental Boar",
+  "text": "Reach, trample, haste",
+  "img": "https://cards.scryfall.io/normal/front/2/f/2f2b7fd3-a139-49ea-8a89-b64261e868ef.jpg?1783910819",
+  "art": "https://cards.scryfall.io/art_crop/front/2/f/2f2b7fd3-a139-49ea-8a89-b64261e868ef.jpg?1783910819",
+  "power": 5,
+  "toughness": 5,
+  "keywords": [
+   "reach",
+   "haste",
+   "trample"
   ]
  },
  {
@@ -1336,7 +3362,6 @@
   "text": "Trample, haste",
   "img": "https://cards.scryfall.io/normal/front/d/5/d5222448-95d1-4b63-ab76-d5060febcf38.jpg?1783935749",
   "art": "https://cards.scryfall.io/art_crop/front/d/5/d5222448-95d1-4b63-ab76-d5060febcf38.jpg?1783935749",
-  "scryfall": "https://scryfall.com/card/xln/138/charging-monstrosaur?utm_source=api",
   "power": 5,
   "toughness": 5,
   "keywords": [
@@ -1345,24 +3370,28 @@
   ]
  },
  {
-  "id": "omega-myr",
-  "name": "Omega Myr",
+  "id": "daggerdrome-imp",
+  "name": "Daggerdrome Imp",
   "types": [
-   "Artifact",
    "Creature"
   ],
   "cost": {
-   "generic": 2
+   "generic": 1,
+   "B": 1
   },
-  "colors": [],
-  "typeLine": "Artifact Creature — Myr",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/d/d/ddaa5c60-054f-4397-a110-21df58264caf.jpg?1783944509",
-  "art": "https://cards.scryfall.io/art_crop/front/d/d/ddaa5c60-054f-4397-a110-21df58264caf.jpg?1783944509",
-  "scryfall": "https://scryfall.com/card/mrd/223/omega-myr?utm_source=api",
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Creature — Imp",
+  "text": "Flying\nLifelink (Damage dealt by this creature also causes you to gain that much life.)",
+  "img": "https://cards.scryfall.io/normal/front/6/d/6d9417ab-e2af-436b-9677-6e0120770d80.jpg?1783934826",
+  "art": "https://cards.scryfall.io/art_crop/front/6/d/6d9417ab-e2af-436b-9677-6e0120770d80.jpg?1783934826",
   "power": 1,
-  "toughness": 2,
-  "keywords": []
+  "toughness": 1,
+  "keywords": [
+   "flying",
+   "lifelink"
+  ]
  },
  {
   "id": "volcanic-dragon",
@@ -1381,12 +3410,57 @@
   "text": "Flying, haste",
   "img": "https://cards.scryfall.io/normal/front/4/6/46419d29-21a1-4753-a2f0-1d0d996ec54e.jpg?1783928803",
   "art": "https://cards.scryfall.io/art_crop/front/4/6/46419d29-21a1-4753-a2f0-1d0d996ec54e.jpg?1783928803",
-  "scryfall": "https://scryfall.com/card/cmr/207/volcanic-dragon?utm_source=api",
   "power": 4,
   "toughness": 4,
   "keywords": [
    "flying",
    "haste"
+  ]
+ },
+ {
+  "id": "raging-redcap",
+  "name": "Raging Redcap",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "R": 1
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Goblin Knight",
+  "text": "Double strike (This creature deals both first-strike and regular combat damage.)",
+  "img": "https://cards.scryfall.io/normal/front/9/6/9627b0a7-bda9-44df-81c9-aa70cc976331.jpg?1783908952",
+  "art": "https://cards.scryfall.io/art_crop/front/9/6/9627b0a7-bda9-44df-81c9-aa70cc976331.jpg?1783908952",
+  "power": 1,
+  "toughness": 2,
+  "keywords": [
+   "double strike"
+  ]
+ },
+ {
+  "id": "hired-blade",
+  "name": "Hired Blade",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Creature — Human Assassin",
+  "text": "Flash (You may cast this spell any time you could cast an instant.)",
+  "img": "https://cards.scryfall.io/normal/front/7/6/7624c9aa-2f47-4fcc-a9fe-cc843e8de053.jpg?1783934570",
+  "art": "https://cards.scryfall.io/art_crop/front/7/6/7624c9aa-2f47-4fcc-a9fe-cc843e8de053.jpg?1783934570",
+  "power": 3,
+  "toughness": 2,
+  "keywords": [
+   "flash"
   ]
  },
  {
@@ -1406,11 +3480,34 @@
   "text": "Haste",
   "img": "https://cards.scryfall.io/normal/front/d/6/d6eb23c9-6061-4ad1-a8f3-2c791c49f352.jpg?1783928234",
   "art": "https://cards.scryfall.io/art_crop/front/d/6/d6eb23c9-6061-4ad1-a8f3-2c791c49f352.jpg?1783928234",
-  "scryfall": "https://scryfall.com/card/khm/124/breakneck-berserker?utm_source=api",
   "power": 3,
   "toughness": 2,
   "keywords": [
    "haste"
+  ]
+ },
+ {
+  "id": "dragon-style-twins",
+  "name": "Dragon-Style Twins",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 3,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Human Monk",
+  "text": "Double strike\nProwess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)",
+  "img": "https://cards.scryfall.io/normal/front/6/4/646edf58-4bc5-4d87-af68-b8b006ccb806.jpg?1783939073",
+  "art": "https://cards.scryfall.io/art_crop/front/6/4/646edf58-4bc5-4d87-af68-b8b006ccb806.jpg?1783939073",
+  "power": 3,
+  "toughness": 3,
+  "keywords": [
+   "prowess",
+   "double strike"
   ]
  },
  {
@@ -1430,7 +3527,6 @@
   "text": "Haste",
   "img": "https://cards.scryfall.io/normal/front/f/5/f55d43d4-5f63-45c3-b8f8-0aebd23750a5.jpg?1783926476",
   "art": "https://cards.scryfall.io/art_crop/front/f/5/f55d43d4-5f63-45c3-b8f8-0aebd23750a5.jpg?1783926476",
-  "scryfall": "https://scryfall.com/card/afr/149/hulking-bugbear?utm_source=api",
   "power": 3,
   "toughness": 3,
   "keywords": [
@@ -1438,72 +3534,96 @@
   ]
  },
  {
-  "id": "goblin-assailant",
-  "name": "Goblin Assailant",
+  "id": "cursed-minotaur",
+  "name": "Cursed Minotaur",
   "types": [
    "Creature"
   ],
   "cost": {
-   "generic": 1,
-   "R": 1
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Creature — Goblin Warrior",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/8/c/8cfefb65-b6e4-44a1-baa9-d3c00ee8ba96.jpg?1783932903",
-  "art": "https://cards.scryfall.io/art_crop/front/8/c/8cfefb65-b6e4-44a1-baa9-d3c00ee8ba96.jpg?1783932903",
-  "scryfall": "https://scryfall.com/card/m20/330/goblin-assailant?utm_source=api",
-  "power": 2,
-  "toughness": 2,
-  "keywords": []
- },
- {
-  "id": "nest-robber",
-  "name": "Nest Robber",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 1,
-   "R": 1
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Creature — Dinosaur",
-  "text": "Haste",
-  "img": "https://cards.scryfall.io/normal/front/5/7/576d3845-f45a-4db0-9f7c-845cedb64c49.jpg?1783935742",
-  "art": "https://cards.scryfall.io/art_crop/front/5/7/576d3845-f45a-4db0-9f7c-845cedb64c49.jpg?1783935742",
-  "scryfall": "https://scryfall.com/card/xln/152/nest-robber?utm_source=api",
-  "power": 2,
-  "toughness": 1,
-  "keywords": [
-   "haste"
-  ]
- },
- {
-  "id": "gutter-skulk",
-  "name": "Gutter Skulk",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 1,
+   "generic": 2,
    "B": 1
   },
   "colors": [
    "B"
   ],
-  "typeLine": "Creature — Zombie Rat",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/8/3/830c7c77-20c4-429f-88c7-b85ab7a0e38b.jpg?1783940131",
-  "art": "https://cards.scryfall.io/art_crop/front/8/3/830c7c77-20c4-429f-88c7-b85ab7a0e38b.jpg?1783940131",
-  "scryfall": "https://scryfall.com/card/gtc/67/gutter-skulk?utm_source=api",
-  "power": 2,
+  "typeLine": "Creature — Zombie Minotaur",
+  "text": "Menace (This creature can't be blocked except by two or more creatures.)",
+  "img": "https://cards.scryfall.io/normal/front/a/3/a3990d2f-39d9-49f9-936f-1d40adcf295c.jpg?1783936509",
+  "art": "https://cards.scryfall.io/art_crop/front/a/3/a3990d2f-39d9-49f9-936f-1d40adcf295c.jpg?1783936509",
+  "power": 3,
   "toughness": 2,
-  "keywords": []
+  "keywords": [
+   "menace"
+  ]
+ },
+ {
+  "id": "ripscale-predator",
+  "name": "Ripscale Predator",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 4,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Dinosaur",
+  "text": "Menace (This creature can't be blocked except by two or more creatures.)",
+  "img": "https://cards.scryfall.io/normal/front/4/1/41578103-04a3-40eb-80b5-cdb5f2ecc297.jpg?1783912534",
+  "art": "https://cards.scryfall.io/art_crop/front/4/1/41578103-04a3-40eb-80b5-cdb5f2ecc297.jpg?1783912534",
+  "power": 6,
+  "toughness": 5,
+  "keywords": [
+   "menace"
+  ]
+ },
+ {
+  "id": "two-headed-cerberus",
+  "name": "Two-Headed Cerberus",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "R": 2
+  },
+  "colors": [
+   "R"
+  ],
+  "typeLine": "Creature — Dog",
+  "text": "Double strike (This creature deals both first-strike and regular combat damage.)",
+  "img": "https://cards.scryfall.io/normal/front/f/8/f8d2f75c-ef2a-4d30-86d1-c47307fc47ac.jpg?1783939753",
+  "art": "https://cards.scryfall.io/art_crop/front/f/8/f8d2f75c-ef2a-4d30-86d1-c47307fc47ac.jpg?1783939753",
+  "power": 1,
+  "toughness": 2,
+  "keywords": [
+   "double strike"
+  ]
+ },
+ {
+  "id": "markov-patrician",
+  "name": "Markov Patrician",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 2,
+   "B": 1
+  },
+  "colors": [
+   "B"
+  ],
+  "typeLine": "Creature — Vampire",
+  "text": "Lifelink (Damage dealt by this creature also causes you to gain that much life.)",
+  "img": "https://cards.scryfall.io/normal/front/2/9/29c3d3f7-5e28-4fec-8422-87856fcd1e8e.jpg?1783940952",
+  "art": "https://cards.scryfall.io/art_crop/front/2/9/29c3d3f7-5e28-4fec-8422-87856fcd1e8e.jpg?1783940952",
+  "power": 3,
+  "toughness": 1,
+  "keywords": [
+   "lifelink"
+  ]
  },
  {
   "id": "frenzied-raptor",
@@ -1522,7 +3642,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/5/f/5fb22ac0-3863-4165-8c93-f2ec1775474f.jpg?1783931050",
   "art": "https://cards.scryfall.io/art_crop/front/5/f/5fb22ac0-3863-4165-8c93-f2ec1775474f.jpg?1783931050",
-  "scryfall": "https://scryfall.com/card/iko/120/frenzied-raptor?utm_source=api",
   "power": 4,
   "toughness": 2,
   "keywords": []
@@ -1544,510 +3663,33 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/e/6/e66e1d97-d676-471a-a140-deb39600a7a9.jpg?1783938592",
   "art": "https://cards.scryfall.io/art_crop/front/e/6/e66e1d97-d676-471a-a140-deb39600a7a9.jpg?1783938592",
-  "scryfall": "https://scryfall.com/card/dtk/127/wandering-tombshell?utm_source=api",
   "power": 1,
   "toughness": 6,
   "keywords": []
  },
  {
-  "id": "fire-elemental",
-  "name": "Fire Elemental",
+  "id": "dragon-sniper",
+  "name": "Dragon Sniper",
   "types": [
    "Creature"
   ],
   "cost": {
-   "generic": 3,
-   "R": 2
+   "generic": 0,
+   "G": 1
   },
   "colors": [
-   "R"
+   "G"
   ],
-  "typeLine": "Creature — Elemental",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/d/c/dc506f58-048d-49cc-ad8c-2eb851b08bb6.jpg?1783908952",
-  "art": "https://cards.scryfall.io/art_crop/front/d/c/dc506f58-048d-49cc-ad8c-2eb851b08bb6.jpg?1783908952",
-  "scryfall": "https://scryfall.com/card/fdn/538/fire-elemental?utm_source=api",
-  "power": 5,
-  "toughness": 4,
-  "keywords": []
- },
- {
-  "id": "pilgrim-of-the-fires",
-  "name": "Pilgrim of the Fires",
-  "types": [
-   "Artifact",
-   "Creature"
-  ],
-  "cost": {
-   "generic": 7
-  },
-  "colors": [],
-  "typeLine": "Artifact Creature — Golem",
-  "text": "First strike, trample",
-  "img": "https://cards.scryfall.io/normal/front/4/5/45a60623-d523-4b43-89b0-8e89568546c7.jpg?1783938670",
-  "art": "https://cards.scryfall.io/art_crop/front/4/5/45a60623-d523-4b43-89b0-8e89568546c7.jpg?1783938670",
-  "scryfall": "https://scryfall.com/card/frf/162/pilgrim-of-the-fires?utm_source=api",
-  "power": 6,
-  "toughness": 4,
-  "keywords": [
-   "first strike",
-   "trample"
-  ]
- },
- {
-  "id": "rotting-mastodon",
-  "name": "Rotting Mastodon",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Zombie Elephant",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/1/5/1564a20a-0e57-4ced-9eda-7acff74274e7.jpg?1783939078",
-  "art": "https://cards.scryfall.io/art_crop/front/1/5/1564a20a-0e57-4ced-9eda-7acff74274e7.jpg?1783939078",
-  "scryfall": "https://scryfall.com/card/ktk/87/rotting-mastodon?utm_source=api",
-  "power": 2,
-  "toughness": 8,
-  "keywords": []
- },
- {
-  "id": "gloom-pangolin",
-  "name": "Gloom Pangolin",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Nightmare Pangolin",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/3/f/3f135dd7-2a4f-4c83-9a90-76bcab3cc33d.jpg?1783931061",
-  "art": "https://cards.scryfall.io/art_crop/front/3/f/3f135dd7-2a4f-4c83-9a90-76bcab3cc33d.jpg?1783931061",
-  "scryfall": "https://scryfall.com/card/iko/89/gloom-pangolin?utm_source=api",
+  "typeLine": "Creature — Human Archer",
+  "text": "Reach, vigilance, deathtouch",
+  "img": "https://cards.scryfall.io/normal/front/0/7/074b1e00-45bb-4436-8f5e-058512b2d08a.jpg?1783907344",
+  "art": "https://cards.scryfall.io/art_crop/front/0/7/074b1e00-45bb-4436-8f5e-058512b2d08a.jpg?1783907344",
   "power": 1,
-  "toughness": 5,
-  "keywords": []
- },
- {
-  "id": "barony-vampire",
-  "name": "Barony Vampire",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Vampire",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/b/0/b0130d04-05f2-44f5-bd6c-8b11f798b69e.jpg?1783933000",
-  "art": "https://cards.scryfall.io/art_crop/front/b/0/b0130d04-05f2-44f5-bd6c-8b11f798b69e.jpg?1783933000",
-  "scryfall": "https://scryfall.com/card/m20/85/barony-vampire?utm_source=api",
-  "power": 3,
-  "toughness": 2,
-  "keywords": []
- },
- {
-  "id": "goblin-roughrider",
-  "name": "Goblin Roughrider",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "R": 1
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Creature — Goblin Knight",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/9/0/9097ec4a-6c0e-4c27-8910-29ac47612031.jpg?1783939173",
-  "art": "https://cards.scryfall.io/art_crop/front/9/0/9097ec4a-6c0e-4c27-8910-29ac47612031.jpg?1783939173",
-  "scryfall": "https://scryfall.com/card/m15/146/goblin-roughrider?utm_source=api",
-  "power": 3,
-  "toughness": 2,
-  "keywords": []
- },
- {
-  "id": "charity-extractor",
-  "name": "Charity Extractor",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Human Knight",
-  "text": "Lifelink",
-  "img": "https://cards.scryfall.io/normal/front/3/5/3594f726-cdbb-4b7d-bcfe-17d5f8cd5228.jpg?1783933451",
-  "art": "https://cards.scryfall.io/art_crop/front/3/5/3594f726-cdbb-4b7d-bcfe-17d5f8cd5228.jpg?1783933451",
-  "scryfall": "https://scryfall.com/card/war/81/charity-extractor?utm_source=api",
-  "power": 1,
-  "toughness": 5,
-  "keywords": [
-   "lifelink"
-  ]
- },
- {
-  "id": "dross-crocodile",
-  "name": "Dross Crocodile",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Zombie Crocodile",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/e/f/efd5c07e-4ece-4c8b-93c8-6abd7dd3a39a.jpg?1783943039",
-  "art": "https://cards.scryfall.io/art_crop/front/e/f/efd5c07e-4ece-4c8b-93c8-6abd7dd3a39a.jpg?1783943039",
-  "scryfall": "https://scryfall.com/card/10e/138/dross-crocodile?utm_source=api",
-  "power": 5,
   "toughness": 1,
-  "keywords": []
- },
- {
-  "id": "catacomb-crocodile",
-  "name": "Catacomb Crocodile",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Crocodile",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/4/4/440c53f0-7922-4e14-802d-d7a22f8fed85.jpg?1783933696",
-  "art": "https://cards.scryfall.io/art_crop/front/4/4/440c53f0-7922-4e14-802d-d7a22f8fed85.jpg?1783933696",
-  "scryfall": "https://scryfall.com/card/rna/67/catacomb-crocodile?utm_source=api",
-  "power": 3,
-  "toughness": 7,
-  "keywords": []
- },
- {
-  "id": "minotaur-aggressor",
-  "name": "Minotaur Aggressor",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 6,
-   "R": 1
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Creature — Minotaur Berserker",
-  "text": "First strike, haste",
-  "img": "https://cards.scryfall.io/normal/front/e/2/e22959dc-8759-454e-80b9-623a799af354.jpg?1783940354",
-  "art": "https://cards.scryfall.io/art_crop/front/e/2/e22959dc-8759-454e-80b9-623a799af354.jpg?1783940354",
-  "scryfall": "https://scryfall.com/card/rtr/100/minotaur-aggressor?utm_source=api",
-  "power": 6,
-  "toughness": 2,
   "keywords": [
-   "first strike",
-   "haste"
-  ]
- },
- {
-  "id": "highborn-vampire",
-  "name": "Highborn Vampire",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Vampire Warrior",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/2/4/24c40082-516e-4381-a4cc-e61c5a9a6cac.jpg?1783929374",
-  "art": "https://cards.scryfall.io/art_crop/front/2/4/24c40082-516e-4381-a4cc-e61c5a9a6cac.jpg?1783929374",
-  "scryfall": "https://scryfall.com/card/znr/107/highborn-vampire?utm_source=api",
-  "power": 4,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "yotian-soldier",
-  "name": "Yotian Soldier",
-  "types": [
-   "Artifact",
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3
-  },
-  "colors": [],
-  "typeLine": "Artifact Creature — Soldier",
-  "text": "Vigilance",
-  "img": "https://cards.scryfall.io/normal/front/9/e/9e71190b-c96c-4aea-9696-780c69eff395.jpg?1783934784",
-  "art": "https://cards.scryfall.io/art_crop/front/9/e/9e71190b-c96c-4aea-9696-780c69eff395.jpg?1783934784",
-  "scryfall": "https://scryfall.com/card/bbd/249/yotian-soldier?utm_source=api",
-  "power": 1,
-  "toughness": 4,
-  "keywords": [
-   "vigilance"
-  ]
- },
- {
-  "id": "nyxborn-brute",
-  "name": "Nyxborn Brute",
-  "types": [
-   "Enchantment",
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "R": 2
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Enchantment Creature — Cyclops",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/0/5/05bc4236-566f-401b-b9d7-f58126fa228b.jpg?1783931550",
-  "art": "https://cards.scryfall.io/art_crop/front/0/5/05bc4236-566f-401b-b9d7-f58126fa228b.jpg?1783931550",
-  "scryfall": "https://scryfall.com/card/thb/144/nyxborn-brute?utm_source=api",
-  "power": 7,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "witch-s-familiar",
-  "name": "Witch's Familiar",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Frog",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/8/c/8c9f3b3b-de16-4ae5-844e-1373e0f84469.jpg?1783939178",
-  "art": "https://cards.scryfall.io/art_crop/front/8/c/8c9f3b3b-de16-4ae5-844e-1373e0f84469.jpg?1783939178",
-  "scryfall": "https://scryfall.com/card/m15/123/witchs-familiar?utm_source=api",
-  "power": 2,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "skeletal-crocodile",
-  "name": "Skeletal Crocodile",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Crocodile Skeleton",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/e/b/ebcbbd6f-2915-4b4c-85d3-1d9b55d36c11.jpg?1783946823",
-  "art": "https://cards.scryfall.io/art_crop/front/e/b/ebcbbd6f-2915-4b4c-85d3-1d9b55d36c11.jpg?1783946823",
-  "scryfall": "https://scryfall.com/card/por/110/skeletal-crocodile?utm_source=api",
-  "power": 5,
-  "toughness": 1,
-  "keywords": []
- },
- {
-  "id": "rakdos-ragemutt",
-  "name": "Rakdos Ragemutt",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "B": 1,
-   "R": 1
-  },
-  "colors": [
-   "B",
-   "R"
-  ],
-  "typeLine": "Creature — Elemental Dog",
-  "text": "Lifelink, haste",
-  "img": "https://cards.scryfall.io/normal/front/b/b/bb36840a-3f85-4fca-87ab-379dfce8e542.jpg?1783940334",
-  "art": "https://cards.scryfall.io/art_crop/front/b/b/bb36840a-3f85-4fca-87ab-379dfce8e542.jpg?1783940334",
-  "scryfall": "https://scryfall.com/card/rtr/185/rakdos-ragemutt?utm_source=api",
-  "power": 3,
-  "toughness": 3,
-  "keywords": [
-   "lifelink",
-   "haste"
-  ]
- },
- {
-  "id": "insatiable-harpy",
-  "name": "Insatiable Harpy",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "B": 2
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Harpy",
-  "text": "Flying, lifelink",
-  "img": "https://cards.scryfall.io/normal/front/1/4/1439ed8d-ae11-4159-9420-5d98c6cc93b3.jpg?1783939778",
-  "art": "https://cards.scryfall.io/art_crop/front/1/4/1439ed8d-ae11-4159-9420-5d98c6cc93b3.jpg?1783939778",
-  "scryfall": "https://scryfall.com/card/ths/92/insatiable-harpy?utm_source=api",
-  "power": 2,
-  "toughness": 2,
-  "keywords": [
-   "flying",
-   "lifelink"
-  ]
- },
- {
-  "id": "borderland-minotaur",
-  "name": "Borderland Minotaur",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "R": 2
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Creature — Minotaur Warrior",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/8/b/8b8c80ea-7b29-4335-ba7b-3e51a5a104a9.jpg?1783930400",
-  "art": "https://cards.scryfall.io/art_crop/front/8/b/8b8c80ea-7b29-4335-ba7b-3e51a5a104a9.jpg?1783930400",
-  "scryfall": "https://scryfall.com/card/jmp/301/borderland-minotaur?utm_source=api",
-  "power": 4,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "balduvian-barbarians",
-  "name": "Balduvian Barbarians",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 1,
-   "R": 2
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Creature — Human Barbarian",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/c/a/caba00ff-df58-456e-8aeb-fc8b632018a6.jpg?1783943977",
-  "art": "https://cards.scryfall.io/art_crop/front/c/a/caba00ff-df58-456e-8aeb-fc8b632018a6.jpg?1783943977",
-  "scryfall": "https://scryfall.com/card/9ed/174/balduvian-barbarians?utm_source=api",
-  "power": 3,
-  "toughness": 2,
-  "keywords": []
- },
- {
-  "id": "rotting-fensnake",
-  "name": "Rotting Fensnake",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Zombie Snake",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/c/2/c21cbb10-9157-4887-a752-29b9e94fc77a.jpg?1783940950",
-  "art": "https://cards.scryfall.io/art_crop/front/c/2/c21cbb10-9157-4887-a752-29b9e94fc77a.jpg?1783940950",
-  "scryfall": "https://scryfall.com/card/isd/113/rotting-fensnake?utm_source=api",
-  "power": 5,
-  "toughness": 1,
-  "keywords": []
- },
- {
-  "id": "vampire-noble",
-  "name": "Vampire Noble",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Creature — Vampire Noble",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/b/2/b2435f17-0378-4480-8d56-d256245c7ced.jpg?1783937761",
-  "art": "https://cards.scryfall.io/art_crop/front/b/2/b2435f17-0378-4480-8d56-d256245c7ced.jpg?1783937761",
-  "scryfall": "https://scryfall.com/card/soi/143/vampire-noble?utm_source=api",
-  "power": 3,
-  "toughness": 2,
-  "keywords": []
- },
- {
-  "id": "lightning-hounds",
-  "name": "Lightning Hounds",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "R": 2
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Creature — Dog",
-  "text": "First strike",
-  "img": "https://cards.scryfall.io/normal/front/3/8/38c82a1d-5db1-4090-b446-cc5bc6dc811d.jpg?1783945936",
-  "art": "https://cards.scryfall.io/art_crop/front/3/8/38c82a1d-5db1-4090-b446-cc5bc6dc811d.jpg?1783945936",
-  "scryfall": "https://scryfall.com/card/mmq/201/lightning-hounds?utm_source=api",
-  "power": 3,
-  "toughness": 2,
-  "keywords": [
-   "first strike"
+   "reach",
+   "vigilance",
+   "deathtouch"
   ]
  },
  {
@@ -2067,10 +3709,33 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/c/1/c1db84d8-d426-4c0d-b44e-5be7b0f5f5bf.jpg?1783934535",
   "art": "https://cards.scryfall.io/art_crop/front/c/1/c1db84d8-d426-4c0d-b44e-5be7b0f5f5bf.jpg?1783934535",
-  "scryfall": "https://scryfall.com/card/m19/185/gigantosaurus?utm_source=api",
   "power": 10,
   "toughness": 10,
   "keywords": []
+ },
+ {
+  "id": "deadly-recluse",
+  "name": "Deadly Recluse",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Spider",
+  "text": "Reach (This creature can block creatures with flying.)\nDeathtouch (Any amount of damage this deals to a creature is enough to destroy it.)",
+  "img": "https://cards.scryfall.io/normal/front/d/4/d432d17e-052b-4a81-bad8-14babf6e593f.jpg?1783915635",
+  "art": "https://cards.scryfall.io/art_crop/front/d/4/d432d17e-052b-4a81-bad8-14babf6e593f.jpg?1783915635",
+  "power": 1,
+  "toughness": 2,
+  "keywords": [
+   "reach",
+   "deathtouch"
+  ]
  },
  {
   "id": "quakestrider-ceratops",
@@ -2089,7 +3754,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/0/6/067f72c2-ead6-4879-bc9d-696c9f87c0b2.jpg?1783909095",
   "art": "https://cards.scryfall.io/art_crop/front/0/6/067f72c2-ead6-4879-bc9d-696c9f87c0b2.jpg?1783909095",
-  "scryfall": "https://scryfall.com/card/fdn/110/quakestrider-ceratops?utm_source=api",
   "power": 12,
   "toughness": 8,
   "keywords": []
@@ -2112,10 +3776,33 @@
   "text": "Deathtouch",
   "img": "https://cards.scryfall.io/normal/front/2/d/2dd0fef1-209f-4de5-a736-8f9bca2faa0a.jpg?1783923851",
   "art": "https://cards.scryfall.io/art_crop/front/2/d/2dd0fef1-209f-4de5-a736-8f9bca2faa0a.jpg?1783923851",
-  "scryfall": "https://scryfall.com/card/neo/183/fang-of-shigeki?utm_source=api",
   "power": 1,
   "toughness": 1,
   "keywords": [
+   "deathtouch"
+  ]
+ },
+ {
+  "id": "thornweald-archer",
+  "name": "Thornweald Archer",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Elf Archer",
+  "text": "Reach (This creature can block creatures with flying.)\nDeathtouch (Any amount of damage this deals to a creature is enough to destroy it.)",
+  "img": "https://cards.scryfall.io/normal/front/1/8/189f6199-f2fe-49a5-89ca-3c4cb39fbf2b.jpg?1783908944",
+  "art": "https://cards.scryfall.io/art_crop/front/1/8/189f6199-f2fe-49a5-89ca-3c4cb39fbf2b.jpg?1783908944",
+  "power": 2,
+  "toughness": 1,
+  "keywords": [
+   "reach",
    "deathtouch"
   ]
  },
@@ -2136,7 +3823,6 @@
   "text": "Deathtouch",
   "img": "https://cards.scryfall.io/normal/front/4/2/424972d6-3b2c-449b-b786-749a77020fa1.jpg?1783911811",
   "art": "https://cards.scryfall.io/art_crop/front/4/2/424972d6-3b2c-449b-b786-749a77020fa1.jpg?1783911811",
-  "scryfall": "https://scryfall.com/card/otj/153/ankle-biter?utm_source=api",
   "power": 1,
   "toughness": 1,
   "keywords": [
@@ -2160,7 +3846,6 @@
   "text": "Deathtouch",
   "img": "https://cards.scryfall.io/normal/front/a/4/a4d35ec4-0e0d-4611-8ad9-39d2c8a2ad6e.jpg?1783931537",
   "art": "https://cards.scryfall.io/art_crop/front/a/4/a4d35ec4-0e0d-4611-8ad9-39d2c8a2ad6e.jpg?1783931537",
-  "scryfall": "https://scryfall.com/card/thb/179/moss-viper?utm_source=api",
   "power": 1,
   "toughness": 1,
   "keywords": [
@@ -2184,34 +3869,9 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/4/0/409f9b88-f03e-40b6-9883-68c14c37c0de.jpg?1783943001",
   "art": "https://cards.scryfall.io/art_crop/front/4/0/409f9b88-f03e-40b6-9883-68c14c37c0de.jpg?1783943001",
-  "scryfall": "https://scryfall.com/card/10e/268/grizzly-bears?utm_source=api",
   "power": 2,
   "toughness": 2,
   "keywords": []
- },
- {
-  "id": "tajuru-blightblade",
-  "name": "Tajuru Blightblade",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 0,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Elf Rogue",
-  "text": "Deathtouch",
-  "img": "https://cards.scryfall.io/normal/front/7/f/7f3d6020-6767-406c-bf28-6b3e9ae72f50.jpg?1783929330",
-  "art": "https://cards.scryfall.io/art_crop/front/7/f/7f3d6020-6767-406c-bf28-6b3e9ae72f50.jpg?1783929330",
-  "scryfall": "https://scryfall.com/card/znr/208/tajuru-blightblade?utm_source=api",
-  "power": 1,
-  "toughness": 1,
-  "keywords": [
-   "deathtouch"
-  ]
  },
  {
   "id": "alpine-grizzly",
@@ -2230,10 +3890,32 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/3/8/38bbf983-df71-4403-86f3-2e86aa8765b8.jpg?1783939069",
   "art": "https://cards.scryfall.io/art_crop/front/3/8/38bbf983-df71-4403-86f3-2e86aa8765b8.jpg?1783939069",
-  "scryfall": "https://scryfall.com/card/ktk/127/alpine-grizzly?utm_source=api",
   "power": 4,
   "toughness": 2,
   "keywords": []
+ },
+ {
+  "id": "ashcoat-bear",
+  "name": "Ashcoat Bear",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 1,
+   "G": 1
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Bear",
+  "text": "Flash (You may cast this spell any time you could cast an instant.)",
+  "img": "https://cards.scryfall.io/normal/front/9/b/9b7a6ab5-8a8f-492c-8484-3089354ce8cf.jpg?1783943213",
+  "art": "https://cards.scryfall.io/art_crop/front/9/b/9b7a6ab5-8a8f-492c-8484-3089354ce8cf.jpg?1783943213",
+  "power": 2,
+  "toughness": 2,
+  "keywords": [
+   "flash"
+  ]
  },
  {
   "id": "runeclaw-bear",
@@ -2252,7 +3934,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/d/1/d1995238-79cc-4381-9595-71ef11ea1e36.jpg?1783939162",
   "art": "https://cards.scryfall.io/art_crop/front/d/1/d1995238-79cc-4381-9595-71ef11ea1e36.jpg?1783939162",
-  "scryfall": "https://scryfall.com/card/m15/197/runeclaw-bear?utm_source=api",
   "power": 2,
   "toughness": 2,
   "keywords": []
@@ -2274,7 +3955,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/d/8/d8662ebb-068b-41d2-b504-4b5854e4d4aa.jpg?1783908951",
   "art": "https://cards.scryfall.io/art_crop/front/d/8/d8662ebb-068b-41d2-b504-4b5854e4d4aa.jpg?1783908951",
-  "scryfall": "https://scryfall.com/card/fdn/552/bear-cub?utm_source=api",
   "power": 2,
   "toughness": 2,
   "keywords": []
@@ -2296,10 +3976,32 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/e/f/ef5297cb-e763-4871-9cd3-0e2dbcc52095.jpg?1783947481",
   "art": "https://cards.scryfall.io/art_crop/front/e/f/ef5297cb-e763-4871-9cd3-0e2dbcc52095.jpg?1783947481",
-  "scryfall": "https://scryfall.com/card/ice/226/balduvian-bears?utm_source=api",
   "power": 2,
   "toughness": 2,
   "keywords": []
+ },
+ {
+  "id": "colossal-dreadmaw",
+  "name": "Colossal Dreadmaw",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 4,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Dinosaur",
+  "text": "Trample (This creature can deal excess combat damage to the player or planeswalker it's attacking.)",
+  "img": "https://cards.scryfall.io/normal/front/8/0/8059c52b-5d25-4052-b48a-e9e219a7a546.jpg?1783930678",
+  "art": "https://cards.scryfall.io/art_crop/front/8/0/8059c52b-5d25-4052-b48a-e9e219a7a546.jpg?1783930678",
+  "power": 6,
+  "toughness": 6,
+  "keywords": [
+   "trample"
+  ]
  },
  {
   "id": "leatherback-baloth",
@@ -2318,7 +4020,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/5/5/55f97b4c-42c7-4986-a150-0b8de11f0537.jpg?1783942043",
   "art": "https://cards.scryfall.io/art_crop/front/5/5/55f97b4c-42c7-4986-a150-0b8de11f0537.jpg?1783942043",
-  "scryfall": "https://scryfall.com/card/wwk/107/leatherback-baloth?utm_source=api",
   "power": 4,
   "toughness": 5,
   "keywords": []
@@ -2340,7 +4041,6 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/3/9/3928bbce-87b7-4b28-9af4-20362935c909.jpg?1783930677",
   "art": "https://cards.scryfall.io/art_crop/front/3/9/3928bbce-87b7-4b28-9af4-20362935c909.jpg?1783930677",
-  "scryfall": "https://scryfall.com/card/m21/184/garruks-gorehorn?utm_source=api",
   "power": 7,
   "toughness": 3,
   "keywords": []
@@ -2362,10 +4062,35 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/1/3/135946fc-fe67-401f-821d-d7145c63f030.jpg?1783939902",
   "art": "https://cards.scryfall.io/art_crop/front/1/3/135946fc-fe67-401f-821d-d7145c63f030.jpg?1783939902",
-  "scryfall": "https://scryfall.com/card/m14/182/kalonian-tusker?utm_source=api",
   "power": 3,
   "toughness": 3,
   "keywords": []
+ },
+ {
+  "id": "galewind-moose",
+  "name": "Galewind Moose",
+  "types": [
+   "Creature"
+  ],
+  "cost": {
+   "generic": 4,
+   "G": 2
+  },
+  "colors": [
+   "G"
+  ],
+  "typeLine": "Creature — Elemental Elk",
+  "text": "Flash\nReach, vigilance, trample",
+  "img": "https://cards.scryfall.io/normal/front/5/8/58706bd8-558a-43b9-9f1e-c1ff0044203b.jpg?1783910810",
+  "art": "https://cards.scryfall.io/art_crop/front/5/8/58706bd8-558a-43b9-9f1e-c1ff0044203b.jpg?1783910810",
+  "power": 6,
+  "toughness": 6,
+  "keywords": [
+   "reach",
+   "vigilance",
+   "trample",
+   "flash"
+  ]
  },
  {
   "id": "vorstclaw",
@@ -2384,76 +4109,33 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/7/9/79719ed0-468d-4946-8dfc-fb7e2b2e305e.jpg?1783932954",
   "art": "https://cards.scryfall.io/art_crop/front/7/9/79719ed0-468d-4946-8dfc-fb7e2b2e305e.jpg?1783932954",
-  "scryfall": "https://scryfall.com/card/m20/201/vorstclaw?utm_source=api",
   "power": 7,
   "toughness": 7,
   "keywords": []
  },
  {
-  "id": "primordial-wurm",
-  "name": "Primordial Wurm",
+  "id": "dawn-s-light-archer",
+  "name": "Dawn's Light Archer",
   "types": [
    "Creature"
   ],
   "cost": {
-   "generic": 4,
-   "G": 2
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Wurm",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/f/c/fc0e8298-adac-4922-8824-a1fafa089f72.jpg?1783933407",
-  "art": "https://cards.scryfall.io/art_crop/front/f/c/fc0e8298-adac-4922-8824-a1fafa089f72.jpg?1783933407",
-  "scryfall": "https://scryfall.com/card/war/174/primordial-wurm?utm_source=api",
-  "power": 7,
-  "toughness": 6,
-  "keywords": []
- },
- {
-  "id": "forest-bear",
-  "name": "Forest Bear",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 1,
+   "generic": 2,
    "G": 1
   },
   "colors": [
    "G"
   ],
-  "typeLine": "Creature — Bear",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/f/a/fae9abc7-ecd3-4042-a5b0-5f2b24491fa6.jpg?1783946101",
-  "art": "https://cards.scryfall.io/art_crop/front/f/a/fae9abc7-ecd3-4042-a5b0-5f2b24491fa6.jpg?1783946101",
-  "scryfall": "https://scryfall.com/card/ptk/135/forest-bear?utm_source=api",
-  "power": 2,
+  "typeLine": "Creature — Elf Archer",
+  "text": "Flash\nReach",
+  "img": "https://cards.scryfall.io/normal/front/7/6/76e80656-6bcb-4d99-8bd2-ca5f75f40daf.jpg?1783904429",
+  "art": "https://cards.scryfall.io/art_crop/front/7/6/76e80656-6bcb-4d99-8bd2-ca5f75f40daf.jpg?1783904429",
+  "power": 4,
   "toughness": 2,
-  "keywords": []
- },
- {
-  "id": "terrain-elemental",
-  "name": "Terrain Elemental",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 1,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Elemental",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/3/2/32b89e5c-ffb4-406f-99d1-ec2797aca061.jpg?1783937136",
-  "art": "https://cards.scryfall.io/art_crop/front/3/2/32b89e5c-ffb4-406f-99d1-ec2797aca061.jpg?1783937136",
-  "scryfall": "https://scryfall.com/card/kld/272/terrain-elemental?utm_source=api",
-  "power": 3,
-  "toughness": 2,
-  "keywords": []
+  "keywords": [
+   "reach",
+   "flash"
+  ]
  },
  {
   "id": "orazca-frillback",
@@ -2472,1270 +4154,8 @@
   "text": "",
   "img": "https://cards.scryfall.io/normal/front/2/0/20471a3b-90f9-4463-9b43-fc7b9b28f5d1.jpg?1783930358",
   "art": "https://cards.scryfall.io/art_crop/front/2/0/20471a3b-90f9-4463-9b43-fc7b9b28f5d1.jpg?1783930358",
-  "scryfall": "https://scryfall.com/card/jmp/416/orazca-frillback?utm_source=api",
   "power": 4,
   "toughness": 2,
   "keywords": []
- },
- {
-  "id": "ordinary-bear",
-  "name": "Ordinary Bear",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Bear",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/0/f/0feb9817-56e1-465a-851c-b2fe202aa8ae.jpg?1785323277",
-  "art": "https://cards.scryfall.io/art_crop/front/0/f/0feb9817-56e1-465a-851c-b2fe202aa8ae.jpg?1785323277",
-  "scryfall": "https://scryfall.com/card/hob/133/ordinary-bear?utm_source=api",
-  "power": 4,
-  "toughness": 5,
-  "keywords": []
- },
- {
-  "id": "swordwise-centaur",
-  "name": "Swordwise Centaur",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 0,
-   "G": 2
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Centaur Warrior",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/1/7/1776ebd7-91fc-49e1-a978-f2012162d1cf.jpg?1783939527",
-  "art": "https://cards.scryfall.io/art_crop/front/1/7/1776ebd7-91fc-49e1-a978-f2012162d1cf.jpg?1783939527",
-  "scryfall": "https://scryfall.com/card/bng/142/swordwise-centaur?utm_source=api",
-  "power": 3,
-  "toughness": 2,
-  "keywords": []
- },
- {
-  "id": "quilled-slagwurm",
-  "name": "Quilled Slagwurm",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "G": 3
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Phyrexian Wurm",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/1/2/12c597b9-5024-42bd-b500-5ef6a3accda6.jpg?1783941373",
-  "art": "https://cards.scryfall.io/art_crop/front/1/2/12c597b9-5024-42bd-b500-5ef6a3accda6.jpg?1783941373",
-  "scryfall": "https://scryfall.com/card/mbs/89/quilled-slagwurm?utm_source=api",
-  "power": 8,
-  "toughness": 8,
-  "keywords": []
- },
- {
-  "id": "underdark-basilisk",
-  "name": "Underdark Basilisk",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 1,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Basilisk",
-  "text": "Deathtouch",
-  "img": "https://cards.scryfall.io/normal/front/e/d/ed220158-e4e3-4d46-8098-7b940a923ce9.jpg?1783926453",
-  "art": "https://cards.scryfall.io/art_crop/front/e/d/ed220158-e4e3-4d46-8098-7b940a923ce9.jpg?1783926453",
-  "scryfall": "https://scryfall.com/card/afr/208/underdark-basilisk?utm_source=api",
-  "power": 1,
-  "toughness": 2,
-  "keywords": [
-   "deathtouch"
-  ]
- },
- {
-  "id": "golden-bear",
-  "name": "Golden Bear",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Bear",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/d/7/d7dfc789-7ea0-4eb8-8c3b-2c50fd52cbab.jpg?1783946455",
-  "art": "https://cards.scryfall.io/art_crop/front/d/7/d7dfc789-7ea0-4eb8-8c3b-2c50fd52cbab.jpg?1783946455",
-  "scryfall": "https://scryfall.com/card/p02/127/golden-bear?utm_source=api",
-  "power": 4,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "nyxborn-colossus",
-  "name": "Nyxborn Colossus",
-  "types": [
-   "Enchantment",
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "G": 3
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Enchantment Creature — Giant",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/8/b/8b4f003c-1e99-4e53-ad6d-81ff3c592b2c.jpg?1783931531",
-  "art": "https://cards.scryfall.io/art_crop/front/8/b/8b4f003c-1e99-4e53-ad6d-81ff3c592b2c.jpg?1783931531",
-  "scryfall": "https://scryfall.com/card/thb/191/nyxborn-colossus?utm_source=api",
-  "power": 6,
-  "toughness": 7,
-  "keywords": []
- },
- {
-  "id": "force-of-savagery",
-  "name": "Force of Savagery",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Elemental",
-  "text": "Trample",
-  "img": "https://cards.scryfall.io/normal/front/b/3/b344511d-631e-4f1d-9d7d-d7c89a473d1b.jpg?1783943100",
-  "art": "https://cards.scryfall.io/art_crop/front/b/3/b344511d-631e-4f1d-9d7d-d7c89a473d1b.jpg?1783943100",
-  "scryfall": "https://scryfall.com/card/fut/126/force-of-savagery?utm_source=api",
-  "power": 8,
-  "toughness": 0,
-  "keywords": [
-   "trample"
-  ]
- },
- {
-  "id": "rumbling-baloth",
-  "name": "Rumbling Baloth",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "G": 2
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Beast",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/9/3/93a56610-482b-4ddf-88e1-e4a2edf4fa0f.jpg?1783930355",
-  "art": "https://cards.scryfall.io/art_crop/front/9/3/93a56610-482b-4ddf-88e1-e4a2edf4fa0f.jpg?1783930355",
-  "scryfall": "https://scryfall.com/card/jmp/426/rumbling-baloth?utm_source=api",
-  "power": 4,
-  "toughness": 4,
-  "keywords": []
- },
- {
-  "id": "elfhame-wurm",
-  "name": "Elfhame Wurm",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Wurm",
-  "text": "Vigilance, trample",
-  "img": "https://cards.scryfall.io/normal/front/e/f/ef2dc99b-083d-473e-b352-e8264353e85b.jpg?1783921301",
-  "art": "https://cards.scryfall.io/art_crop/front/e/f/ef2dc99b-083d-473e-b352-e8264353e85b.jpg?1783921301",
-  "scryfall": "https://scryfall.com/card/dmu/161/elfhame-wurm?utm_source=api",
-  "power": 5,
-  "toughness": 4,
-  "keywords": [
-   "vigilance",
-   "trample"
-  ]
- },
- {
-  "id": "enormous-baloth",
-  "name": "Enormous Baloth",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 6,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Beast",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/5/4/54069e65-eef4-4fb8-bb0d-932a4c9889b3.jpg?1783942363",
-  "art": "https://cards.scryfall.io/art_crop/front/5/4/54069e65-eef4-4fb8-bb0d-932a4c9889b3.jpg?1783942363",
-  "scryfall": "https://scryfall.com/card/m10/180/enormous-baloth?utm_source=api",
-  "power": 7,
-  "toughness": 7,
-  "keywords": []
- },
- {
-  "id": "grizzled-outrider",
-  "name": "Grizzled Outrider",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Elf Warrior",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/4/a/4a1d4473-5317-4bdd-9cb9-93670acf52e9.jpg?1783928213",
-  "art": "https://cards.scryfall.io/art_crop/front/4/a/4a1d4473-5317-4bdd-9cb9-93670acf52e9.jpg?1783928213",
-  "scryfall": "https://scryfall.com/card/khm/173/grizzled-outrider?utm_source=api",
-  "power": 5,
-  "toughness": 5,
-  "keywords": []
- },
- {
-  "id": "colossapede",
-  "name": "Colossapede",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Insect",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/7/6/7642bfc5-ace8-419e-b57b-2b881bfe023e.jpg?1783936478",
-  "art": "https://cards.scryfall.io/art_crop/front/7/6/7642bfc5-ace8-419e-b57b-2b881bfe023e.jpg?1783936478",
-  "scryfall": "https://scryfall.com/card/akh/161/colossapede?utm_source=api",
-  "power": 5,
-  "toughness": 5,
-  "keywords": []
- },
- {
-  "id": "panther-warriors",
-  "name": "Panther Warriors",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Cat Warrior",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/b/a/ba165e25-5328-40f4-b87c-9d02590f9d38.jpg?1783946158",
-  "art": "https://cards.scryfall.io/art_crop/front/b/a/ba165e25-5328-40f4-b87c-9d02590f9d38.jpg?1783946158",
-  "scryfall": "https://scryfall.com/card/6ed/243/panther-warriors?utm_source=api",
-  "power": 6,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "kraul-stinger",
-  "name": "Kraul Stinger",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Insect Assassin",
-  "text": "Deathtouch",
-  "img": "https://cards.scryfall.io/normal/front/4/6/46b88fe9-2450-47ee-ac1e-bbbccbf5684f.jpg?1783933411",
-  "art": "https://cards.scryfall.io/art_crop/front/4/6/46b88fe9-2450-47ee-ac1e-bbbccbf5684f.jpg?1783933411",
-  "scryfall": "https://scryfall.com/card/war/165/kraul-stinger?utm_source=api",
-  "power": 2,
-  "toughness": 2,
-  "keywords": [
-   "deathtouch"
-  ]
- },
- {
-  "id": "centaur-courser",
-  "name": "Centaur Courser",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Centaur Warrior",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/e/8/e8b67ee8-3189-4426-8b1a-b540267768fd.jpg?1783932966",
-  "art": "https://cards.scryfall.io/art_crop/front/e/8/e8b67ee8-3189-4426-8b1a-b540267768fd.jpg?1783932966",
-  "scryfall": "https://scryfall.com/card/m20/168/centaur-courser?utm_source=api",
-  "power": 3,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "elvish-ranger",
-  "name": "Elvish Ranger",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Elf Ranger",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/5/e/5eac1616-d764-4e62-9fc6-939c28b75f52.jpg?1783942606",
-  "art": "https://cards.scryfall.io/art_crop/front/5/e/5eac1616-d764-4e62-9fc6-939c28b75f52.jpg?1783942606",
-  "scryfall": "https://scryfall.com/card/me2/158/elvish-ranger?utm_source=api",
-  "power": 4,
-  "toughness": 1,
-  "keywords": []
- },
- {
-  "id": "gorilla-warrior",
-  "name": "Gorilla Warrior",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Ape Warrior",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/d/6/d6997a75-42c9-4706-ac34-69fa34011eca.jpg?1783946023",
-  "art": "https://cards.scryfall.io/art_crop/front/d/6/d6997a75-42c9-4706-ac34-69fa34011eca.jpg?1783946023",
-  "scryfall": "https://scryfall.com/card/s99/128/gorilla-warrior?utm_source=api",
-  "power": 3,
-  "toughness": 2,
-  "keywords": []
- },
- {
-  "id": "ferocious-zheng",
-  "name": "Ferocious Zheng",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "G": 2
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Cat Beast",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/7/a/7a6d1184-15e0-4b41-ba2d-4f68e91c61d4.jpg?1783934626",
-  "art": "https://cards.scryfall.io/art_crop/front/7/a/7a6d1184-15e0-4b41-ba2d-4f68e91c61d4.jpg?1783934626",
-  "scryfall": "https://scryfall.com/card/gs1/28/ferocious-zheng?utm_source=api",
-  "power": 4,
-  "toughness": 4,
-  "keywords": []
- },
- {
-  "id": "silverback-ape",
-  "name": "Silverback Ape",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "G": 2
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Ape",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/0/2/025b3156-975d-4f64-b19c-172cb21266c5.jpg?1783944853",
-  "art": "https://cards.scryfall.io/art_crop/front/0/2/025b3156-975d-4f64-b19c-172cb21266c5.jpg?1783944853",
-  "scryfall": "https://scryfall.com/card/8ed/S7/silverback-ape?utm_source=api",
-  "power": 5,
-  "toughness": 5,
-  "keywords": []
- },
- {
-  "id": "murasa-brute",
-  "name": "Murasa Brute",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 2,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Troll Warrior",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/e/f/efe1c5b2-4356-41ae-ab7e-ad9fc835a911.jpg?1783929336",
-  "art": "https://cards.scryfall.io/art_crop/front/e/f/efe1c5b2-4356-41ae-ab7e-ad9fc835a911.jpg?1783929336",
-  "scryfall": "https://scryfall.com/card/znr/195/murasa-brute?utm_source=api",
-  "power": 3,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "broodhunter-wurm",
-  "name": "Broodhunter Wurm",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Wurm",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/c/1/c11c852d-9c7c-4d9b-8e79-70ea5ac865df.jpg?1783938188",
-  "art": "https://cards.scryfall.io/art_crop/front/c/1/c11c852d-9c7c-4d9b-8e79-70ea5ac865df.jpg?1783938188",
-  "scryfall": "https://scryfall.com/card/bfz/171/broodhunter-wurm?utm_source=api",
-  "power": 4,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "axebane-beast",
-  "name": "Axebane Beast",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Beast",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/2/f/2f420b35-1f73-41c8-a15f-1aee4af0999c.jpg?1783933673",
-  "art": "https://cards.scryfall.io/art_crop/front/2/f/2f420b35-1f73-41c8-a15f-1aee4af0999c.jpg?1783933673",
-  "scryfall": "https://scryfall.com/card/rna/121/axebane-beast?utm_source=api",
-  "power": 3,
-  "toughness": 4,
-  "keywords": []
- },
- {
-  "id": "wild-ceratok",
-  "name": "Wild Ceratok",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Rhino",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/4/4/4464e11a-c5b9-40ea-8be0-dab29d14e289.jpg?1783934143",
-  "art": "https://cards.scryfall.io/art_crop/front/4/4/4464e11a-c5b9-40ea-8be0-dab29d14e289.jpg?1783934143",
-  "scryfall": "https://scryfall.com/card/grn/150/wild-ceratok?utm_source=api",
-  "power": 4,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "nettle-swine",
-  "name": "Nettle Swine",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Creature — Boar",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/7/5/75935f0e-9086-485b-b3e6-1a958fd0f2af.jpg?1783940664",
-  "art": "https://cards.scryfall.io/art_crop/front/7/5/75935f0e-9086-485b-b3e6-1a958fd0f2af.jpg?1783940664",
-  "scryfall": "https://scryfall.com/card/avr/186/nettle-swine?utm_source=api",
-  "power": 4,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "watchwolf",
-  "name": "Watchwolf",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 0,
-   "G": 1,
-   "W": 1
-  },
-  "colors": [
-   "G",
-   "W"
-  ],
-  "typeLine": "Creature — Wolf",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/6/8/682af5e9-26b5-4f88-99e1-ab2aa34fba86.jpg?1783935110",
-  "art": "https://cards.scryfall.io/art_crop/front/6/8/682af5e9-26b5-4f88-99e1-ab2aa34fba86.jpg?1783935110",
-  "scryfall": "https://scryfall.com/card/a25/220/watchwolf?utm_source=api",
-  "power": 3,
-  "toughness": 3,
-  "keywords": []
- },
- {
-  "id": "armored-wolf-rider",
-  "name": "Armored Wolf-Rider",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "G": 1,
-   "W": 1
-  },
-  "colors": [
-   "G",
-   "W"
-  ],
-  "typeLine": "Creature — Elf Knight",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/e/4/e43d959f-6055-4578-a69a-0ec93e993e21.jpg?1783940033",
-  "art": "https://cards.scryfall.io/art_crop/front/e/4/e43d959f-6055-4578-a69a-0ec93e993e21.jpg?1783940033",
-  "scryfall": "https://scryfall.com/card/dgm/52/armored-wolf-rider?utm_source=api",
-  "power": 4,
-  "toughness": 6,
-  "keywords": []
- },
- {
-  "id": "tobias-andrion",
-  "name": "Tobias Andrion",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "W": 1,
-   "U": 1
-  },
-  "colors": [
-   "U",
-   "W"
-  ],
-  "typeLine": "Legendary Creature — Human Advisor",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/9/4/9469a9b3-430c-43b1-bede-80e6949fd895.jpg?1783942196",
-  "art": "https://cards.scryfall.io/art_crop/front/9/4/9469a9b3-430c-43b1-bede-80e6949fd895.jpg?1783942196",
-  "scryfall": "https://scryfall.com/card/me3/181/tobias-andrion?utm_source=api",
-  "legendary": true,
-  "power": 4,
-  "toughness": 4,
-  "keywords": []
- },
- {
-  "id": "barktooth-warbeard",
-  "name": "Barktooth Warbeard",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "B": 1,
-   "R": 2
-  },
-  "colors": [
-   "B",
-   "R"
-  ],
-  "typeLine": "Legendary Creature — Human Warrior",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/b/f/bffbda3c-61c0-421d-a724-6bb9a7005c0f.jpg?1783942209",
-  "art": "https://cards.scryfall.io/art_crop/front/b/f/bffbda3c-61c0-421d-a724-6bb9a7005c0f.jpg?1783942209",
-  "scryfall": "https://scryfall.com/card/me3/144/barktooth-warbeard?utm_source=api",
-  "legendary": true,
-  "power": 6,
-  "toughness": 5,
-  "keywords": []
- },
- {
-  "id": "the-lady-of-the-mountain",
-  "name": "The Lady of the Mountain",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 4,
-   "R": 1,
-   "G": 1
-  },
-  "colors": [
-   "G",
-   "R"
-  ],
-  "typeLine": "Legendary Creature — Giant",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/7/0/70802e74-c292-446f-aa9a-dd32454a4b3d.jpg?1783942195",
-  "art": "https://cards.scryfall.io/art_crop/front/7/0/70802e74-c292-446f-aa9a-dd32454a4b3d.jpg?1783942195",
-  "scryfall": "https://scryfall.com/card/me3/180/the-lady-of-the-mountain?utm_source=api",
-  "legendary": true,
-  "power": 5,
-  "toughness": 5,
-  "keywords": []
- },
- {
-  "id": "jasmine-boreal",
-  "name": "Jasmine Boreal",
-  "types": [
-   "Creature"
-  ],
-  "cost": {
-   "generic": 3,
-   "G": 1,
-   "W": 1
-  },
-  "colors": [
-   "G",
-   "W"
-  ],
-  "typeLine": "Legendary Creature — Human",
-  "text": "",
-  "img": "https://cards.scryfall.io/normal/front/0/0/004af467-815a-47c0-a974-1ae49ca3a1a8.jpg?1783943265",
-  "art": "https://cards.scryfall.io/art_crop/front/0/0/004af467-815a-47c0-a974-1ae49ca3a1a8.jpg?1783943265",
-  "scryfall": "https://scryfall.com/card/tsb/93/jasmine-boreal?utm_source=api",
-  "legendary": true,
-  "power": 4,
-  "toughness": 5,
-  "keywords": []
- },
- {
-  "id": "sacred-nectar",
-  "name": "Sacred Nectar",
-  "types": [
-   "Sorcery"
-  ],
-  "cost": {
-   "generic": 1,
-   "W": 1
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Sorcery",
-  "text": "You gain 4 life.",
-  "img": "https://cards.scryfall.io/normal/front/b/c/bcdd5e1c-47db-4960-860c-2af14b734b59.jpg?1783944087",
-  "art": "https://cards.scryfall.io/art_crop/front/b/c/bcdd5e1c-47db-4960-860c-2af14b734b59.jpg?1783944087",
-  "scryfall": "https://scryfall.com/card/9ed/38/sacred-nectar?utm_source=api",
-  "effect": {
-   "kind": "gainLife",
-   "amount": 4
-  }
- },
- {
-  "id": "angel-s-mercy",
-  "name": "Angel's Mercy",
-  "types": [
-   "Instant"
-  ],
-  "cost": {
-   "generic": 2,
-   "W": 2
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Instant",
-  "text": "You gain 7 life.",
-  "img": "https://cards.scryfall.io/normal/front/4/3/43e6d650-4e96-43a3-8b94-7f044d3b2f82.jpg?1783940523",
-  "art": "https://cards.scryfall.io/art_crop/front/4/3/43e6d650-4e96-43a3-8b94-7f044d3b2f82.jpg?1783940523",
-  "scryfall": "https://scryfall.com/card/m13/3/angels-mercy?utm_source=api",
-  "effect": {
-   "kind": "gainLife",
-   "amount": 7
-  }
- },
- {
-  "id": "glorious-anthem",
-  "name": "Glorious Anthem",
-  "types": [
-   "Enchantment"
-  ],
-  "cost": {
-   "generic": 1,
-   "W": 2
-  },
-  "colors": [
-   "W"
-  ],
-  "typeLine": "Enchantment",
-  "text": "Creatures you control get +1/+1.",
-  "img": "https://cards.scryfall.io/normal/front/1/7/17d154d3-7ae5-43ff-9978-d974285e2c89.jpg?1783930741",
-  "art": "https://cards.scryfall.io/art_crop/front/1/7/17d154d3-7ae5-43ff-9978-d974285e2c89.jpg?1783930741",
-  "scryfall": "https://scryfall.com/card/m21/21/glorious-anthem?utm_source=api",
-  "effect": {
-   "kind": "anthem",
-   "amount": 1
-  }
- },
- {
-  "id": "divination",
-  "name": "Divination",
-  "types": [
-   "Sorcery"
-  ],
-  "cost": {
-   "generic": 2,
-   "U": 1
-  },
-  "colors": [
-   "U"
-  ],
-  "typeLine": "Sorcery",
-  "text": "Draw two cards.",
-  "img": "https://cards.scryfall.io/normal/front/c/b/cb3b35b8-f321-46d8-a441-6b9a6efa9021.jpg?1783934590",
-  "art": "https://cards.scryfall.io/art_crop/front/c/b/cb3b35b8-f321-46d8-a441-6b9a6efa9021.jpg?1783934590",
-  "scryfall": "https://scryfall.com/card/m19/51/divination?utm_source=api",
-  "effect": {
-   "kind": "draw",
-   "amount": 2
-  }
- },
- {
-  "id": "concentrate",
-  "name": "Concentrate",
-  "types": [
-   "Sorcery"
-  ],
-  "cost": {
-   "generic": 2,
-   "U": 2
-  },
-  "colors": [
-   "U"
-  ],
-  "typeLine": "Sorcery",
-  "text": "Draw three cards.",
-  "img": "https://cards.scryfall.io/normal/front/5/a/5aca3338-30a6-4ce4-b74c-a18144b6efc9.jpg?1783935617",
-  "art": "https://cards.scryfall.io/art_crop/front/5/a/5aca3338-30a6-4ce4-b74c-a18144b6efc9.jpg?1783935617",
-  "scryfall": "https://scryfall.com/card/ddt/4/concentrate?utm_source=api",
-  "effect": {
-   "kind": "draw",
-   "amount": 3
-  }
- },
- {
-  "id": "tidings",
-  "name": "Tidings",
-  "types": [
-   "Sorcery"
-  ],
-  "cost": {
-   "generic": 3,
-   "U": 2
-  },
-  "colors": [
-   "U"
-  ],
-  "typeLine": "Sorcery",
-  "text": "Draw four cards.",
-  "img": "https://cards.scryfall.io/normal/front/6/a/6a123f44-0a72-46d0-a73d-b4ab01b6c2df.jpg?1783934303",
-  "art": "https://cards.scryfall.io/art_crop/front/6/a/6a123f44-0a72-46d0-a73d-b4ab01b6c2df.jpg?1783934303",
-  "scryfall": "https://scryfall.com/card/c18/108/tidings?utm_source=api",
-  "effect": {
-   "kind": "draw",
-   "amount": 4
-  }
- },
- {
-  "id": "murder",
-  "name": "Murder",
-  "types": [
-   "Instant"
-  ],
-  "cost": {
-   "generic": 1,
-   "B": 2
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Instant",
-  "text": "Destroy target creature.",
-  "img": "https://cards.scryfall.io/normal/front/2/c/2c249609-9cf7-46f1-b94c-9329add966bb.jpg?1783909477",
-  "art": "https://cards.scryfall.io/art_crop/front/2/c/2c249609-9cf7-46f1-b94c-9329add966bb.jpg?1783909477",
-  "scryfall": "https://scryfall.com/card/dsk/110/murder?utm_source=api",
-  "effect": {
-   "kind": "destroyCreature",
-   "amount": 0
-  }
- },
- {
-  "id": "eviscerate",
-  "name": "Eviscerate",
-  "types": [
-   "Sorcery"
-  ],
-  "cost": {
-   "generic": 3,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Sorcery",
-  "text": "Destroy target creature.",
-  "img": "https://cards.scryfall.io/normal/front/6/2/62ba90b8-3a30-4058-b8d3-72900b1f4fe0.jpg?1783935009",
-  "art": "https://cards.scryfall.io/art_crop/front/6/2/62ba90b8-3a30-4058-b8d3-72900b1f4fe0.jpg?1783935009",
-  "scryfall": "https://scryfall.com/card/dom/91/eviscerate?utm_source=api",
-  "effect": {
-   "kind": "destroyCreature",
-   "amount": 0
-  }
- },
- {
-  "id": "blood-tithe",
-  "name": "Blood Tithe",
-  "types": [
-   "Sorcery"
-  ],
-  "cost": {
-   "generic": 3,
-   "B": 1
-  },
-  "colors": [
-   "B"
-  ],
-  "typeLine": "Sorcery",
-  "text": "Each opponent loses 3 life. You gain life equal to the life lost this way.",
-  "img": "https://cards.scryfall.io/normal/front/c/f/cf166294-3359-4da4-84d0-006c75c183fd.jpg?1783941819",
-  "art": "https://cards.scryfall.io/art_crop/front/c/f/cf166294-3359-4da4-84d0-006c75c183fd.jpg?1783941819",
-  "scryfall": "https://scryfall.com/card/m11/84/blood-tithe?utm_source=api",
-  "effect": {
-   "kind": "drainOpponents",
-   "amount": 3
-  }
- },
- {
-  "id": "lightning-bolt",
-  "name": "Lightning Bolt",
-  "types": [
-   "Instant"
-  ],
-  "cost": {
-   "generic": 0,
-   "R": 1
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Instant",
-  "text": "Lightning Bolt deals 3 damage to any target.",
-  "img": "https://cards.scryfall.io/normal/front/7/6/7673784e-db4b-43a1-8d55-1bb9fc1e284f.jpg?1783903008",
-  "art": "https://cards.scryfall.io/art_crop/front/7/6/7673784e-db4b-43a1-8d55-1bb9fc1e284f.jpg?1783903008",
-  "scryfall": "https://scryfall.com/card/msc/806/lightning-bolt?utm_source=api",
-  "effect": {
-   "kind": "damageAny",
-   "amount": 3
-  }
- },
- {
-  "id": "lightning-strike",
-  "name": "Lightning Strike",
-  "types": [
-   "Instant"
-  ],
-  "cost": {
-   "generic": 1,
-   "R": 1
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Instant",
-  "text": "Lightning Strike deals 3 damage to any target.",
-  "img": "https://cards.scryfall.io/normal/front/8/8/88b13bc0-da54-4c3b-917c-7c8345a329f5.jpg?1783902927",
-  "art": "https://cards.scryfall.io/art_crop/front/8/8/88b13bc0-da54-4c3b-917c-7c8345a329f5.jpg?1783902927",
-  "scryfall": "https://scryfall.com/card/msh/142/lightning-strike?utm_source=api",
-  "effect": {
-   "kind": "damageAny",
-   "amount": 3
-  }
- },
- {
-  "id": "searing-spear",
-  "name": "Searing Spear",
-  "types": [
-   "Instant"
-  ],
-  "cost": {
-   "generic": 1,
-   "R": 1
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Instant",
-  "text": "Searing Spear deals 3 damage to any target.",
-  "img": "https://cards.scryfall.io/normal/front/4/4/44c5f884-d071-40c2-bb2c-925dc2197ea3.jpg?1783936148",
-  "art": "https://cards.scryfall.io/art_crop/front/4/4/44c5f884-d071-40c2-bb2c-925dc2197ea3.jpg?1783936148",
-  "scryfall": "https://scryfall.com/card/e01/56/searing-spear?utm_source=api",
-  "effect": {
-   "kind": "damageAny",
-   "amount": 3
-  }
- },
- {
-  "id": "brute-force",
-  "name": "Brute Force",
-  "types": [
-   "Instant"
-  ],
-  "cost": {
-   "generic": 0,
-   "R": 1
-  },
-  "colors": [
-   "R"
-  ],
-  "typeLine": "Instant",
-  "text": "Target creature gets +3/+3 until end of turn.",
-  "img": "https://cards.scryfall.io/normal/front/8/9/89db7256-3bd0-4c1d-9c6f-de81f7d3c1a2.jpg?1783927801",
-  "art": "https://cards.scryfall.io/art_crop/front/8/9/89db7256-3bd0-4c1d-9c6f-de81f7d3c1a2.jpg?1783927801",
-  "scryfall": "https://scryfall.com/card/tsr/157/brute-force?utm_source=api",
-  "effect": {
-   "kind": "pump",
-   "amount": 3
-  }
- },
- {
-  "id": "giant-growth",
-  "name": "Giant Growth",
-  "types": [
-   "Instant"
-  ],
-  "cost": {
-   "generic": 0,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Instant",
-  "text": "Target creature gets +3/+3 until end of turn.",
-  "img": "https://cards.scryfall.io/normal/front/f/d/fd1f95bf-48ea-455a-8a6c-0249b11c8900.jpg?1783902918",
-  "art": "https://cards.scryfall.io/art_crop/front/f/d/fd1f95bf-48ea-455a-8a6c-0249b11c8900.jpg?1783902918",
-  "scryfall": "https://scryfall.com/card/msh/167/giant-growth?utm_source=api",
-  "effect": {
-   "kind": "pump",
-   "amount": 3
-  }
- },
- {
-  "id": "titanic-growth",
-  "name": "Titanic Growth",
-  "types": [
-   "Instant"
-  ],
-  "cost": {
-   "generic": 1,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Instant",
-  "text": "Target creature gets +4/+4 until end of turn.",
-  "img": "https://cards.scryfall.io/normal/front/4/6/46917de3-5e98-4dd6-8950-fc10338515df.jpg?1783915076",
-  "art": "https://cards.scryfall.io/art_crop/front/4/6/46917de3-5e98-4dd6-8950-fc10338515df.jpg?1783915076",
-  "scryfall": "https://scryfall.com/card/woe/191/titanic-growth?utm_source=api",
-  "effect": {
-   "kind": "pump",
-   "amount": 4
-  }
- },
- {
-  "id": "rampant-growth",
-  "name": "Rampant Growth",
-  "types": [
-   "Sorcery"
-  ],
-  "cost": {
-   "generic": 1,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Sorcery",
-  "text": "Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
-  "img": "https://cards.scryfall.io/normal/front/b/7/b7c47024-5e08-4b17-b41a-7647f8b814b9.jpg?1783907042",
-  "art": "https://cards.scryfall.io/art_crop/front/b/7/b7c47024-5e08-4b17-b41a-7647f8b814b9.jpg?1783907042",
-  "scryfall": "https://scryfall.com/card/tdc/265/rampant-growth?utm_source=api",
-  "effect": {
-   "kind": "rampLand",
-   "amount": 1
-  }
- },
- {
-  "id": "explosive-vegetation",
-  "name": "Explosive Vegetation",
-  "types": [
-   "Sorcery"
-  ],
-  "cost": {
-   "generic": 3,
-   "G": 1
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Sorcery",
-  "text": "Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
-  "img": "https://cards.scryfall.io/normal/front/8/d/8de3fdf8-d55e-4ffc-8f8b-6314d4d467ce.jpg?1783909606",
-  "art": "https://cards.scryfall.io/art_crop/front/8/d/8de3fdf8-d55e-4ffc-8f8b-6314d4d467ce.jpg?1783909606",
-  "scryfall": "https://scryfall.com/card/dsc/177/explosive-vegetation?utm_source=api",
-  "effect": {
-   "kind": "rampLand",
-   "amount": 2
-  }
- },
- {
-  "id": "harmonize",
-  "name": "Harmonize",
-  "types": [
-   "Sorcery"
-  ],
-  "cost": {
-   "generic": 2,
-   "G": 2
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Sorcery",
-  "text": "Draw three cards.",
-  "img": "https://cards.scryfall.io/normal/front/b/d/bd7138fb-6aa7-455e-b1f7-ca08d747277d.jpg?1783903229",
-  "art": "https://cards.scryfall.io/art_crop/front/b/d/bd7138fb-6aa7-455e-b1f7-ca08d747277d.jpg?1783903229",
-  "scryfall": "https://scryfall.com/card/msc/175/harmonize?utm_source=api",
-  "effect": {
-   "kind": "draw",
-   "amount": 3
-  }
- },
- {
-  "id": "gaea-s-anthem",
-  "name": "Gaea's Anthem",
-  "types": [
-   "Enchantment"
-  ],
-  "cost": {
-   "generic": 1,
-   "G": 2
-  },
-  "colors": [
-   "G"
-  ],
-  "typeLine": "Enchantment",
-  "text": "Creatures you control get +1/+1.",
-  "img": "https://cards.scryfall.io/normal/front/4/3/43febc63-597d-4392-b8ea-a00841148c45.jpg?1783927781",
-  "art": "https://cards.scryfall.io/art_crop/front/4/3/43febc63-597d-4392-b8ea-a00841148c45.jpg?1783927781",
-  "scryfall": "https://scryfall.com/card/tsr/204/gaeas-anthem?utm_source=api",
-  "effect": {
-   "kind": "anthem",
-   "amount": 1
-  }
- },
- {
-  "id": "arcane-signet",
-  "name": "Arcane Signet",
-  "types": [
-   "Artifact"
-  ],
-  "cost": {
-   "generic": 2
-  },
-  "colors": [],
-  "typeLine": "Artifact",
-  "text": "{T}: Add one mana of any color in your commander's color identity.",
-  "img": "https://cards.scryfall.io/normal/front/c/6/c6b6117c-faab-4bbb-b851-07bd8061ef03.jpg?1789644435",
-  "art": "https://cards.scryfall.io/art_crop/front/c/6/c6b6117c-faab-4bbb-b851-07bd8061ef03.jpg?1789644435",
-  "scryfall": "https://scryfall.com/card/frc/20/arcane-signet?utm_source=api",
-  "produces": [
-   "ANY"
-  ]
- },
- {
-  "id": "plains",
-  "name": "Plains",
-  "types": [
-   "Land"
-  ],
-  "cost": {
-   "generic": 0
-  },
-  "colors": [],
-  "typeLine": "Basic Land — Plains",
-  "text": "({T}: Add {W}.)",
-  "img": "https://cards.scryfall.io/normal/front/0/9/09ac862f-0a51-44dd-b86f-9412b8218b13.jpg?1791578423",
-  "art": "https://cards.scryfall.io/art_crop/front/0/9/09ac862f-0a51-44dd-b86f-9412b8218b13.jpg?1791578423",
-  "scryfall": "https://scryfall.com/card/mdd/292/plains?utm_source=api",
-  "basic": true,
-  "produces": [
-   "W"
-  ]
- },
- {
-  "id": "island",
-  "name": "Island",
-  "types": [
-   "Land"
-  ],
-  "cost": {
-   "generic": 0
-  },
-  "colors": [],
-  "typeLine": "Basic Land — Island",
-  "text": "({T}: Add {U}.)",
-  "img": "https://cards.scryfall.io/normal/front/1/3/1335d293-3dd2-4f13-bd2c-22181f4528ee.jpg?1791578424",
-  "art": "https://cards.scryfall.io/art_crop/front/1/3/1335d293-3dd2-4f13-bd2c-22181f4528ee.jpg?1791578424",
-  "scryfall": "https://scryfall.com/card/mdd/294/island?utm_source=api",
-  "basic": true,
-  "produces": [
-   "U"
-  ]
- },
- {
-  "id": "swamp",
-  "name": "Swamp",
-  "types": [
-   "Land"
-  ],
-  "cost": {
-   "generic": 0
-  },
-  "colors": [],
-  "typeLine": "Basic Land — Swamp",
-  "text": "({T}: Add {B}.)",
-  "img": "https://cards.scryfall.io/normal/front/b/2/b233b117-9369-45c1-80c5-cc857386b6be.jpg?1791578437",
-  "art": "https://cards.scryfall.io/art_crop/front/b/2/b233b117-9369-45c1-80c5-cc857386b6be.jpg?1791578437",
-  "scryfall": "https://scryfall.com/card/mdd/296/swamp?utm_source=api",
-  "basic": true,
-  "produces": [
-   "B"
-  ]
- },
- {
-  "id": "mountain",
-  "name": "Mountain",
-  "types": [
-   "Land"
-  ],
-  "cost": {
-   "generic": 0
-  },
-  "colors": [],
-  "typeLine": "Basic Land — Mountain",
-  "text": "({T}: Add {R}.)",
-  "img": "https://cards.scryfall.io/normal/front/8/5/85177bd7-6c50-48da-b692-ae5fe7bd357c.jpg?1791578439",
-  "art": "https://cards.scryfall.io/art_crop/front/8/5/85177bd7-6c50-48da-b692-ae5fe7bd357c.jpg?1791578439",
-  "scryfall": "https://scryfall.com/card/mdd/298/mountain?utm_source=api",
-  "basic": true,
-  "produces": [
-   "R"
-  ]
- },
- {
-  "id": "forest",
-  "name": "Forest",
-  "types": [
-   "Land"
-  ],
-  "cost": {
-   "generic": 0
-  },
-  "colors": [],
-  "typeLine": "Basic Land — Forest",
-  "text": "({T}: Add {G}.)",
-  "img": "https://cards.scryfall.io/normal/front/2/e/2e781bfd-f8cb-4d20-b977-4359f3a21311.jpg?1791578317",
-  "art": "https://cards.scryfall.io/art_crop/front/2/e/2e781bfd-f8cb-4d20-b977-4359f3a21311.jpg?1791578317",
-  "scryfall": "https://scryfall.com/card/mdd/301/forest?utm_source=api",
-  "basic": true,
-  "produces": [
-   "G"
-  ]
- },
- {
-  "id": "command-tower",
-  "name": "Command Tower",
-  "types": [
-   "Land"
-  ],
-  "cost": {
-   "generic": 0
-  },
-  "colors": [],
-  "typeLine": "Land",
-  "text": "{T}: Add one mana of any color in your commander's color identity.",
-  "img": "https://cards.scryfall.io/normal/front/1/a/1ac6cb62-45da-4e9a-84c6-09e6eacf0664.jpg?1789644465",
-  "art": "https://cards.scryfall.io/art_crop/front/1/a/1ac6cb62-45da-4e9a-84c6-09e6eacf0664.jpg?1789644465",
-  "scryfall": "https://scryfall.com/card/frc/22/command-tower?utm_source=api",
-  "produces": [
-   "ANY"
-  ]
  }
 ]
