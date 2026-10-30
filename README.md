@@ -95,11 +95,12 @@ Cards whose text doesn't fully compile keep a **Limited** badge and play only th
 - Emblems live in a per-player emblem zone (shown as purple badges in the player panel) and support static and triggered abilities.
 - Compiler handles emblems, gain control (incl. until end of turn), extra turns, "life total becomes N", walker animation, "until your next turn" effects, can't attack/block, and more.
 - "can be your commander" walkers are legal commanders.
+- Batch 2 adds: Narset's draw limit, Teferi's sorcery-speed lock and sorceries-with-flash, Ashiok's search ban, uncounterable creature spells, Jace's empty-library win, token doubling (Elspeth, Storm Slayer; Kaya), instant-speed loyalty (Wandering Emperor, Teferi), Liliana of the Veil's piles, Liliana Dreadhorde General's keep-one-of-each-type, amass, reveal-until, "if …, … instead", "X with mana value X or less" (Ugin, Tezzeret), "in addition to its other types", tokens with quoted abilities, player hexproof, win/lose the game.
 - AI: +abilities when threatened, −abilities for removal/value, ultimates when safe; attacks opposing walkers when worthwhile and blocks to protect its own.
 
 ## Known gaps
 
-- Planeswalkers: only ~40/296 walkers compile fully (most have at least one unusual line). Emblems aren't restored from a saved game. Battles aren't implemented.
+- Planeswalkers: 77/296 walkers compile fully (see docs/coverage.md for the top-20 list and what's missing). Still missing: reflexive "when you do" triggers, cast-from-exile-now (Chandra, Torch of Defiance), "becomes a <type>" with lost abilities (Oko, Vraska), phasing, delayed end-step triggers, die rolls. Emblems aren't restored from a saved game. Battles aren't implemented.
 - Replacement effects are missing (Doubling Season, Hardened Scales), as are emblems, sagas, vehicles, delayed "next upkeep" triggers and cumulative upkeep.
 - Most planeswalker ultimates and choose-a-creature-type cards are not supported.
 - Library arranging (Ponder, Sensei's Top) is not supported.

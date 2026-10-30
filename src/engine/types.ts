@@ -15,6 +15,7 @@ export interface Filter {
   tapped?: boolean; untapped?: boolean; other?: boolean; token?: boolean; nontoken?: boolean;
   powLE?: number; powGE?: number; mvLE?: number; mvGE?: number; attacking?: boolean; blocking?: boolean; atkOrBlk?: boolean;
   legendary?: boolean; nonlegendary?: boolean; basic?: boolean; nonbasic?: boolean; kw?: string; noKw?: string; name?: string; notName?: string;
+  /** one or more colors */ colored?: boolean; /** has a counter of this kind */ ctr?: string; /** mana value <= / == the ability's X */ mvLEX?: boolean; mvEqX?: boolean;
 }
 /** One target slot. who: perm = permanent on battlefield; any = creature/planeswalker/player; player/opp = players; spell / ability = on the stack; card = card in a graveyard. */
 export interface TSlot { who: 'perm' | 'any' | 'player' | 'opp' | 'spell' | 'ability' | 'card'; f?: Filter; zoneOwner?: 'you' | 'opp' | 'any'; opt?: boolean; harm?: boolean; label?: string; same?: number }
@@ -24,15 +25,15 @@ export type Ref = string | { all: Filter; zone?: 'graveyard' };
 /** Player reference: you, opps, all, evp (event player), tctl (controller of target 0), t0 (player target slot 0), ctl:tN, def (defending), owner:tN. */
 export type PRef = string;
 export interface Cond {
-  k: 'yourTurn' | 'notYourTurn' | 'control' | 'controlNo' | 'lifeGE' | 'lifeLE' | 'kicked' | 'handLE' | 'handGE' | 'gyGE' | 'oppControlsMore' | 'attacking' | 'tapped' | 'untapped' | 'evCtlYou' | 'evCtlOpp' | 'evIs' | 'xGE' | 'lifeGainedThisTurn' | 'cardsInGyGE' | 'noCardsHand' | 'manaSpent' | 'oppLifeLE' | 'gotCounters' | 'creatureDiedThisTurn' | 'descended' | 'oppsGE' | 'not';
+  k: 'yourTurn' | 'notYourTurn' | 'control' | 'controlNo' | 'lifeGE' | 'lifeLE' | 'kicked' | 'handLE' | 'handGE' | 'gyGE' | 'oppControlsMore' | 'attacking' | 'tapped' | 'untapped' | 'evCtlYou' | 'evCtlOpp' | 'evIs' | 'xGE' | 'lifeGainedThisTurn' | 'cardsInGyGE' | 'noCardsHand' | 'manaSpent' | 'oppLifeLE' | 'gotCounters' | 'creatureDiedThisTurn' | 'descended' | 'oppsGE' | 'not' | 'enteredThisTurn' | 'libEmpty';
   f?: Filter; n?: number; ref?: Ref; c?: Cond;
 }
-export interface TokenSpec { name: string; p?: number; t?: number; colors: Color[]; types: string[]; sub?: string[]; kws?: string[]; legendary?: boolean; preset?: 'Treasure' | 'Food' | 'Clue' | 'Blood' | 'Map' | 'Gold' | 'Powerstone' }
+export interface TokenSpec { name: string; p?: number; t?: number; colors: Color[]; types: string[]; sub?: string[]; kws?: string[]; legendary?: boolean; /** compiled quoted abilities (\"{t}: add {g}.\") */ ext?: Pick<CardDef, 'text' | 'mana' | 'abilities' | 'triggers' | 'statics' | 'keywords'>; preset?: 'Treasure' | 'Food' | 'Clue' | 'Blood' | 'Map' | 'Gold' | 'Powerstone' }
 export interface Effect {
   op: string; n?: Amt; m?: Amt; toHand?: boolean;
   who?: Ref; pl?: PRef; f?: Filter; kw?: string[]; kind?: string; tok?: TokenSpec; dest?: 'hand' | 'battlefield' | 'top' | 'bottom' | 'graveyard' | 'exile';
   tapped?: boolean; attacking?: boolean; sub?: Effect[]; cond?: Cond; text?: string; mana?: string[]; rest?: 'bottom' | 'graveyard' | 'top' | 'hand' | 'exile'; take?: Amt; eot?: boolean; random?: boolean; upTo?: boolean;
-  zone?: 'graveyard' | 'library' | 'hand' | 'battlefield'; reveal?: boolean; sh?: boolean; other?: Ref; until?: 'eot' | 'yourNext'; ctl?: PRef; ret?: 'eot' | 'now'; ifPaid?: Cost; /** emblem definition (op 'emblem') */ emb?: CardDef;
+  zone?: 'graveyard' | 'library' | 'hand' | 'battlefield'; reveal?: boolean; sh?: boolean; other?: Ref; until?: 'eot' | 'yourNext'; ctl?: PRef; ret?: 'eot' | 'now'; ifPaid?: Cost; /** emblem definition (op 'emblem') */ emb?: CardDef; /** 'if' otherwise-branch ("... instead") */ else?: Effect[];
 }
 export interface ManaAbility { add: ManaSym[]; sac?: boolean; n?: Amt; cost?: Cost; tap?: boolean; /** damage dealt to you when tapped for colored mana (painlands) */ pain?: number }
 export interface ActAbility {
@@ -46,7 +47,7 @@ export interface TriggerDef {
   // compiled triggers (on === 'x')
   ev?: string; subj?: 'self' | 'other' | 'any' | 'attached'; f?: Filter; pl?: 'you' | 'opp' | 'any' | 'notyou'; tslots?: TSlot[]; ifc?: Cond; modes?: Modes; kindF?: string; zoneFrom?: string; once?: boolean; combat?: boolean;
 }
-export interface Static { k: 'pt' | 'kw' | 'cantBlock' | 'cantAttack' | 'costLess' | 'costMore' | 'unblockable' | 'mustAttack' | 'noMaxHand' | 'cantBeBlockedBy' | 'doesntUntap'; who: 'self' | 'attached' | 'others' | 'all'; f?: Filter; p?: number | Amt; t?: number | Amt; kws?: string[]; n?: number; spellF?: Filter; cond?: Cond }
+export interface Static { k: 'pt' | 'kw' | 'cantBlock' | 'cantAttack' | 'costLess' | 'costMore' | 'unblockable' | 'mustAttack' | 'noMaxHand' | 'cantBeBlockedBy' | 'doesntUntap' | 'playerHexproof' | 'drawLimit' | 'oppsSorcery' | 'noSearch' | 'winOnEmptyDraw' | 'tokenDouble' | 'pwInstant'; who: 'self' | 'attached' | 'others' | 'all'; f?: Filter; p?: number | Amt; t?: number | Amt; kws?: string[]; n?: number; spellF?: Filter; cond?: Cond }
 export interface CardDef {
   id: string; name: string; types: string[]; legendary?: boolean; basic?: boolean; cost: Cost; colors: Color[]; power?: number; toughness?: number;
   keywords?: string[]; text: string; typeLine?: string; img?: string; art?: string; sub?: string[];
