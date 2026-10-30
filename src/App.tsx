@@ -3,7 +3,7 @@ import { compileScry } from './import/classify';
 import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
 import { DragEvent, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
-import { Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards } from './engine/engine';
+import { emblemsOf, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards } from './engine/engine';
 import { DecisionDialog, KickerDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
@@ -21,8 +21,8 @@ const KW_HELP: Record<string, string> = {
   deathtouch: 'Any amount of damage it deals to a creature is enough to destroy it.', 'first strike': 'Deals combat damage before creatures without first strike.', 'double strike': 'Deals both first-strike and regular combat damage.',
   menace: "Can't be blocked except by two or more creatures.", defender: "Can't attack.", flash: 'You may cast it any time you could cast an instant.', hexproof: "Can't be the target of spells or abilities your opponents control.", prowess: 'Whenever you cast a noncreature spell, it gets +1/+1 until end of turn.',
 };
-type AbLike = { tap?: boolean; untap?: boolean; mana?: Cost; sac?: boolean; loyalty?: number; sacF?: { n: number }; discard?: number; life?: number; remC?: { kind: string; n: number }; exileGy?: { n: number; self?: boolean }; tapF?: { n: number } };
-const abCost = (a: AbLike) => [a.loyalty !== undefined ? `${a.loyalty > 0 ? '+' : a.loyalty === 0 ? '±' : ''}${a.loyalty}` : '', a.mana ? costText(a.mana) : '', a.tap ? '{T}' : '', a.untap ? '{Q}' : '', a.sac ? 'Sac' : '', a.sacF ? `Sac ${a.sacF.n}` : '', a.discard ? `Discard ${a.discard}` : '', a.life ? `${a.life} life` : '', a.remC ? `−${a.remC.n} ${a.remC.kind}` : '', a.exileGy ? (a.exileGy.self ? 'Exile from gy' : `Exile ${a.exileGy.n} from gy`) : '', a.tapF ? `Tap ${a.tapF.n}` : ''].filter(Boolean).join(', ');
+type AbLike = { tap?: boolean; untap?: boolean; mana?: Cost; sac?: boolean; loyalty?: number; loyX?: boolean; sacF?: { n: number }; discard?: number; life?: number; remC?: { kind: string; n: number }; exileGy?: { n: number; self?: boolean }; tapF?: { n: number } };
+const abCost = (a: AbLike) => [a.loyalty !== undefined ? (a.loyX ? '−X' : `${a.loyalty > 0 ? '+' : a.loyalty === 0 ? '±' : '−'}${Math.abs(a.loyalty)}`) : '', a.mana ? costText(a.mana) : '', a.tap ? '{T}' : '', a.untap ? '{Q}' : '', a.sac ? 'Sac' : '', a.sacF ? `Sac ${a.sacF.n}` : '', a.discard ? `Discard ${a.discard}` : '', a.life ? `${a.life} life` : '', a.remC ? `−${a.remC.n} ${a.remC.kind}` : '', a.exileGy ? (a.exileGy.self ? 'Exile from gy' : `Exile ${a.exileGy.n} from gy`) : '', a.tapF ? `Tap ${a.tapF.n}` : ''].filter(Boolean).join(', ');
 /** A cast or activation being set up: kicker → X → modes → one target per active slot. */
 type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; kicked?: boolean; x?: number; modes?: number[]; ts: (Target | undefined)[] };
 type PendingAct = Flow;
@@ -60,29 +60,41 @@ function LifeTotal({ v, big }: { v: number; big?: boolean }) {
 interface UI {
   g: Game; setHover: (h: Hover) => void; clickPerm: (c: Card) => void; permCls: (c: Card) => string; activateAb: (c: Card, i: number) => void;
   isTarget: (t: Target) => boolean; blockDown: (c: Card, e: React.MouseEvent) => void; blockCtx: (c: Card, e: React.MouseEvent) => void; why: (c: Card) => string | null; dropOn: (t: Target, e: DragEvent) => void; dragStart: (c: Card, e: DragEvent) => void;
-  clickPlayer: (pid: number) => void; atkPlan: Record<number, number>; atkTarget?: number; declaring: boolean; openZone: (pid: number, zone: 'graveyard' | 'exile') => void; clickCommand: (c: Card) => void; canTapMana: (cs: Card[]) => boolean; tapMana: (cs: Card[]) => void;
+  clickPlayer: (pid: number) => void; atkPlan: Record<number, number>; atkPw: Record<number, number>; atkWalker: number | null; atkTarget?: number; declaring: boolean; openZone: (pid: number, zone: 'graveyard' | 'exile') => void; clickCommand: (c: Card) => void; canTapMana: (cs: Card[]) => boolean; tapMana: (cs: Card[]) => void;
 }
 
 function Permanent({ ui, c }: { ui: UI; c: Card }) {
   const { g } = ui; const d = def(c); const cr = isType(c, 'Creature'); const mine = c.owner === HUMAN;
   const sick = cr && c.sick && !hasKw(c, 'haste') && c.owner === g.active;
   const atkTo = c.attacking ?? ui.atkPlan[c.uid];
-  const abs = mine ? (d.abilities ?? []).map((a, i) => ({ a, i, ok: canActivate(g, HUMAN, c, i) })) : [];
+  const walker = isType(c, 'Planeswalker'); const [open, setOpen] = useState(false);
+  const abs = mine ? (d.abilities ?? []).map((a, i) => ({ a, i, ok: canActivate(g, HUMAN, c, i) })).filter(x => !walker || x.a.loyalty === undefined) : [];
+  const loyAbs = walker ? (d.abilities ?? []).map((a, i) => ({ a, i, ok: mine && canActivate(g, HUMAN, c, i) })).filter(x => x.a.loyalty !== undefined) : [];
+  const loyWhy = (a: AbLike & { loyalty?: number }) => !mine ? 'Opponent\'s planeswalker' : c.usedLoyalty === g.turn ? 'Already activated a loyalty ability this turn' : !sorceryTiming(g, HUMAN) ? 'Loyalty abilities: your main phase, empty stack' : (a.loyalty ?? 0) < 0 && ctr(c, 'loyalty') < -(a.loyalty ?? 0) ? 'Not enough loyalty' : 'Can\'t activate right now';
+  const pwTarget = walker && !mine && ui.declaring; const aimed = pwTarget && ui.atkWalker === c.uid;
+  const atkW = c.atkPw ?? ui.atkPw[c.uid]; const atkWName = atkW !== undefined ? findCard(g, atkW) && def(findCard(g, atkW)!).name.split(',')[0] : undefined;
   const t = { card: c.uid };
   return (
     <div className={`slot ${c.tapped ? 'tapped' : ''}`} data-uid={c.uid}
-      onDragOver={e => { if (ui.isTarget(t)) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
-      <div className={`perm ${c.attacking !== undefined ? 'attacking' : ''} ${c.blocking !== undefined ? 'blocking' : ''} ${ui.permCls(c)}`}
+      onDragOver={e => { if (ui.isTarget(t) || pwTarget) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
+      <div className={`perm ${walker ? 'walker' : ''} ${pwTarget ? 'atkpick' : ''} ${aimed ? 'atktarget' : ''} ${c.attacking !== undefined ? 'attacking' : ''} ${c.blocking !== undefined ? 'blocking' : ''} ${ui.permCls(c)}`}
         draggable={mine && ui.declaring && canAttack(g, c)} onDragStart={e => ui.dragStart(c, e)}
-        onMouseDown={e => ui.blockDown(c, e)} onContextMenu={e => ui.blockCtx(c, e)} onClick={() => ui.clickPerm(c)} onMouseEnter={() => ui.setHover({ id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)}>
+        onMouseDown={e => ui.blockDown(c, e)} onContextMenu={e => ui.blockCtx(c, e)} onClick={e => { if (walker && mine && !ui.declaring) setOpen(o => !o); if (pwTarget) e.stopPropagation(); ui.clickPerm(c); }} onMouseEnter={() => ui.setHover({ id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)}>
         <CardFace d={d} />
         {cr && <span className={`pt ${c.damage ? 'hurt' : ''} ${c.pp || c.pt ? 'pumped' : ''}`} title={`Power/toughness${c.damage ? ` (${c.damage} damage marked)` : ''}`}>{power(g, c)}/{toughness(g, c) - c.damage}</span>}
         {sick && <span className="badge sick" title="Summoning sick: can't attack or use {T} abilities this turn">💤</span>}
-        {atkTo !== undefined && <span className="badge atk" style={{ background: PCOLORS[atkTo] }}>⚔ {g.players[atkTo].name}</span>}
+        {atkTo !== undefined && <span className="badge atk" style={{ background: PCOLORS[atkTo] }}>⚔ {atkWName ? `◆ ${atkWName}` : g.players[atkTo].name}</span>}
+        {walker && mine && !open && loyAbs.some(x => x.ok) && <span className="badge loyready" title="Click to use a loyalty ability">◆ ready</span>}
+        {walker && <span className={`loyshield ${ctr(c, 'loyalty') <= 2 ? 'low' : ''}`} data-loyalty={ctr(c, 'loyalty')} title={`Loyalty ${ctr(c, 'loyalty')}`}>{ctr(c, 'loyalty')}</span>}
+        {c.anim && <span className="badge anim" title="Planeswalker is a creature until end of turn">⚔ creature</span>}
+        {aimed && <span className="badge atk aim">🎯 Target</span>}
+        {walker && loyAbs.length > 0 && open && <div className="loypanel" onClick={e => e.stopPropagation()}>{loyAbs.map(({ a, i, ok }) => {
+          const k = a.loyX || (a.loyalty ?? 0) < 0 ? ((a.loyalty ?? 0) <= -6 ? 'ult' : 'minus') : (a.loyalty ?? 0) > 0 ? 'plus' : 'zero';
+          return <button key={i} data-loy={i} className={`loyab ${k}`} disabled={!ok} title={ok ? a.label : `${a.label}\n— ${loyWhy(a)}`} onClick={e => { e.stopPropagation(); ui.activateAb(c, i); setOpen(false); }}><span className="lcost">{abCost(a)}</span><span className="ltext">{a.label.replace(/^[+−-]?(\d+|x|X)\s*:\s*/, '')}</span></button>; })}</div>}
         {c.blocking !== undefined && <span className="badge blk">🛡 Block</span>}
         {isCommander(g, c) && <span className="badge cmdr" title="Commander">★</span>}
         {c.token && <span className="badge tok" title="Token">TOKEN</span>}
-        {Object.entries(c.counters ?? {}).some(([, v]) => v) && <div className="ctrs">{Object.entries(c.counters ?? {}).filter(([, v]) => v).map(([k, v]) => <span key={k} data-counter={k} className={`ctr ${k === '+1/+1' ? 'plus' : k === '-1/-1' ? 'minus' : k === 'loyalty' ? 'loy' : ''}`} title={`${v} ${k} counter${v > 1 ? 's' : ''}`}>{k === 'loyalty' ? `◆${v}` : `${k === '+1/+1' || k === '-1/-1' ? k : k} ×${v}`}</span>)}</div>}
+        {Object.entries(c.counters ?? {}).some(([k, v]) => v && !(walker && k === 'loyalty')) && <div className="ctrs">{Object.entries(c.counters ?? {}).filter(([k, v]) => v && !(walker && k === 'loyalty')).map(([k, v]) => <span key={k} data-counter={k} className={`ctr ${k === '+1/+1' ? 'plus' : k === '-1/-1' ? 'minus' : k === 'loyalty' ? 'loy' : ''}`} title={`${v} ${k} counter${v > 1 ? 's' : ''}`}>{k === 'loyalty' ? `◆${v}` : `${k === '+1/+1' || k === '-1/-1' ? k : k} ×${v}`}</span>)}</div>}
         {c.attachedTo !== undefined && <span className="badge host" title={`Attached to ${findCard(g, c.attachedTo) ? def(findCard(g, c.attachedTo)!).name : '?'}`}>⛓ {findCard(g, c.attachedTo) ? def(findCard(g, c.attachedTo)!).name : ''}</span>}
         {(() => { const att = g.players.flatMap(q => q.battlefield).filter(x => x.attachedTo === c.uid); return att.length ? <div className="attached" data-attached={att.length}>{att.map(x => <span key={x.uid} title={def(x).name}>⚔ {def(x).name}</span>)}</div> : null; })()}
         {abs.length > 0 && <div className="abstrip">{abs.map(({ a, i, ok }) => (
@@ -152,6 +164,10 @@ function CmdDamage({ g, pid }: { g: Game; pid: number }) {
       <span key={o.id} className={`cd ${v >= 14 ? 'danger' : ''} ${v === 0 ? 'zero' : ''}`} style={{ borderColor: PCOLORS[o.id] }} title={`${v}/21 combat damage from ${CARDS[o.commanderId].name} (${o.name})`}>
         <i style={{ backgroundImage: `url(${CARDS[o.commanderId].art})` }} /><b>{v}</b>/21</span>); })}</div>;
 }
+function Emblems({ g, pid }: { g: Game; pid: number }) {
+  const es = emblemsOf(g.players[pid]); if (!es.length) return null;
+  return <div className="emblems" data-emblems={es.length}>{es.map(e => <span key={e.uid} className="emblem" title={`Emblem — ${def(e).text}`}>✦ <b>{def(e).name.replace(/ emblem$/, '')}</b> <i>{def(e).text}</i></span>)}</div>;
+}
 function OppPanel({ ui, pid }: { ui: UI; pid: number }) {
   const { g } = ui; const p = g.players[pid]; const t = { player: pid };
   const tgt = ui.isTarget(t); const atkSel = ui.declaring && ui.atkTarget === pid;
@@ -160,6 +176,7 @@ function OppPanel({ ui, pid }: { ui: UI; pid: number }) {
       onClick={() => ui.clickPlayer(pid)} onDragOver={e => { if (tgt || (ui.declaring && !p.lost)) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
       <PlayerHeader ui={ui} pid={pid} />
       <CmdDamage g={g} pid={pid} />
+      <Emblems g={g} pid={pid} />
       {atkSel && <div className="atkflag">🎯 Attack target</div>}
       <Battlefield ui={ui} pid={pid} />
     </section>
@@ -188,7 +205,7 @@ function StackView({ g, ui }: { g: Game; ui: UI }) {
   );
 }
 /** Arrows for attacks, blocks, planned assignments and the top stack item's target. */
-function Arrows({ g, plan, blk }: { g: Game; plan: Record<number, number>; blk: Record<number, number> }) {
+function Arrows({ g, plan, blk, pw }: { g: Game; plan: Record<number, number>; blk: Record<number, number>; pw: Record<number, number> }) {
   const ref = useRef<SVGSVGElement>(null);
   useLayoutEffect(() => {
     const draw = () => {
@@ -202,9 +219,9 @@ function Arrows({ g, plan, blk }: { g: Game; plan: Record<number, number>; blk: 
       };
       for (const a of attackers(g)) {
         for (const b of a.blockedBy ?? []) add(q(`[data-uid="${b}"]`), q(`[data-uid="${a.uid}"]`), '#42a5f5', false);
-        add(q(`[data-uid="${a.uid}"]`), q(`[data-player="${a.attacking}"] .avatar`), PCOLORS[a.attacking!], !!a.blockedBy?.length);
+        add(q(`[data-uid="${a.uid}"]`), a.atkPw !== undefined && q(`[data-uid="${a.atkPw}"]`) ? q(`[data-uid="${a.atkPw}"]`) : q(`[data-player="${a.attacking}"] .avatar`), PCOLORS[a.attacking!], !!a.blockedBy?.length);
       }
-      for (const [u, pid] of Object.entries(plan)) add(q(`[data-uid="${u}"]`), q(`[data-player="${pid}"] .avatar`), PCOLORS[pid], true);
+      for (const [u, pid] of Object.entries(plan)) add(q(`[data-uid="${u}"]`), pw[+u] !== undefined ? q(`[data-uid="${pw[+u]}"]`) : q(`[data-player="${pid}"] .avatar`), PCOLORS[pid], true);
       for (const [b, a] of Object.entries(blk)) add(q(`[data-uid="${b}"]`), q(`[data-uid="${a}"]`), '#42a5f5', true);
       const top = g.stack[g.stack.length - 1];
       if (top?.target) add(q(`[data-stack="${top.id}"]`), top.target.card !== undefined ? q(`[data-uid="${top.target.card}"]`) : top.target.player !== undefined ? q(`[data-player="${top.target.player}"] .avatar`) : q(`[data-stack="${top.target.stack}"]`), '#ce93d8', true);
@@ -271,6 +288,8 @@ export default function App() {
   const [pending, setPending] = useState<PendingAct | null>(null);
   const [atkTarget, setAtkTarget] = useState<number | null>(null);
   const [atkPlan, setAtkPlan] = useState<Record<number, number>>({});
+  const [atkPwPlan, setAtkPwPlan] = useState<Record<number, number>>({});
+  const [atkWalker, setAtkWalker] = useState<number | null>(null);
   const [selBlocker, setSelBlocker] = useState<number | null>(null);
   const [blkPlan, setBlkPlan] = useState<Record<number, number>>({});
   const [bdrag, setBdrag] = useState<{ uid: number; x0: number; y0: number; x: number; y: number; over: number | null; moved: boolean } | null>(null);
@@ -318,7 +337,7 @@ export default function App() {
   const flowActive = flowModes ? (flow?.modes ?? []).flatMap(i => modeRange(flowModes, i)) : flowSlots.map((_, i) => i);
   const flowStage: null | 'kicker' | 'x' | 'modes' | 'targets' = !g || !flow ? null
     : flow.kind === 'cast' && flowCard && def(flowCard).kicker && flow.kicked === undefined ? 'kicker'
-    : flow.x === undefined && (flow.kind === 'cast' ? !!flowCard && !!costOf(g, flowCard).x : flow.kind === 'ability' ? !!flowAb?.mana?.x : false) ? 'x'
+    : flow.x === undefined && (flow.kind === 'cast' ? !!flowCard && !!costOf(g, flowCard).x : flow.kind === 'ability' ? !!flowAb?.mana?.x || !!flowAb?.loyX : false) ? 'x'
     : flowModes && !flow.modes ? 'modes'
     : flow.ts.length < flowActive.length ? 'targets' : null;
   const curSlot = flowStage === 'targets' ? flowSlots[flowActive[flow!.ts.length]] : undefined;
@@ -386,17 +405,22 @@ export default function App() {
   function activateAb(c: Card, i: number) {
     if (!g || !canActivate(g, HUMAN, c, i)) return;
     const a = def(c).abilities![i]; const f: Flow = { kind: 'ability', uid: c.uid, idx: i, ts: [] };
-    if (a.mana?.x) { setPending(f); return; }
+    if (a.mana?.x || a.loyX) { setPending(f); return; }
     advance(f);
   }
   const canTapMana = (cs: Card[]) => !!g && g.priority === HUMAN && !g.decision && !g.choice && !g.res && cs.some(c => c.owner === HUMAN && !c.tapped && !!def(c).mana?.[0] && def(c).mana![0].tap !== false && !def(c).mana![0].cost);
   const tapMana = (cs: Card[]) => { if (!canTapMana(cs)) return; const c = cs.find(x => !x.tapped)!; act(g => { tapForMana(g, HUMAN, c.uid); }); };
   function toggleAttacker(c: Card, to = curAtkTarget) {
-    const p = { ...atkPlan }; if (p[c.uid] !== undefined && to === p[c.uid]) delete p[c.uid]; else if (canAttack(g!, c) && to !== undefined) p[c.uid] = to; setAtkPlan(p);
+    const w = atkWalker !== null && findCard(g!, atkWalker)?.owner === to ? atkWalker : undefined;
+    const p = { ...atkPlan }; const pw = { ...atkPwPlan };
+    if (p[c.uid] !== undefined && to === p[c.uid] && pw[c.uid] === w) { delete p[c.uid]; delete pw[c.uid]; }
+    else if (canAttack(g!, c) && to !== undefined) { p[c.uid] = to; if (w !== undefined) pw[c.uid] = w; else delete pw[c.uid]; }
+    setAtkPlan(p); setAtkPwPlan(pw);
   }
   function clickPerm(c: Card) {
     if (!g) return;
     if (spec) { targetClick({ card: c.uid }); return; }
+    if (declaring && c.owner !== HUMAN && isType(c, 'Planeswalker')) { setAtkTarget(c.owner); setAtkWalker(atkWalker === c.uid ? null : c.uid); return; }
     if (c.owner === HUMAN && !declaring && !blocking && isType(c, 'Creature') && !(def(c).abilities ?? []).length && canTapMana([c])) { tapMana([c]); return; }
     if (declaring && c.owner === HUMAN) return toggleAttacker(c);
     if (blocking) {
@@ -442,7 +466,7 @@ export default function App() {
     window.addEventListener('mousemove', m); window.addEventListener('mouseup', u);
     return () => { window.removeEventListener('mousemove', m); window.removeEventListener('mouseup', u); };
   }, []);
-  function clickPlayer(pid: number) { if (spec) { targetClick({ player: pid }); return; } if (declaring && !g!.players[pid].lost && pid !== HUMAN) setAtkTarget(pid); }
+  function clickPlayer(pid: number) { if (spec) { targetClick({ player: pid }); return; } if (declaring && !g!.players[pid].lost && pid !== HUMAN) { setAtkTarget(pid); setAtkWalker(null); } }
   function dragStart(c: Card, e: DragEvent) {
     e.dataTransfer.setData('text/plain', String(c.uid)); e.dataTransfer.effectAllowed = 'move';
     if (!declaring && c.owner === HUMAN && me!.hand.includes(c) && spellSlots(def(c)).length && canCast(g!, HUMAN, c)) startCast(c);
@@ -451,10 +475,12 @@ export default function App() {
     e?.preventDefault?.();
     if (spec) { targetClick(t); return; }
     const uid = Number(e?.dataTransfer?.getData('text/plain'));
-    if (declaring && t.player !== undefined && uid) { const c = me!.battlefield.find(x => x.uid === uid); if (c && canAttack(g!, c)) { setAtkPlan({ ...atkPlan, [uid]: t.player }); setAtkTarget(t.player); } }
+    if (declaring && t.player !== undefined && uid) { const c = me!.battlefield.find(x => x.uid === uid); if (c && canAttack(g!, c)) { setAtkPlan({ ...atkPlan, [uid]: t.player }); const pw = { ...atkPwPlan }; delete pw[uid]; setAtkPwPlan(pw); setAtkTarget(t.player); setAtkWalker(null); } }
+    const w = declaring && t.card !== undefined ? findCard(g!, t.card) : undefined;
+    if (w && uid && w.owner !== HUMAN && isType(w, 'Planeswalker')) { e?.stopPropagation?.(); const c = me!.battlefield.find(x => x.uid === uid); if (c && canAttack(g!, c)) { setAtkPlan({ ...atkPlan, [uid]: w.owner }); setAtkPwPlan({ ...atkPwPlan, [uid]: w.uid }); setAtkTarget(w.owner); setAtkWalker(w.uid); } }
   }
-  const attackAll = () => { if (!g || curAtkTarget === undefined) return; const p = { ...atkPlan }; for (const c of me!.battlefield) if (canAttack(g, c) && p[c.uid] === undefined && power(g, c) > 0) p[c.uid] = curAtkTarget; setAtkPlan(p); };
-  const confirmAttacks = () => { act(g => { declareAttackers(g, HUMAN, Object.entries(atkPlan).map(([u, d]) => ({ uid: +u, defender: d }))); }); setAtkPlan({}); };
+  const attackAll = () => { if (!g || curAtkTarget === undefined) return; const p = { ...atkPlan }; for (const c of me!.battlefield) if (canAttack(g, c) && p[c.uid] === undefined && power(g, c) > 0) p[c.uid] = curAtkTarget; setAtkPlan(p); if (atkWalker !== null && findCard(g, atkWalker)?.owner === curAtkTarget) { const pw = { ...atkPwPlan }; for (const u of Object.keys(p)) if (atkPlan[+u] === undefined) pw[+u] = atkWalker; setAtkPwPlan(pw); } };
+  const confirmAttacks = () => { act(g => { declareAttackers(g, HUMAN, Object.entries(atkPlan).map(([u, d]) => ({ uid: +u, defender: d, pw: atkPwPlan[+u] }))); }); setAtkPlan({}); setAtkPwPlan({}); setAtkWalker(null); };
   const confirmBlocks = () => { act(g => { declareBlockers(g, HUMAN, Object.entries(blkPlan).map(([b, a]) => ({ blocker: +b, attacker: a }))); }); setBlkPlan({}); setSelBlocker(null); };
   const doPass = () => act(g => { pass(g, HUMAN); });
   const endTurn = () => { if (!g) return; setPassUntil(g.turn); act(g => { if (g.priority === HUMAN) pass(g, HUMAN); }); };
@@ -561,7 +587,7 @@ export default function App() {
     if (bdrag?.uid === c.uid && bdrag.moved) out.push('dragging');
     return out.join(' ');
   };
-  const ui: UI = { canTapMana, tapMana, g, blockDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand };
+  const ui: UI = { canTapMana, tapMana, g, blockDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand };
   const hand = me.hand; const n = hand.length;
 
   return (
@@ -583,7 +609,7 @@ export default function App() {
         <div className={`prompt ${tone}`}><span>{prompt}</span></div>
         <section className={`player me ${g.active === HUMAN ? 'active' : ''} ${isTarget({ player: HUMAN }) ? 'targetable' : ''}`} style={{ ['--pc' as string]: PCOLORS[0] }} data-player={HUMAN}
           onClick={() => isTarget({ player: HUMAN }) && targetClick({ player: HUMAN })} onDragOver={e => { if (isTarget({ player: HUMAN })) e.preventDefault(); }} onDrop={e => dropOn({ player: HUMAN }, e)}>
-          <div className="meside"><PlayerHeader ui={ui} pid={HUMAN} big /><CmdDamage g={g} pid={HUMAN} /></div>
+          <div className="meside"><PlayerHeader ui={ui} pid={HUMAN} big /><CmdDamage g={g} pid={HUMAN} /><Emblems g={g} pid={HUMAN} /></div>
           <Battlefield ui={ui} pid={HUMAN} />
         </section>
         <div className="hand" style={{ ['--n' as string]: n }}>
@@ -619,12 +645,12 @@ export default function App() {
         </div>
       </aside>
 
-      <Arrows g={g} plan={atkPlan} blk={blkPlan} />
+      <Arrows g={g} plan={atkPlan} blk={blkPlan} pw={atkPwPlan} />
       {bdrag?.moved && <DragLine uid={bdrag.uid} x={bdrag.x} y={bdrag.y} color={bdrag.over === null ? '#9ec3ff' : blockReason(g, findCard(g, bdrag.uid)!, findCard(g, bdrag.over)!) ? '#ef5350' : '#42a5f5'} />}
       {toast && <div className="toast">{toast}</div>}
       {humanDecision && <DecisionDialog key={humanDecision.key + humanDecision.kind} g={g} d={humanDecision} answer={a => act(g => { answerDecision(g, a); })} Face={CardFace} setHover={id => setHover(id ? { id } : null)} />}
       {!humanDecision && flow && flowStage === 'kicker' && flowCard && <KickerDialog name={flowName} cost={costText(def(flowCard).kicker!)} cancel={() => setPending(null)} pick={k => begin2({ ...flow, kicked: k }, flowCard)} />}
-      {!humanDecision && flow && flowStage === 'x' && <XDialog name={flowName} max={flow.kind === 'ability' && flowCard ? maxX(g, HUMAN, flowCard, { abil: flowAb!.mana, exclude: flowAb!.tap ? flowCard.uid : undefined }) : flowCard ? maxX(g, HUMAN, flowCard, { kicked: flow.kicked }) : 0} cancel={() => setPending(null)} pick={x => advance({ ...flow, x })} />}
+      {!humanDecision && flow && flowStage === 'x' && <XDialog name={flowName} max={flow.kind === 'ability' && flowCard && flowAb?.loyX ? ctr(flowCard, 'loyalty') : flow.kind === 'ability' && flowCard ? maxX(g, HUMAN, flowCard, { abil: flowAb!.mana, exclude: flowAb!.tap ? flowCard.uid : undefined }) : flowCard ? maxX(g, HUMAN, flowCard, { kicked: flow.kicked }) : 0} cancel={() => setPending(null)} pick={x => advance({ ...flow, x })} />}
       {!humanDecision && flow && flowStage === 'modes' && flowModes && <ModesDialog key={flow.uid} name={flowName} m={flowModes} avail={flowModes.list.map(md => (md.tslots ?? []).every(sl => sl.opt || [...g.players.map(q => ({ player: q.id })), ...g.players.flatMap(q => [...q.battlefield, ...q.graveyard].map(c => ({ card: c.uid }))), ...g.stack.map(it => ({ stack: it.id }))].some(t => validSlot(g, HUMAN, sl, t, tctx))))} cancel={flow.kind === 'trigger' ? undefined : () => setPending(null)} pick={ms => advance({ ...flow, modes: ms })} />}
       {!humanDecision && curSlot?.who === 'card' && (() => { const cands = g.players.flatMap(q => [...q.graveyard]).filter(c => validSlot(g, HUMAN, curSlot, { card: c.uid }, tctx)); return (
         <div className="modal choice"><div className="mbox wide" data-dialog="gytarget"><h2>{flowName}: choose {curSlot.label ?? 'a card'}</h2><p className="csub">Target a card in a graveyard.</p>

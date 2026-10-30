@@ -259,3 +259,26 @@ html,body,#root,.app,.table{overflow:clip!important}
 .gyplay button{background:#4a148cdd;color:#fff;border:1px solid #ce93d8;border-radius:.4rem;padding:.3rem .6rem;font-size:.8rem}
 .slotinfo{display:inline-block;margin-left:.6rem;color:var(--gold)}
 .pip-multi{background:linear-gradient(135deg,#f8f3d6,#aad4f5,#b9aeb4,#f5a48d,#9fd6a3);color:#000}
+/* ---- planeswalkers ---- */
+.perm.walker{box-shadow:0 0 0 2px #d4af37aa,0 0 .8rem #d4af3744}
+.loyshield{position:absolute;right:-.45rem;bottom:-.45rem;z-index:4;width:calc(var(--cw)*.36);height:calc(var(--cw)*.42);min-width:2.5rem;min-height:2.9rem;display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:max(1.15rem,calc(var(--cw)*.2));color:#fff;background:linear-gradient(180deg,#5d4037,#1b0f0a);border:2px solid var(--gold,#d4af37);
+  clip-path:polygon(50% 0,100% 14%,100% 60%,50% 100%,0 60%,0 14%);text-shadow:0 1px 2px #000;filter:drop-shadow(0 2px 3px #000)}
+.loyshield.low{background:linear-gradient(180deg,#b71c1c,#3e0b0b)}
+.loypanel{position:absolute;left:50%;top:100%;transform:translateX(-50%);z-index:30;display:flex;flex-direction:column;gap:.2rem;min-width:calc(var(--cw)*2.1);max-width:18rem;margin-top:.3rem;
+  background:#14110dee;border:1px solid var(--gold,#d4af37);border-radius:.4rem;padding:.3rem;box-shadow:0 .4rem 1.2rem #000c}
+.loyab{display:flex;gap:.4rem;align-items:center;text-align:left;font-size:.72rem;line-height:1.15;padding:.25rem .35rem;border-radius:.3rem;border:1px solid #fff3;background:#263238;color:#eee;cursor:pointer}
+.loyab:hover:not(:disabled){filter:brightness(1.25)}
+.loyab:disabled{opacity:.38;cursor:not-allowed;filter:grayscale(.8)}
+.loyab .lcost{flex:none;min-width:2.1rem;text-align:center;font-weight:900;font-size:.85rem;padding:.1rem .25rem;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);color:#fff}
+.loyab.plus .lcost{background:#2e7d32}.loyab.minus .lcost{background:#c62828}.loyab.ult .lcost{background:#6a1b9a}.loyab.zero .lcost{background:#546e7a}
+.loyab.ult{border-color:#ce93d8}
+.perm.atkpick{cursor:crosshair;box-shadow:0 0 0 2px #ff5252aa}
+.perm.atktarget{box-shadow:0 0 0 .2rem #ff5252,0 0 1.4rem #ff5252aa}
+.badge.atk.aim{top:auto;bottom:-.9rem;background:#ff5252;color:#000}
+.badge.anim{bottom:.2rem;left:.2rem;background:#ff7043;color:#000;font-size:.65rem}
+.emblems{display:flex;flex-wrap:wrap;gap:.25rem;margin:.2rem 0}
+.emblem{font-size:.68rem;background:linear-gradient(90deg,#4a148c,#1a237e);border:1px solid #ce93d8;color:#fff;border-radius:1rem;padding:.1rem .5rem;max-width:22rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.emblem i{color:#e1bee7;font-style:normal;opacity:.9}
+.badge.loyready{top:.2rem;left:.2rem;background:#d4af37;color:#000;font-size:.62rem;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}

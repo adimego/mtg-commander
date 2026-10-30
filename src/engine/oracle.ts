@@ -7,7 +7,7 @@ import type { ActAbility, Amt, CardDef, Color, Cond, Cost, Effect, Filter, ManaA
 const SUB = new Map<string, string>((SUBTYPES as string[]).map(s => [s.toLowerCase(), s]));
 const TYPES: Record<string, string> = { creature: 'Creature', artifact: 'Artifact', enchantment: 'Enchantment', land: 'Land', planeswalker: 'Planeswalker', instant: 'Instant', sorcery: 'Sorcery', battle: 'Battle', permanent: 'Permanent', legendary: 'Legendary', historic: 'Historic', outlaw: 'Outlaw' };
 const COLOR_OF: Record<string, Color> = { white: 'W', blue: 'U', black: 'B', red: 'R', green: 'G' };
-export const KWS = ['flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted'];
+export const KWS = ['compleated', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted'];
 const IRREG: Record<string, string> = { elves: 'elf', dwarves: 'dwarf', wolves: 'wolf', werewolves: 'werewolf', fungi: 'fungus', mice: 'mouse', sorceries: 'sorcery', allies: 'ally', faeries: 'faerie', zombies: 'zombie', zombie: 'zombie', thieves: 'thief', leeches: 'leech', octopi: 'octopus', 'cyclopes': 'cyclops', 'sphinxes': 'sphinx', 'foxes': 'fox', 'boars': 'boar', 'mercenaries': 'mercenary', 'slivers': 'sliver' };
 function typeWord(w: string): string | null {
   const cands = [IRREG[w], w, w.replace(/ies$/, 'y'), w.replace(/es$/, ''), w.replace(/s$/, '')].filter(Boolean) as string[];
@@ -109,7 +109,7 @@ function obj(s: string, cx: Cx, harm: boolean): ObjR | null {
   if (/^(that creature|that permanent|that card|that token|that land|that artifact|those creatures|those cards|those tokens|that enchantment|that spell|that planeswalker)$/.test(s)) return { ref: cx.that ?? cx.it ?? 'ev' };
   if (/^(enchanted|equipped) (creature|permanent|land|artifact|planeswalker)$/.test(s)) return { ref: 'attached' };
   if (s === 'any target' || s === 'any other target') return { ref: addSlot(cx, { who: 'any', harm }) };
-  if (/^(one|two|three|\d+) target/.test(s) && !/^(one|two|three|\d+) target (creature|player)s?/.test(s)) return null;
+  if (/^(one|two|three|\d+) target/.test(s) && !/^(one|two|three|\d+) target (creature|player|[a-z]+s\b)/.test(s)) return null;
   const tm = /^(?:(up to )?(one|two|three|four|five|x|\d+) )?(other |another )?target (.+)$/.exec(s);
   if (tm) {
     const n = tm[2] ? num(tm[2]) : 1; if (n === null || n === 'X') return null; const opt = !!tm[1]; let noun = tm[4];
@@ -118,8 +118,8 @@ function obj(s: string, cx: Cx, harm: boolean): ObjR | null {
     if (/^(opponent|opponents)$/.test(noun)) return { ref: addSlot(cx, { who: 'opp', harm: true, opt }), pl: 't' + (cx.slots.length - 1) };
     if (/^(activated or triggered ability|activated ability|triggered ability)$/.test(noun)) return { ref: addSlot(cx, { who: 'ability', harm: true }) };
     let who: TSlot['who'] = 'perm'; let zoneOwner: TSlot['zoneOwner'];
-    const gm = /^(.+?) (?:card|cards) (?:from|in) (your|a|an opponent's|target player's|that player's) graveyards?$/.exec(noun) ?? /^(card|cards) (?:from|in) (your|a|an opponent's) graveyards?$/.exec(noun);
-    if (gm) { who = 'card'; zoneOwner = gm[2] === 'your' ? 'you' : gm[2] === 'a' ? 'any' : 'opp'; noun = gm[1] === 'card' || gm[1] === 'cards' ? 'card' : gm[1] + ' card'; }
+    const gm = /^(.+?) (?:card|cards)( with [a-z0-9 ]+?)? (?:from|in) (your|a|an opponent's|target player's|that player's) graveyards?$/.exec(noun) ?? /^(card|cards)( with [a-z0-9 ]+?)? (?:from|in) (your|a|an opponent's) graveyards?$/.exec(noun);
+    if (gm) { who = 'card'; zoneOwner = gm[3] === 'your' ? 'you' : gm[3] === 'a' ? 'any' : 'opp'; noun = (gm[1] === 'card' || gm[1] === 'cards' ? 'card' : gm[1] + ' card') + (gm[2] ?? ''); }
     const fp = parseFilter(noun); if (!fp) return null;
     if (fp.spell) who = 'spell'; else if (fp.card && who !== 'card') return null;
     if (tm[3]) fp.f.other = true;
@@ -149,6 +149,7 @@ function amount(s: string, cx: Cx): Amt | null {
   if ((m = /^the number of (?:\+1\/\+1 )?counters on ~$/.exec(eq))) return { ctr: '+1/+1', who: 'self' };
   if (/^the number of opponents you have$/.test(eq)) return { opps: true };
   if (/^your life total$/.test(eq)) return { life: 'you' };
+  if ((m = /^the (?:greatest|highest) power among (.+)$/.exec(eq))) { const fp = parseFilter(m[1]); return fp && !fp.card ? { maxPow: fp.f } : null; }
   if (/^the life you've gained this turn$|^the amount of life you gained this turn$/.test(eq)) return { lifeGained: true };
   if ((m = /^the number of (.+?)$/.exec(eq))) { const fp = parseFilter(m[1]); return fp && !fp.card && !fp.spell ? { count: fp.f } : null; }
   return null;
@@ -207,7 +208,9 @@ function tokenSpec(s: string): TokenSpec | null {
     if (COLOR_OF[x]) colors.push(COLOR_OF[x]); else if (x === 'and' || x === 'colorless') continue;
     else if (x === 'legendary') legendary = true;
     else if (['artifact', 'creature', 'enchantment', 'land'].includes(x)) types.push(TYPES[x]);
-    else if (SUB.has(x)) sub.push(SUB.get(x)!); else return null;
+    else if (SUB.has(x)) sub.push(SUB.get(x)!);
+    else if (/^[a-z]+$/.test(x) && !types.length && w.slice(i + 1).some(y => ['artifact', 'creature', 'enchantment'].includes(y)) && !['tapped', 'attacking', 'token', 'tokens', 'named', 'with', 'that', 'copy'].includes(x)) sub.push(x[0].toUpperCase() + x.slice(1));
+    else return null;
   }
   if (!types.length && sub.length === 1 && PRESETS.includes(sub[0].toLowerCase())) return { name: sub[0], colors: [], types: ['Artifact'], preset: sub[0] as TokenSpec['preset'] };
   if (!types.length || (types.includes('Creature') && p === undefined)) return null;
@@ -237,7 +240,28 @@ const P_RE = "(you|each opponent|each player|target player|target opponent|that 
 type Pat = [RegExp, (m: RegExpExecArray, cx: Cx) => Effect[] | null];
 const harmOf = (n: Amt) => typeof n === 'number' && n < 0;
 function pl(m: string | undefined, cx: Cx, harm = true): PRef | null { if (!m) return 'you'; return playerRef(m, cx, harm); }
+const EMB: string[] = [];
+const hashStr = (t: string) => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+/** Compile emblem text ("creatures you control get +1/+1", triggers…) into a synthetic card definition. */
+function emblemDef(body: string): CardDef | null {
+  const owner = CUR_NAME; const text = body.replace(/this emblem/g, '~').replace(/'([^']+)'/g, '"$1"');
+  const name = `${owner.split(',')[0]} emblem`;
+  const d: CardDef = { id: `emblem:${owner}:${hashStr(text)}`, name, types: ['Emblem'], cost: { generic: 0 }, colors: [], text: '' };
+  const r = compile({ name, oracle_text: text, type_line: 'Emblem' }, d); CUR_NAME = owner;
+  if (!r.ok) return null; d.text = pretty(text, name).replace(/^./, x => x.toUpperCase()); return d;
+}
+const UNTIL_NEXT = (fx: Effect[] | null) => { if (!fx || !fx.length || !fx.every(e => e.op === 'pump' || e.op === 'grant')) return null; for (const e of fx) e.until = 'yourNext'; return fx; };
 const PATS: Pat[] = [
+  [/^(you|target opponent|target player|each opponent) gets? emblem#(\d+)$/, (m, cx) => { const d = emblemDef(EMB[+m[2]]); const p = m[1] === 'you' ? 'you' : playerRef(m[1], cx, m[1] !== 'target player'); return d && p ? [{ op: 'emblem', pl: p, emb: d }] : null; }],
+  [/^gain control of (.+?)( until end of turn)?$/, (m, cx) => { const o = obj(m[1], cx, true); return o && !o.card ? [{ op: 'steal', who: o.ref, until: m[2] ? 'eot' : undefined }] : null; }],
+  [/^take an extra turn after this one$/, () => [{ op: 'extraTurn' }]],
+  [new RegExp(`^(${P_RE})(?:'s)? life totals? becomes? (\\d+)$`), (m, cx) => { const p = playerRef(m[1].replace(/'s$/, ''), cx); return p ? [{ op: 'lifeBecomes', n: +m[m.length - 1], pl: p }] : null; }],
+  [/^(?:until end of turn, )?~ becomes an? (\d+)\/(\d+) (?:[a-z ]+ )?creature(?: with ([a-z ,]+?))? that's still a planeswalker(?: until end of turn)?( §prevent)?$/, m => { const kw = m[3] ? kwList(m[3]) : []; if (kw === null) return null; return [{ op: 'animate', n: +m[1], m: +m[2], kw, eot: !!m[4] }]; }],
+  [/^~ deals (\d+) damage to target (player|opponent)(?: or planeswalker)? and each creature( and planeswalker)? (?:that player|they|that player or that planeswalker's controller) controls?$/, (m, cx) => { addSlot(cx, { who: m[1] && /or planeswalker/.test(m[0]) ? 'any' : m[2] === 'opponent' ? 'opp' : 'player', harm: true }); return [{ op: 'dmgPlayerAndCreatures', n: +m[1], f: m[3] ? { types: ['Planeswalker'] } : undefined }]; }],
+  [/^until your next turn, (.+)$/, (m, cx) => { const n = cx.slots.length; const a = UNTIL_NEXT(clause(m[1], cx)); if (a) return a; cx.slots.length = n; return UNTIL_NEXT(clause(m[1] + ' until end of turn', cx)); }],
+  [/^(.+?) can't attack or block (?:this turn|until end of turn)$/, (m, cx) => { const o = obj(m[1], cx, true); return o && !o.card ? [{ op: 'grant', who: o.ref, kw: ['_cantattack', '_cantblock'] }] : null; }],
+  [/^put an? (\+1\/\+1|loyalty) counter on each (.+?) and an? (\+1\/\+1|loyalty) counter on each (.+)$/, (m, cx) => { const a = obj('each ' + m[2], cx, false); const b = obj('each ' + m[4], cx, false); return a && b ? [{ op: 'addC', kind: m[1], n: 1, who: a.ref }, { op: 'addC', kind: m[3], n: 1, who: b.ref }] : null; }],
+  [/^(.+) until your next turn$/, (m, cx) => UNTIL_NEXT(clause(m[1] + ' until end of turn', cx))],
   [/^(?:shuffle(?: your library)?|then shuffle|(?:it|they) can't be regenerated)$/, () => []],
   [new RegExp(`^(?:${P_RE} )?draws? (${N}|that many|x) cards?(?: for each (.+))?$`), (m, cx) => { const p = pl(m[1], cx, false); const a = num(m[2]) ?? (m[2] === 'that many' ? 'ev' : null); if (!p || a === null) return null; const n = withForEach(a, m[3], cx); return n === null ? null : [{ op: 'draw', n, pl: p }]; }],
   [new RegExp(`^(?:${P_RE} )?draws? cards equal to (.+)$`), (m, cx) => { const p = pl(m[1], cx, false); const a = amount(m[2], cx); return p && a !== null ? [{ op: 'draw', n: a, pl: p }] : null; }],
@@ -255,8 +279,8 @@ const PATS: Pat[] = [
   [/^destroy (.+?)$/, (m, cx) => { const o = obj(m[1], cx, true); return o && !o.card ? [{ op: 'destroy', who: o.ref }] : null; }],
   [/^exile (.+?)(?: until ~ leaves the battlefield)?$/, (m, cx) => { if (/until/.test(m[0])) return null; const o = obj(m[1], cx, true); return o ? [{ op: 'exile', who: o.ref }] : null; }],
   [/^return (a|an) (land|creature|permanent|nonland permanent|artifact|enchantment) you control to its owner's hand$/, m => { const fp = parseFilter(m[2]); return fp ? [{ op: 'sac', f: { ...fp.f, ctrl: 'you' }, n: 1, pl: 'you', dest: 'hand' }] : null; }],
-  [/^return (.+?) to (?:its owner's|their owners'|your|their owner's) hands?$/, (m, cx) => { const o = (/^target .*graveyard$/.test(m[1]) ? obj(m[1], cx, false) : null) ?? obj(m[1].replace(/ from your graveyard$| from a graveyard$/, ''), cx, !/graveyard/.test(m[1])); if (!o) { const o2 = gyObj(m[1], cx); return o2 ? [{ op: 'ret', who: o2, dest: 'hand' }] : null; } return [{ op: o.card || /graveyard/.test(m[1]) ? 'ret' : 'bounce', who: o.ref, dest: 'hand' }]; }],
-  [/^return (.+?) to the battlefield( tapped)?(?: under (your|its owner's|their owners'|their owner's) control)?( tapped)?$/, (m, cx) => { const o = obj(m[1].replace(/ from your graveyard$| from a graveyard$/, ''), cx, false) ?? (gyObj(m[1], cx) ? { ref: gyObj(m[1], cx)! } : null); return o ? [{ op: 'ret', who: o.ref, dest: 'battlefield', tapped: !!(m[2] || m[4]), ctl: m[3] === 'your' ? 'you' : undefined }] : null; }],
+  [/^return (.+?) to (?:its owner's|their owners'|your|their owner's) hands?$/, (m, cx) => { const o = (/\btarget .*graveyard$/.test(m[1]) ? obj(m[1], cx, false) : null) ?? obj(m[1].replace(/ from your graveyard$| from a graveyard$/, ''), cx, !/graveyard/.test(m[1])); if (!o) { const o2 = gyObj(m[1], cx); return o2 ? [{ op: 'ret', who: o2, dest: 'hand' }] : null; } return [{ op: o.card || /graveyard/.test(m[1]) ? 'ret' : 'bounce', who: o.ref, dest: 'hand' }]; }],
+  [/^return (.+?) to the battlefield( tapped)?(?: under (your|its owner's|their owners'|their owner's) control)?( tapped)?$/, (m, cx) => { const o = (/\btarget .*graveyard$/.test(m[1]) ? obj(m[1], cx, false) : null) ?? obj(m[1].replace(/ from your graveyard$| from a graveyard$/, ''), cx, false) ?? (gyObj(m[1], cx) ? { ref: gyObj(m[1], cx)! } : null); return o ? [{ op: 'ret', who: o.ref, dest: 'battlefield', tapped: !!(m[2] || m[4]), ctl: m[3] === 'your' ? 'you' : undefined }] : null; }],
   [/^put (target .+? card from (?:a|your|an opponent's) graveyard) onto the battlefield( tapped)? under your control$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'ret', who: o.ref, dest: 'battlefield', tapped: !!m[2], ctl: 'you' }] : null; }],
   [/^exile (target player's|each opponent's|each player's|all|all opponents') graveyards?$/, (m, cx) => { const p = m[1] === 'all' ? 'all' : playerRef(m[1].replace(/'s?$/, ''), cx, true); return p ? [{ op: 'exileGrave', pl: p }] : null; }],
   [/^(?:then )?put (two|three|a|one) cards? from your hand on top of your library(?: in any order)?$/, m => [{ op: 'putBack', n: num(m[1])! }]],
@@ -295,7 +319,7 @@ const PATS: Pat[] = [
   [/^(?:you may )?play an additional land (?:this turn|on each of your turns)$/, () => [{ op: 'extraLand', n: 1 }]],
   [/^put (a|an|up to (?:one|two)) (.+?) cards? from your hand onto the battlefield( tapped)?$/, (m, cx) => { const fp = parseFilter(m[2]); return fp ? [{ op: 'putLand', f: fp.f, n: /two/.test(m[1]) ? 2 : 1, tapped: !!m[3], text: `${m[1]} ${m[2]} card` }] : null; }],
   [/^attach (?:~|it) to (.+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'attach', who: 'self', other: o.ref }] : null; }],
-  [/^search your library for (a|an|one|two|three|up to (?:one|two|three|four|five|x)) (.+?) cards?(?: with (?:different names|the same name))?, (?:reveal (?:it|them|that card|those cards), )?(?:and )?put (?:it|them|that card|those cards|the card) (onto the battlefield( tapped)?|into your hand|on top of your library)(?:,? then shuffle| and shuffle)?$/, (m, cx) => search(m[1], m[2], m[3], !!m[4])],
+  [/^search your library for (a|an|one|two|three|any number of|up to (?:one|two|three|four|five|x)) (.+?) cards?(?: with (?:different names|the same name))?, (?:reveal (?:it|them|that card|those cards), )?(?:and )?put (?:it|them|that card|those cards|the card) (onto the battlefield( tapped)?|into your hand|on top of your library)(?:,? then shuffle| and shuffle)?$/, (m, cx) => search(m[1], m[2], m[3], !!m[4])],
   [/^search your library for (a|an|one) card,? (?:then )?(?:reveal it, )?(?:then )?(?:shuffle(?: and|,)? )?(?:put|and put) (?:that card|it) (into your hand|on top(?: of your library)?)(?:,? then shuffle)?$/, m => search(m[1], 'card', m[2].startsWith('on top') ? 'on top of your library' : m[2], false)],
   [/^search your library for (a|an|one|two|three|up to (?:one|two|three)) (.+?) cards?, (?:reveal (?:it|them|those cards), )?(?:then )?shuffle,? and put (?:that card|the card|it|them) (on top|into your hand|onto the battlefield)(?: of your library)?$/, (m, cx) => search(m[1], m[2], m[3] === 'on top' ? 'on top of your library' : m[3], false)],
   [/^search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand(?:, then shuffle)?$/, () => [{ op: 'search', n: 2, f: { types: ['Land'], basic: true }, dest: 'battlefield', tapped: true, take: 1, rest: 'hand', text: 'basic land card' }]],
@@ -306,7 +330,7 @@ function gyObj(s: string, cx: Cx): Ref | null {
   return null;
 }
 function search(nw: string, noun = 'card', dest: string, tapped: boolean): Effect[] | null {
-  const n = /up to/.test(nw) ? num(nw.replace('up to ', '')) : num(nw); if (n === null) return null;
+  const n = nw === 'any number of' ? 99 : /up to/.test(nw) ? num(nw.replace('up to ', '')) : num(nw); if (n === null) return null;
   const fp = parseFilter(noun === 'card' ? 'card' : noun + ' card'); if (!fp) return null;
   return [{ op: 'search', n, f: fp.f, dest: dest.startsWith('onto') ? 'battlefield' : dest.startsWith('on top') ? 'top' : 'hand', tapped, text: noun === 'card' ? 'card' : `${noun} card` }];
 }
@@ -336,7 +360,7 @@ function dmg(srcS: string, n: Amt, toS: string, cx: Cx, fe?: string): Effect[] |
 }
 
 function clause(s: string, cx: Cx): Effect[] | null {
-  s = s.trim().replace(/^then /, '').replace(/\.$/, '');
+  s = s.trim().replace(/^then /, '').replace(/\.$/, '').replace(/\beach of (up to \w+|\w+) target\b/, '$1 target');
   if (!s) return [];
   let m: RegExpExecArray | null;
   if ((m = /^if (.+?), (.+)$/.exec(s))) { const c = cond(m[1], cx); const sub = c && clause(m[2], cx); if (c && sub) return [{ op: 'if', cond: c, sub }]; }
@@ -381,6 +405,8 @@ export function effects(text: string, cx: Cx): Effect[] | null {
   }
   const imp = /^(.*?)exile the top (card|\w+ cards) of your library\. (?:until (?:the )?end of (?:your next )?turn, )?you may play (?:it|that card|them|those cards)(?: this turn| until the end of your next turn| until end of turn)?(.*)$/.exec(t);
   if (imp) { const pre = imp[1] ? effects(imp[1], cx) : []; const k = imp[2] === 'card' ? 1 : num(imp[2].split(' ')[0]); const post = imp[3].replace(/^\.\s*/, ''); const tail = post ? effects(post, cx) : []; if (!pre || !tail || k === null) return null; return [...pre, { op: 'exileTop', n: k, until: /next turn/.test(imp[0]) ? 'yourNext' : 'eot' }, ...tail]; }
+  t = t.replace(/(you|target opponent|target player|each opponent) gets? an emblem with "([^"]+)"/g, (_, w: string, b: string) => { EMB.push(b.replace(/\.$/, '')); return `${w} gets emblem#${EMB.length - 1}`; })
+    .replace(/that's still a planeswalker\. prevent all damage that would be dealt to (?:him|her|it|them) this turn/, "that's still a planeswalker §prevent");
   t = t.replace(/(that player|they) may pay \{(\d+)\}\. if (?:the player|they|that player) (?:doesn't|don't|does not|do not), ([^.]+)/g, '$3 unless $1 pays {$2}')
     .replace(/(you may [^.]+)\. if you do, /g, '$1 §ifdo ')
     .replace(/\. you gain life equal to the life lost this way/, ' §gainlost');
@@ -395,6 +421,7 @@ export function effects(text: string, cx: Cx): Effect[] | null {
     const e = clause(s, cx); if (!e) return null;
     // "it"/"that creature" now refer to the first target, if any
     out.push(...e);
+    const st = e.find(x => x.op === 'steal' && typeof x.who === 'object'); if (st) { cx.it = st.who as never; cx.that = st.who as never; }
     const firstT = e.find(x => typeof x.who === 'string' && /^t\d+$/.test(x.who as string)); if (firstT) { cx.it = firstT.who as string; cx.that = firstT.who as string; }
   }
   return out;
@@ -514,7 +541,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
     const lm = /^([+-]?\d+|[+-]x): (.+)$/.exec(l);
     if (lm && d.types.includes('Planeswalker')) {
       const cx = newCx(); const fx = effects(lm[2], cx); if (!fx) { fail(raw); continue; }
-      abilities.push({ label: `${lm[1].startsWith('+') || lm[1] === '0' ? lm[1] : lm[1]}: ${shortLabel(lm[2])}`, loyalty: lm[1] === 'x' || lm[1] === '-x' ? -0 : +lm[1], effects: fx, tslots: cx.slots.length ? cx.slots : undefined, sorcery: true });
+      abilities.push({ label: `${lm[1].startsWith('+') || lm[1] === '0' ? lm[1] : lm[1]}: ${shortLabel(lm[2])}`, loyalty: lm[1] === 'x' ? 0 : lm[1] === '-x' ? -0 : +lm[1], loyX: lm[1] === '-x' || undefined, effects: fx, tslots: cx.slots.length ? cx.slots : undefined, sorcery: true });
       continue;
     }
     // triggered

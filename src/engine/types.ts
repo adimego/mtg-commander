@@ -18,7 +18,7 @@ export interface Filter {
 }
 /** One target slot. who: perm = permanent on battlefield; any = creature/planeswalker/player; player/opp = players; spell / ability = on the stack; card = card in a graveyard. */
 export interface TSlot { who: 'perm' | 'any' | 'player' | 'opp' | 'spell' | 'ability' | 'card'; f?: Filter; zoneOwner?: 'you' | 'opp' | 'any'; opt?: boolean; harm?: boolean; label?: string; same?: number }
-export type Amt = number | string | { count: Filter; zone?: 'battlefield' | 'graveyard'; pl?: PRef } | { pow: Ref } | { tough: Ref } | { mv: Ref } | { cards: 'hand' | 'graveyard' | 'library'; pl: PRef; f?: Filter } | { life: PRef } | { mul: number; of: Amt } | { plus: number; of: Amt } | { ctr: string; who: Ref } | { half: Amt } | { devotion: Color[] } | { opps: true } | { lifeLost: true } | { lostWay: true } | { lifeGained: true };
+export type Amt = number | string | { maxPow: Filter } | { count: Filter; zone?: 'battlefield' | 'graveyard'; pl?: PRef } | { pow: Ref } | { tough: Ref } | { mv: Ref } | { cards: 'hand' | 'graveyard' | 'library'; pl: PRef; f?: Filter } | { life: PRef } | { mul: number; of: Amt } | { plus: number; of: Amt } | { ctr: string; who: Ref } | { half: Amt } | { devotion: Color[] } | { opps: true } | { lifeLost: true } | { lostWay: true } | { lifeGained: true };
 /** Reference to objects: self, ev (event card), t0..tN (targets), created, chosen, attached (what the source is attached to), host, all:filter. */
 export type Ref = string | { all: Filter; zone?: 'graveyard' };
 /** Player reference: you, opps, all, evp (event player), tctl (controller of target 0), t0 (player target slot 0), ctl:tN, def (defending), owner:tN. */
@@ -32,13 +32,13 @@ export interface Effect {
   op: string; n?: Amt; m?: Amt; toHand?: boolean;
   who?: Ref; pl?: PRef; f?: Filter; kw?: string[]; kind?: string; tok?: TokenSpec; dest?: 'hand' | 'battlefield' | 'top' | 'bottom' | 'graveyard' | 'exile';
   tapped?: boolean; attacking?: boolean; sub?: Effect[]; cond?: Cond; text?: string; mana?: string[]; rest?: 'bottom' | 'graveyard' | 'top' | 'hand' | 'exile'; take?: Amt; eot?: boolean; random?: boolean; upTo?: boolean;
-  zone?: 'graveyard' | 'library' | 'hand' | 'battlefield'; reveal?: boolean; sh?: boolean; other?: Ref; until?: 'eot' | 'yourNext'; ctl?: PRef; ret?: 'eot' | 'now'; ifPaid?: Cost;
+  zone?: 'graveyard' | 'library' | 'hand' | 'battlefield'; reveal?: boolean; sh?: boolean; other?: Ref; until?: 'eot' | 'yourNext'; ctl?: PRef; ret?: 'eot' | 'now'; ifPaid?: Cost; /** emblem definition (op 'emblem') */ emb?: CardDef;
 }
 export interface ManaAbility { add: ManaSym[]; sac?: boolean; n?: Amt; cost?: Cost; tap?: boolean; /** damage dealt to you when tapped for colored mana (painlands) */ pain?: number }
 export interface ActAbility {
   label: string; tap?: boolean; untap?: boolean; mana?: Cost; sac?: boolean; target?: TargetSpec; effects: Effect[];
   tslots?: TSlot[]; sacF?: { f: Filter; n: number; other?: boolean }; discard?: number; discardRandom?: boolean; life?: number; remC?: { kind: string; n: number }; addC?: { kind: string; n: number };
-  exileGy?: { f?: Filter; n: number; self?: boolean }; tapF?: { f: Filter; n: number }; loyalty?: number; sorcery?: boolean; zone?: 'hand' | 'graveyard'; equip?: boolean; once?: boolean; exileSelf?: boolean; returnSelf?: boolean; reveal?: boolean; modes?: Modes; xFromMana?: boolean; cond?: Cond; manaAb?: boolean;
+  exileGy?: { f?: Filter; n: number; self?: boolean }; tapF?: { f: Filter; n: number }; loyalty?: number; /** -X loyalty: X chosen on activation */ loyX?: boolean; sorcery?: boolean; zone?: 'hand' | 'graveyard'; equip?: boolean; once?: boolean; exileSelf?: boolean; returnSelf?: boolean; reveal?: boolean; modes?: Modes; xFromMana?: boolean; cond?: Cond; manaAb?: boolean;
 }
 export interface Modes { min: number; max: number; list: { label: string; tslots?: TSlot[]; effects: Effect[] }[] }
 export interface TriggerDef {

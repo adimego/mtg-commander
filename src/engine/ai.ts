@@ -155,6 +155,8 @@ function isThreat(g: Game, pid: number, top: Game['stack'][number]) {
 }
 
 /** Decide whether (and how) to activate ability i of c now. */
+/** How much damage opponents could swing at this walker next turn. */
+function walkerThreat(g: Game, w: Card) { return Math.max(0, ...opponents(g, w.owner).map(o => creatures(o).filter(c => !hasKw(c, 'defender')).reduce((s, c) => s + Math.max(0, power(g, c)), 0))); }
 function tryActivate(g: Game, pid: number, c: Card, i: number, a: ActAbility, phase: 'main' | 'eot' | 'combat'): boolean {
   if (a.manaAb || !canActivate(g, pid, c, i)) return false;
   const uk = `${g.turn}:${c.uid}:${i}`; if ((USED.get(uk) ?? 0) >= 2) return false;
@@ -173,12 +175,22 @@ function tryActivate(g: Game, pid: number, c: Card, i: number, a: ActAbility, ph
   if (a.equip) { if (c.attachedTo !== undefined && locate(g, c.attachedTo)?.c.owner === pid) return false; const host = (a.tslots ?? []).length ? chooseTargets(g, pid, a.tslots!, [], false, c.uid)?.[0] : undefined; if (!host) return false; USED.set(uk, 9); return activate(g, pid, c.uid, i, { targets: [host] }); }
   let modes: number[] | undefined; let fx = a.effects; const slots = abilitySlots(a); let active = slots.map((_, k) => k);
   if (a.modes) { modes = chooseModes(g, pid, a.modes, c.uid); active = modes.flatMap(k => modeRange(a.modes!, k)); fx = modes.flatMap(k => a.modes!.list[k].effects); }
-  const x = a.mana?.x ? maxX(g, pid, c, { abil: a.mana, exclude: a.tap ? c.uid : undefined }) : 0;
-  if (a.mana?.x && x < 1) return false;
+  const loy = ctr(c, 'loyalty'); const x = a.loyX ? Math.max(1, loy - 1) : a.mana?.x ? maxX(g, pid, c, { abil: a.mana, exclude: a.tap ? c.uid : undefined }) : 0;
+  if (a.mana?.x && !a.loyX && x < 1) return false;
   let sc = scoreFx(g, pid, fx, x);
-  if (a.loyalty !== undefined) { if (a.loyalty >= 0) sc += 2; else if (ctr(c, 'loyalty') + a.loyalty < 1 && sc < 6) return false; }
+  if (a.loyalty !== undefined) {
+    // planeswalkers: tick up when threatened, use minus for removal/value, fire the ultimate when it's safe
+    const threat = walkerThreat(g, c); const cost = a.loyX ? -x : a.loyalty; const after = loy + cost;
+    const best = (def(c).abilities ?? []).map((b, j) => ({ b, j })).filter(({ b, j }) => b.loyalty !== undefined && j !== i && canActivate(g, pid, c, j));
+    if (cost >= 0) sc += threat >= loy ? 5 : 2;
+    else {
+      if (after < 1 && sc < 8) return false; // don't throw the walker away for little
+      if (threat >= after && after > 0 && sc < 5 && best.some(({ b }) => (b.loyalty ?? 0) >= 0)) return false; // threatened: prefer ticking up
+      if (cost <= -6) sc += threat < after ? 8 : 2; // ultimate
+    }
+  }
   if (sc <= 0) return false;
-  if (fx.every(e => e.op === 'pump' || e.op === 'grant') && phase !== 'combat') return false;
+  if (fx.every(e => e.op === 'pump' || e.op === 'grant') && phase !== 'combat' && a.loyalty === undefined) return false;
   let targets: (Target | undefined)[] = [];
   if (active.length) {
     const ts = chooseTargets(g, pid, active.map(k => slots[k]), fx, false, c.uid, x); if (!ts) return false;
@@ -264,7 +276,7 @@ export function aiAttack(g: Game, pid: number) {
   let elig = creatures(p).filter(c => canAttack(g, c)).sort((a, b) => power(g, b) - power(g, a));
   const forced = (c: Card) => !!def(c).mustAttack || !!c.goad || hasKw(c, '_mustattack');
   if (p.life <= threat * 1.5) { const keep = Math.ceil(elig.filter(c => !hasKw(c, 'vigilance')).length / 2); elig = elig.filter((c, i) => hasKw(c, 'vigilance') || forced(c) || i < elig.length - keep); }
-  const plan: { uid: number; defender: number }[] = [];
+  const plan: { uid: number; defender: number; pw?: number }[] = []; const onW: Record<number, number> = {};
   for (const c of elig) {
     const pw = power(g, c), tg = toughness(g, c);
     const cands = c.goad ? opp.filter(o => o.id !== c.goad!.by) : opp; const pool = cands.length ? cands : opp;
@@ -277,6 +289,10 @@ export function aiAttack(g: Game, pid: number) {
     const choice = safe.length ? safe : forced(c) ? pool : [];
     if (!choice.length) continue;
     choice.sort((a, b) => (a.life - b.life) - (boardPower(g, a) - boardPower(g, b)) * 0.3);
+    // go after opposing planeswalkers when it kills one (or the walker is close to its ultimate)
+    const ws = choice.flatMap(o => o.battlefield.filter(w => isType(w, 'Planeswalker') && !isType(w, 'Creature')).map(w => ({ o, w, left: ctr(w, 'loyalty') - (onW[w.uid] ?? 0) })))
+      .filter(x => x.left > 0 && (x.left <= pw || ctr(x.w, 'loyalty') >= 5 || x.o.life > 20)).sort((a, b) => (a.left <= pw ? 0 : 1) - (b.left <= pw ? 0 : 1) || b.left - a.left);
+    if (ws.length && !(choice[0].life <= pw)) { onW[ws[0].w.uid] = (onW[ws[0].w.uid] ?? 0) + pw; plan.push({ uid: c.uid, defender: ws[0].o.id, pw: ws[0].w.uid }); continue; }
     plan.push({ uid: c.uid, defender: choice[0].id });
   }
   if (!declareAttackers(g, pid, plan)) declareAttackers(g, pid, plan.filter(x => forced(findCard(g, x.uid)!)));
@@ -285,19 +301,20 @@ export function aiAttack(g: Game, pid: number) {
 /** Block to survive; otherwise take favorable blocks. */
 export function aiBlock(g: Game, pid: number) {
   const p = g.players[pid]; const inc = attackers(g).filter(a => a.attacking === pid).sort((a, b) => power(g, b) - power(g, a));
-  let incoming = inc.reduce((s, a) => s + power(g, a), 0); const used = new Set<number>(); const plan: { blocker: number; attacker: number }[] = [];
+  let incoming = inc.filter(a => a.atkPw === undefined).reduce((s, a) => s + power(g, a), 0); const used = new Set<number>(); const plan: { blocker: number; attacker: number }[] = [];
   const cmdLethal = (a: Card) => isCommander(g, a) && (p.cmdDamage[a.owner] || 0) + power(g, a) >= 21;
   for (const a of inc) {
     const ap = power(g, a), at = toughness(g, a);
     const bl = creatures(p).filter(b => !used.has(b.uid) && canBlock(g, b, a)).sort((x, y) => value(g, x) - value(g, y));
-    const desperate = incoming >= p.life || cmdLethal(a);
+    const wk = a.atkPw !== undefined ? findCard(g, a.atkPw) : undefined;
+    const desperate = (!wk && incoming >= p.life) || cmdLethal(a) || (!!wk && ap >= ctr(wk, 'loyalty'));
     if (hasKw(a, 'menace')) {
       if (desperate && bl.length >= 2) { for (const b of bl.slice(0, 2)) { used.add(b.uid); plan.push({ blocker: b.uid, attacker: a.uid }); } incoming -= ap; }
       continue;
     }
     const good = bl.find(b => (toughness(g, b) > ap && !hasKw(a, 'deathtouch')) || ((power(g, b) >= at || hasKw(b, 'deathtouch')) && value(g, b) <= value(g, a)));
     const pick = good ?? (desperate ? bl[0] : undefined);
-    if (pick) { used.add(pick.uid); plan.push({ blocker: pick.uid, attacker: a.uid }); if (!hasKw(a, 'trample')) incoming -= ap; }
+    if (pick) { used.add(pick.uid); plan.push({ blocker: pick.uid, attacker: a.uid }); if (!hasKw(a, 'trample') && !wk) incoming -= ap; }
   }
   declareBlockers(g, pid, plan);
 }

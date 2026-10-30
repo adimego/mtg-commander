@@ -86,7 +86,20 @@ Partner commanders both sit in the command zone, and each has its own tax.
 
 Cards whose text doesn't fully compile keep a **Limited** badge and play only the parts that work. Coverage: see [docs/coverage.md](docs/coverage.md).
 
+## Planeswalkers & emblems
+
+- Walkers enter with printed loyalty (minus Compleated life paid). One loyalty ability per walker per turn, sorcery speed; minus costs can't exceed loyalty; −X abilities ask for X (max = loyalty).
+- 0 loyalty → graveyard (SBA). Damage to a walker removes loyalty; "any target" burn can target walkers; legend rule applies; walker statics work.
+- Attack walkers by clicking an opposing walker while declaring (🎯), then your creatures, or drag a creature onto the walker. Arrows show the target. Blocking works normally; trample excess goes to the walker.
+- Click your walker to open its loyalty panel (+ / − / ultimate buttons, greyed with a reason when unusable).
+- Emblems live in a per-player emblem zone (shown as purple badges in the player panel) and support static and triggered abilities.
+- Compiler handles emblems, gain control (incl. until end of turn), extra turns, "life total becomes N", walker animation, "until your next turn" effects, can't attack/block, and more.
+- "can be your commander" walkers are legal commanders.
+- AI: +abilities when threatened, −abilities for removal/value, ultimates when safe; attacks opposing walkers when worthwhile and blocks to protect its own.
+
 ## Known gaps
+
+- Planeswalkers: only ~40/296 walkers compile fully (most have at least one unusual line). Emblems aren't restored from a saved game. Battles aren't implemented.
 - Replacement effects are missing (Doubling Season, Hardened Scales), as are emblems, sagas, vehicles, delayed "next upkeep" triggers and cumulative upkeep.
 - Most planeswalker ultimates and choose-a-creature-type cards are not supported.
 - Library arranging (Ponder, Sensei's Top) is not supported.
