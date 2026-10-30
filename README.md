@@ -53,18 +53,44 @@ Turn on **Hold priority** in the header to stop at every priority point, includi
 | Selesnya Intelligence (GW) | Sergeant John Benton | Trample, haste. Combat damage to a player: you and that player each draw that many |
 
 ## Code layout
-- `src/engine/engine.ts` — rules engine (pure state + functions)
-- `src/engine/ai.ts` — heuristic AI (lands, best affordable spells, safe attacks on weakest opponent, survival blocks)
-- `src/engine/controller.ts` — game loop glue
-- `src/App.tsx` — UI
+- `src/engine/engine.ts`: the rules engine (pure state + functions). Effects resolve resumably, so a choice pauses resolution and resumes after the answer.
+- `src/engine/oracle.ts`: the Oracle-text compiler. It turns card text into triggers, activated abilities, statics and effect ops.
+- `src/engine/ai.ts`: the heuristic AI. It handles targets per slot (harm-aware), modes, X, kicker, may/pick/scry choices, ability use, attacks and blocks.
+- `src/engine/controller.ts`: game loop glue.
+- `src/App.tsx` and `src/Dialogs.tsx`: the UI and the choice dialogs.
+- `scripts/coverage.ts`: the compiler coverage report. Results are in [docs/coverage.md](docs/coverage.md).
+- `scripts/fuzz.ts`: AI-only stress games built from random supported cards.
+
+## Activated & triggered abilities
+The compiler supports:
+- Triggers: ETB, dies, attacks/blocks, combat damage, upkeep/end step, cast, landfall, draw, and others.
+- Activated costs: {T}/{Q}, mana and X, sacrifice, discard, life, counters, exile from graveyard, and tapping creatures.
+- Loyalty abilities.
+- Equip.
+- Cycling and other hand abilities.
+- Graveyard abilities and flashback.
+- Modal spells and abilities.
+- Kicker.
+- "you may … if you do".
+- "unless … pays".
+- Tokens, counters and tutors.
+- Scry and surveil.
+- Shock lands, check lands and pain lands.
+- Devotion.
+
+Choices go to a dialog when you make them and to heuristics when the AI does. The choices are: may, modes, X, kicker, targets (one prompt per target slot, optional slots can be skipped), pick-cards, scry/surveil and trigger ordering.
+
+Mana is paid automatically. You can also click a land chip (or a mana creature without other abilities) to float mana in your pool, and spells spend the pool first.
+
+Partner commanders both sit in the command zone, and each has its own tax.
+
+Cards whose text doesn't fully compile keep a **Limited** badge and play only the parts that work. Coverage: see [docs/coverage.md](docs/coverage.md).
 
 ## Known gaps
-- "You may" choices are always taken. "Up to" searches take the maximum. The mulligan bottom pick and discards are automatic.
-- Mana is paid automatically and there is no floating mana pool, so leftover mana from Sol Ring is lost.
-- No tokens, counters, auras, equipment, planeswalkers, X spells, or modal/kicker cards. Those cards are skipped.
-- If Judith dies at the same moment as other creatures, the other deaths don't trigger her.
-- A commander that is bounced goes to its owner's hand; there's no choice to send it to the command zone.
-- Triggers you control go on the stack in a fixed order; you can't reorder them.
+- Replacement effects are missing (Doubling Season, Hardened Scales), as are emblems, sagas, vehicles, delayed "next upkeep" triggers and cumulative upkeep.
+- Most planeswalker ultimates and choose-a-creature-type cards are not supported.
+- Library arranging (Ponder, Sensei's Top) is not supported.
+- A commander that is bounced goes to its owner's hand.
 
 ## Desktop UI & controls
 

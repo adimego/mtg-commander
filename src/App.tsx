@@ -1,13 +1,17 @@
 import { ImportDialog } from './ImportDialog';
+import { compileScry } from './import/classify';
+import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
 import { DragEvent, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
-import { Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTarget, describeTarget, defenders, isCommander, blockReason, menaceShort } from './engine/engine';
+import { Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards } from './engine/engine';
+import { DecisionDialog, KickerDialog, XDialog, ModesDialog } from './Dialogs';
+import type { TSlot, Modes } from './engine/types';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
 
 const HUMAN = 0;
 const PCOLORS = ['#4fc3f7', '#ef5350', '#ffb300', '#66bb6a'];
 export const costStr = (c: Cost) => `${c.generic ? `{${c.generic}}` : ''}${COLORS.map(k => `{${k}}`.repeat(c[k] || 0)).join('')}` || '{0}';
-const STEP_LABEL: Record<string, string> = { untap: 'Untap', upkeep: 'Upkeep', draw: 'Draw', main1: 'Main 1', attackers: 'Attack', blockers: 'Block', firstStrike: 'First strike', damage: 'Damage', main2: 'Main 2', end: 'End', cleanup: 'Cleanup' };
+const STEP_LABEL: Record<string, string> = { untap: 'Untap', upkeep: 'Upkeep', draw: 'Draw', main1: 'Main 1', beginCombat: 'Begin combat', attackers: 'Attack', blockers: 'Block', firstStrike: 'First strike', damage: 'Damage', main2: 'Main 2', end: 'End', cleanup: 'Cleanup' };
 const SHOWN_STEPS = STEPS.filter(s => s !== 'untap' && s !== 'cleanup' && s !== 'firstStrike');
 const youGrammar = (t: string) => t.replace(/^You's/, 'Your').replace(/You's/g, 'your').replace(/^You (plays|casts|mulligans|loses|gains|discards|wins|activates|sacrifices)/, (_, v: string) => 'You ' + (v === 'mulligans' ? 'mulligan' : v.endsWith('es') && v !== 'loses' && v !== 'sacrifices' && v !== 'activates' ? v.slice(0, -2) : v.slice(0, -1))).replace(/to You\./g, 'to you.').replace(/attacks You\./g, 'attacks you.').replace(/under You's/g, 'under your');
 const poss = (g: Game, pid: number) => (pid === HUMAN ? 'your' : `${g.players[pid].name}'s`);
@@ -17,8 +21,11 @@ const KW_HELP: Record<string, string> = {
   deathtouch: 'Any amount of damage it deals to a creature is enough to destroy it.', 'first strike': 'Deals combat damage before creatures without first strike.', 'double strike': 'Deals both first-strike and regular combat damage.',
   menace: "Can't be blocked except by two or more creatures.", defender: "Can't attack.", flash: 'You may cast it any time you could cast an instant.', hexproof: "Can't be the target of spells or abilities your opponents control.", prowess: 'Whenever you cast a noncreature spell, it gets +1/+1 until end of turn.',
 };
-const abCost = (a: { tap?: boolean; mana?: Cost; sac?: boolean }) => [a.mana ? costStr(a.mana) : '', a.tap ? '{T}' : '', a.sac ? 'Sac' : ''].filter(Boolean).join(', ');
-type PendingAct = { kind: 'cast'; uid: number } | { kind: 'ability'; uid: number; idx: number };
+type AbLike = { tap?: boolean; untap?: boolean; mana?: Cost; sac?: boolean; loyalty?: number; sacF?: { n: number }; discard?: number; life?: number; remC?: { kind: string; n: number }; exileGy?: { n: number; self?: boolean }; tapF?: { n: number } };
+const abCost = (a: AbLike) => [a.loyalty !== undefined ? `${a.loyalty > 0 ? '+' : a.loyalty === 0 ? '±' : ''}${a.loyalty}` : '', a.mana ? costText(a.mana) : '', a.tap ? '{T}' : '', a.untap ? '{Q}' : '', a.sac ? 'Sac' : '', a.sacF ? `Sac ${a.sacF.n}` : '', a.discard ? `Discard ${a.discard}` : '', a.life ? `${a.life} life` : '', a.remC ? `−${a.remC.n} ${a.remC.kind}` : '', a.exileGy ? (a.exileGy.self ? 'Exile from gy' : `Exile ${a.exileGy.n} from gy`) : '', a.tapF ? `Tap ${a.tapF.n}` : ''].filter(Boolean).join(', ');
+/** A cast or activation being set up: kicker → X → modes → one target per active slot. */
+type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; kicked?: boolean; x?: number; modes?: number[]; ts: (Target | undefined)[] };
+type PendingAct = Flow;
 const SAVED0 = decks.activateAll();
 type Hover = { id: string; uid?: number } | null;
 type Modal = null | 'settings' | 'help' | 'tips' | 'import' | { pid: number; zone: 'graveyard' | 'exile' };
@@ -53,7 +60,7 @@ function LifeTotal({ v, big }: { v: number; big?: boolean }) {
 interface UI {
   g: Game; setHover: (h: Hover) => void; clickPerm: (c: Card) => void; permCls: (c: Card) => string; activateAb: (c: Card, i: number) => void;
   isTarget: (t: Target) => boolean; blockDown: (c: Card, e: React.MouseEvent) => void; blockCtx: (c: Card, e: React.MouseEvent) => void; why: (c: Card) => string | null; dropOn: (t: Target, e: DragEvent) => void; dragStart: (c: Card, e: DragEvent) => void;
-  clickPlayer: (pid: number) => void; atkPlan: Record<number, number>; atkTarget?: number; declaring: boolean; openZone: (pid: number, zone: 'graveyard' | 'exile') => void; clickCommand: (c: Card) => void;
+  clickPlayer: (pid: number) => void; atkPlan: Record<number, number>; atkTarget?: number; declaring: boolean; openZone: (pid: number, zone: 'graveyard' | 'exile') => void; clickCommand: (c: Card) => void; canTapMana: (cs: Card[]) => boolean; tapMana: (cs: Card[]) => void;
 }
 
 function Permanent({ ui, c }: { ui: UI; c: Card }) {
@@ -74,6 +81,10 @@ function Permanent({ ui, c }: { ui: UI; c: Card }) {
         {atkTo !== undefined && <span className="badge atk" style={{ background: PCOLORS[atkTo] }}>⚔ {g.players[atkTo].name}</span>}
         {c.blocking !== undefined && <span className="badge blk">🛡 Block</span>}
         {isCommander(g, c) && <span className="badge cmdr" title="Commander">★</span>}
+        {c.token && <span className="badge tok" title="Token">TOKEN</span>}
+        {Object.entries(c.counters ?? {}).some(([, v]) => v) && <div className="ctrs">{Object.entries(c.counters ?? {}).filter(([, v]) => v).map(([k, v]) => <span key={k} data-counter={k} className={`ctr ${k === '+1/+1' ? 'plus' : k === '-1/-1' ? 'minus' : k === 'loyalty' ? 'loy' : ''}`} title={`${v} ${k} counter${v > 1 ? 's' : ''}`}>{k === 'loyalty' ? `◆${v}` : `${k === '+1/+1' || k === '-1/-1' ? k : k} ×${v}`}</span>)}</div>}
+        {c.attachedTo !== undefined && <span className="badge host" title={`Attached to ${findCard(g, c.attachedTo) ? def(findCard(g, c.attachedTo)!).name : '?'}`}>⛓ {findCard(g, c.attachedTo) ? def(findCard(g, c.attachedTo)!).name : ''}</span>}
+        {(() => { const att = g.players.flatMap(q => q.battlefield).filter(x => x.attachedTo === c.uid); return att.length ? <div className="attached" data-attached={att.length}>{att.map(x => <span key={x.uid} title={def(x).name}>⚔ {def(x).name}</span>)}</div> : null; })()}
         {abs.length > 0 && <div className="abstrip">{abs.map(({ a, i, ok }) => (
           <button key={i} disabled={!ok} title={`${abCost(a)}: ${a.label}`} onClick={e => { e.stopPropagation(); ui.activateAb(c, i); }}><b>{abCost(a)}</b> {a.label}</button>))}</div>}
       </div>
@@ -84,7 +95,7 @@ function Permanent({ ui, c }: { ui: UI; c: Card }) {
 function LandRow({ ui, cards }: { ui: UI; cards: Card[] }) {
   const groups = Object.values(cards.reduce((m, c) => ((m[c.id] ??= []).push(c), m), {} as Record<string, Card[]>));
   return <div className="lands">{groups.map(gr => { const d = def(gr[0]); const un = gr.filter(c => !c.tapped).length; return (
-    <div key={d.id} className={`landchip ${un ? '' : 'alltapped'}`} onMouseEnter={() => ui.setHover({ id: d.id })} onMouseLeave={() => ui.setHover(null)} title={`${d.name}: ${un} untapped of ${gr.length}`}>
+    <div key={d.id} className={`landchip ${un ? '' : 'alltapped'} ${ui.canTapMana(gr) ? 'tappable' : ''}`} data-land={d.id} onClick={() => ui.tapMana(gr)} onMouseEnter={() => ui.setHover({ id: d.id })} onMouseLeave={() => ui.setHover(null)} title={`${d.name}: ${un} untapped of ${gr.length}${ui.canTapMana(gr) ? ' · click to tap one for mana (it floats in your pool)' : ''}`}>
       <div className="landart" style={{ backgroundImage: `url(${d.art})` }} /><span className="landname">{d.name}</span><span className="landcount"><b>{un}</b>/{gr.length}</span>
     </div>); })}</div>;
 }
@@ -100,16 +111,18 @@ function Battlefield({ ui, pid }: { ui: UI; pid: number }) {
   );
 }
 function CommandZone({ ui, pid }: { ui: UI; pid: number }) {
-  const { g } = ui; const p = g.players[pid]; const cmd = CARDS[p.commanderId]; const inZone = p.command[0];
-  const castable = pid === HUMAN && inZone && canCast(g, HUMAN, inZone);
-  return (
-    <div className={`cmdzone ${castable ? 'playable' : ''} ${inZone ? '' : 'away'}`} onClick={() => inZone && pid === HUMAN && ui.clickCommand(inZone)}
-      onMouseEnter={() => ui.setHover({ id: cmd.id })} onMouseLeave={() => ui.setHover(null)} title={`Command zone. Commander tax: +${2 * p.commanderCasts} (each recast costs {2} more)`}>
-      <CardFace d={cmd} />
-      <span className="tax">TAX +{2 * p.commanderCasts}</span>
-      {inZone ? <span className="czcost"><ManaCost c={costOf(g, inZone)} /></span> : <span className="czlabel">{p.battlefield.some(c => c.id === cmd.id) ? 'IN PLAY' : 'AWAY'}</span>}
-    </div>
-  );
+  const { g } = ui; const p = g.players[pid];
+  return <>{p.commanderIds.map(id => {
+    const cmd = CARDS[id]; const inZone = p.command.find(c => c.id === id); const tax = 2 * (p.casts[id] ?? 0);
+    const castable = pid === HUMAN && inZone && canCast(g, HUMAN, inZone);
+    return (
+      <div key={id} data-cmd={id} className={`cmdzone ${castable ? 'playable' : ''} ${inZone ? '' : 'away'} ${p.commanderIds.length > 1 ? 'partner' : ''}`} onClick={() => inZone && pid === HUMAN && ui.clickCommand(inZone)}
+        onMouseEnter={() => ui.setHover({ id: cmd.id })} onMouseLeave={() => ui.setHover(null)} title={`${cmd.name} (command zone). Commander tax: +${tax} (each recast costs {2} more)`}>
+        <CardFace d={cmd} />
+        <span className="tax">TAX +{tax}</span>
+        {inZone ? <span className="czcost"><ManaCost c={costOf(g, inZone)} /></span> : <span className="czlabel">{p.battlefield.some(c => c.id === cmd.id) ? 'IN PLAY' : 'AWAY'}</span>}
+      </div>);
+  })}</>;
 }
 function PlayerHeader({ ui, pid, big }: { ui: UI; pid: number; big?: boolean }) {
   const { g } = ui; const p = g.players[pid];
@@ -124,6 +137,7 @@ function PlayerHeader({ ui, pid, big }: { ui: UI; pid: number; big?: boolean }) 
           <button className="zbtn" title="View graveyard" onClick={e => { e.stopPropagation(); ui.openZone(pid, 'graveyard'); }}>🪦 {p.graveyard.length}</button>
           <button className="zbtn" title="View exile" onClick={e => { e.stopPropagation(); ui.openZone(pid, 'exile'); }}>⛔ {p.exile.length}</button>
           {pid === HUMAN && <span title="Untapped mana available">💧 {manaAvailable(p)}</span>}
+          {pid === HUMAN && p.pool.length > 0 && <span className="pool" data-pool={p.pool.join(',')} title="Floating mana: spent first, empties at the end of each step"><span className="lbl">POOL</span>{p.pool.map((m, i) => <i key={i} className={`pip pip-${m.includes('|') || m === 'ANY' || m === 'IDENTITY' ? 'multi' : m}`}>{m.includes('|') ? m.replace('|', '/') : m === 'ANY' ? '★' : m}</i>)}</span>}
         </div>
       </div>
       <LifeTotal v={p.life} big={big} />
@@ -270,6 +284,8 @@ export default function App() {
   const opts: PassOpts = { stopAll, passUntilTurn: passUntil };
 
   const act = useCallback((f: (g: Game) => void) => { if (gref.current) { f(gref.current); bump(); } }, []);
+  // test/debug hook (only with ?debug in the URL): lets scripted screenshots stage a board
+  useEffect(() => { if (/[?&]debug\b/.test(location.search)) (window as unknown as Record<string, unknown>).__ca = { game: () => gref.current, act, CARDS, compile: (o: Record<string, unknown>) => { const d = compileScry({ colors: [], color_identity: [], keywords: [], mana_cost: '', ...o } as unknown as ScryCard).def; registerCards([d]); return d.id; } }; }, [act]);
   function newMatch() {
     localStorage.setItem('ca_deck', deck);
     const pre = DECKS.slice(0, 4).map(d => d.id).filter(x => x !== deck);
@@ -290,10 +306,26 @@ export default function App() {
   // ---------- derived state ----------
   const me = g?.players[HUMAN];
   const myTurn = !!g && g.active === HUMAN && !me!.lost;
-  const pendingCard = g && pending ? (pending.kind === 'cast' ? [...me!.hand, ...me!.command].find(c => c.uid === pending.uid) : me!.battlefield.find(c => c.uid === pending.uid)) : undefined;
   const humanChoice = g?.choice && g.players[g.choice.controller].human ? g.choice : null;
-  const spec: TargetSpec | undefined = humanChoice ? humanChoice.trig.target : pending && pendingCard ? (pending.kind === 'cast' ? def(pendingCard).spell?.target : def(pendingCard).abilities?.[pending.idx].target) : undefined;
-  const isTarget = (t: Target) => !!g && !!spec && validTarget(g, HUMAN, spec, t);
+  const humanDecision = g?.decision && g.players[g.decision.pid].human ? g.decision : null;
+  // the active flow: a human trigger needing targets/modes takes over from any half-built cast
+  const flow: Flow | null = g && humanChoice ? (pending?.kind === 'trigger' && pending.uid === humanChoice.sourceUid ? pending : { kind: 'trigger', uid: humanChoice.sourceUid, ts: [] }) : pending;
+  const flowCard = g && flow && flow.kind !== 'trigger' ? [...me!.hand, ...me!.command, ...me!.battlefield, ...me!.graveyard, ...me!.exile].find(c => c.uid === flow.uid) : undefined;
+  const flowName = flow ? (flow.kind === 'trigger' ? CARDS[humanChoice!.sourceId].name : flowCard ? def(flowCard).name : '') : '';
+  const flowAb = flow?.kind === 'ability' && flowCard ? def(flowCard).abilities?.[flow.idx!] : undefined;
+  const flowSlots: TSlot[] = !flow ? [] : flow.kind === 'trigger' ? trigSlots(humanChoice!.trig) : flow.kind === 'ability' ? (flowAb ? abilitySlots(flowAb) : []) : flowCard ? spellSlots(def(flowCard)) : [];
+  const flowModes: Modes | undefined = !flow ? undefined : flow.kind === 'trigger' ? humanChoice!.trig.modes : flow.kind === 'ability' ? flowAb?.modes : flowCard ? def(flowCard).spell?.modes : undefined;
+  const flowActive = flowModes ? (flow?.modes ?? []).flatMap(i => modeRange(flowModes, i)) : flowSlots.map((_, i) => i);
+  const flowStage: null | 'kicker' | 'x' | 'modes' | 'targets' = !g || !flow ? null
+    : flow.kind === 'cast' && flowCard && def(flowCard).kicker && flow.kicked === undefined ? 'kicker'
+    : flow.x === undefined && (flow.kind === 'cast' ? !!flowCard && !!costOf(g, flowCard).x : flow.kind === 'ability' ? !!flowAb?.mana?.x : false) ? 'x'
+    : flowModes && !flow.modes ? 'modes'
+    : flow.ts.length < flowActive.length ? 'targets' : null;
+  const curSlot = flowStage === 'targets' ? flowSlots[flowActive[flow!.ts.length]] : undefined;
+  const tctx = flow ? { srcUid: flow.kind === 'trigger' ? humanChoice!.sourceUid : flow.kind === 'ability' ? flow.uid : undefined, srcId: flow.kind === 'trigger' ? humanChoice!.sourceId : flowCard?.id, taken: flow.ts } : {};
+  const isTarget = (t: Target) => !!g && !!curSlot && validSlot(g, HUMAN, curSlot, t, tctx);
+  const spec = curSlot; // truthy while choosing a target
+  const pendingCard = flowCard;
   const blocking = !!g && g.awaiting === 'block' && defenders(g).includes(HUMAN) && !g.blockersDone.includes(HUMAN) && !me!.lost;
   const short = g && blocking ? menaceShort(g, blkPlan) : [];
   const declaring = !!g && g.awaiting === 'attack' && g.active === HUMAN && !me!.lost;
@@ -304,28 +336,68 @@ export default function App() {
 
   // ---------- actions ----------
   const clearSel = () => { setPending(null); setSelBlocker(null); };
+  /** Finish or advance a flow: auto-skip impossible optional slots and fire once everything is chosen. */
+  function advance(f: Flow) {
+    if (!g) return;
+    const card = f.kind === 'trigger' ? undefined : [...me!.hand, ...me!.command, ...me!.battlefield, ...me!.graveyard, ...me!.exile].find(c => c.uid === f.uid);
+    const ab = f.kind === 'ability' && card ? def(card).abilities?.[f.idx!] : undefined;
+    const slots = f.kind === 'trigger' ? trigSlots(g.choice!.trig) : ab ? abilitySlots(ab) : card ? spellSlots(def(card)) : [];
+    const ms = f.kind === 'trigger' ? g.choice!.trig.modes : ab ? ab.modes : card ? def(card).spell?.modes : undefined;
+    if (ms && !f.modes) { setPending(f); return; }
+    const active = ms ? f.modes!.flatMap(i => modeRange(ms, i)) : slots.map((_, i) => i);
+    // optional slot with nothing legal: skip it
+    while (f.ts.length < active.length) {
+      const sl = slots[active[f.ts.length]]; if (!sl.opt) break;
+      const any = [...g.players.map(q => ({ player: q.id })), ...g.players.flatMap(q => [...q.battlefield, ...q.graveyard].map(c => ({ card: c.uid }))), ...g.stack.map(it => ({ stack: it.id }))].some(t => validSlot(g, HUMAN, sl, t, { srcUid: f.kind !== 'cast' ? f.uid : undefined, taken: f.ts }));
+      if (any) break; f = { ...f, ts: [...f.ts, undefined] };
+    }
+    if (f.ts.length < active.length) { setPending(f); return; }
+    const full: (Target | undefined)[] = slots.map(() => undefined); active.forEach((i, k) => (full[i] = f.ts[k]));
+    setPending(null);
+    act(g => {
+      if (f.kind === 'trigger') chooseTriggerTargets(g, full, f.modes);
+      else if (f.kind === 'cast') { if (!castSpell(g, HUMAN, f.uid, { targets: full, modes: f.modes, x: f.x, kicked: f.kicked })) flash("Couldn't cast that (targets or mana no longer valid)."); }
+      else if (!activate(g, HUMAN, f.uid, f.idx!, { targets: full, modes: f.modes, x: f.x })) flash("Couldn't activate that.");
+    });
+  }
   const targetClick = (t: Target) => {
-    if (!g || !isTarget(t)) return false;
-    if (humanChoice) { act(g => { chooseTriggerTarget(g, t); }); return true; }
-    if (!pending) return false;
-    act(g => { if (pending.kind === 'cast') castSpell(g, HUMAN, pending.uid, t); else activate(g, HUMAN, pending.uid, pending.idx, t); }); setPending(null); return true;
+    if (!g || !flow || !isTarget(t)) return false;
+    advance({ ...flow, ts: [...flow.ts, t] }); return true;
   };
+  const skipSlot = () => { if (flow && curSlot?.opt) advance({ ...flow, ts: [...flow.ts, undefined] }); };
+  function startCast(c: Card) {
+    if (!g) return;
+    const d = def(c); const f: Flow = { kind: 'cast', uid: c.uid, ts: [] };
+    if (d.kicker && !canCast(g, HUMAN, c, { kicked: true })) f.kicked = false;
+    if (d.kicker && f.kicked === undefined) { setPending(f); return; }
+    begin2(f, c);
+  }
+  function begin2(f: Flow, c: Card) {
+    if (!g) return;
+    if (f.x === undefined && costOf(g, c).x) { setPending(f); return; }
+    advance(f);
+  }
   function clickHand(c: Card) {
     if (!g) return;
     if (canPlayLand(g, HUMAN, c)) return act(g => playLand(g, HUMAN, c.uid));
     if (!canCast(g, HUMAN, c)) return;
-    if (def(c).spell?.target) setPending({ kind: 'cast', uid: c.uid }); else act(g => castSpell(g, HUMAN, c.uid));
+    startCast(c);
   }
   function activateAb(c: Card, i: number) {
     if (!g || !canActivate(g, HUMAN, c, i)) return;
-    if (def(c).abilities![i].target) setPending({ kind: 'ability', uid: c.uid, idx: i }); else act(g => activate(g, HUMAN, c.uid, i));
+    const a = def(c).abilities![i]; const f: Flow = { kind: 'ability', uid: c.uid, idx: i, ts: [] };
+    if (a.mana?.x) { setPending(f); return; }
+    advance(f);
   }
+  const canTapMana = (cs: Card[]) => !!g && g.priority === HUMAN && !g.decision && !g.choice && !g.res && cs.some(c => c.owner === HUMAN && !c.tapped && !!def(c).mana?.[0] && def(c).mana![0].tap !== false && !def(c).mana![0].cost);
+  const tapMana = (cs: Card[]) => { if (!canTapMana(cs)) return; const c = cs.find(x => !x.tapped)!; act(g => { tapForMana(g, HUMAN, c.uid); }); };
   function toggleAttacker(c: Card, to = curAtkTarget) {
     const p = { ...atkPlan }; if (p[c.uid] !== undefined && to === p[c.uid]) delete p[c.uid]; else if (canAttack(g!, c) && to !== undefined) p[c.uid] = to; setAtkPlan(p);
   }
   function clickPerm(c: Card) {
     if (!g) return;
     if (spec) { targetClick({ card: c.uid }); return; }
+    if (c.owner === HUMAN && !declaring && !blocking && isType(c, 'Creature') && !(def(c).abilities ?? []).length && canTapMana([c])) { tapMana([c]); return; }
     if (declaring && c.owner === HUMAN) return toggleAttacker(c);
     if (blocking) {
       if (c.owner === HUMAN && isType(c, 'Creature') && !c.tapped) return;
@@ -373,7 +445,7 @@ export default function App() {
   function clickPlayer(pid: number) { if (spec) { targetClick({ player: pid }); return; } if (declaring && !g!.players[pid].lost && pid !== HUMAN) setAtkTarget(pid); }
   function dragStart(c: Card, e: DragEvent) {
     e.dataTransfer.setData('text/plain', String(c.uid)); e.dataTransfer.effectAllowed = 'move';
-    if (!declaring && c.owner === HUMAN && me!.hand.includes(c) && def(c).spell?.target && canCast(g!, HUMAN, c)) setPending({ kind: 'cast', uid: c.uid });
+    if (!declaring && c.owner === HUMAN && me!.hand.includes(c) && spellSlots(def(c)).length && canCast(g!, HUMAN, c)) startCast(c);
   }
   function dropOn(t: Target, e: DragEvent | null) {
     e?.preventDefault?.();
@@ -396,8 +468,15 @@ export default function App() {
     const topDesc = top ? `${top.label} (${g.players[top.controller].name}${top.target ? ` → ${describeTarget(g, top.target)}` : ''})` : '';
     if (!g.started) { prompt = `Opening hand: keep it, or mulligan for a fresh 7 (${me.mulligans === 0 ? 'the first mulligan is free' : `next one bottoms ${me.mulligans}`}).`; primary = { label: 'Keep hand', run: () => act(g => startGame(g)), key: 'Enter' }; if (me.mulligans < 6) secondary.push({ label: 'Mulligan', run: () => act(g => mulligan(g, HUMAN)) }); }
     else if (g.winner !== null) { prompt = g.winner === HUMAN ? '🏆 Victory! Every opponent is out.' : `${g.players[g.winner].name} wins the game.`; tone = 'end'; primary = { label: 'Play again', run: newMatch }; }
-    else if (humanChoice) { prompt = `⚡ Your trigger: ${CARDS[humanChoice.sourceId].name}, ${humanChoice.trig.label}. Choose a target (it's required).`; tone = 'target'; }
-    else if (pendingCard && spec) { prompt = `🎯 Choose a target for ${def(pendingCard).name}: ${spec.toLowerCase().endsWith('spell') ? 'a spell on the stack' : spec === 'any' ? 'a creature or an opponent/player' : 'a creature'} (highlighted in green).`; tone = 'target'; secondary.push({ label: 'Cancel', run: () => setPending(null), key: 'Esc' }); }
+    else if (humanDecision) { prompt = `❓ ${humanDecision.src ? `${CARDS[humanDecision.src]?.name}: ` : ''}${humanDecision.text}`; tone = 'target'; }
+    else if (flow && flowStage && flowStage !== 'targets') { prompt = `${flowName}: ${flowStage === 'kicker' ? 'kick it?' : flowStage === 'x' ? 'choose X' : 'choose mode(s)'}`; tone = 'target'; }
+    else if (flow && curSlot) {
+      const n = flowActive.length; const k = flow.ts.length + 1;
+      prompt = `${flow.kind === 'trigger' ? '⚡ Your trigger' : '🎯'} ${flowName}: choose ${curSlot.label ?? 'a target'}${n > 1 ? ` (target ${k} of ${n})` : ''}${curSlot.who === 'card' ? ' from a graveyard' : ''}. Legal targets glow green.`;
+      tone = 'target';
+      if (curSlot.opt) secondary.push({ label: 'Skip (no target)', run: skipSlot });
+      if (flow.kind !== 'trigger') secondary.push({ label: 'Cancel', run: () => setPending(null), key: 'Esc' });
+    }
     else if (blocking) { const dmg = incoming.reduce((s, a) => s + power(g, a), 0); prompt = `⚠ ${incoming.length} attacker${incoming.length > 1 ? 's' : ''}, ${dmg} damage coming at you. ${selBlocker !== null ? 'Now click the attacker to block.' : 'Drag your creatures onto attackers to block (several can block one). Right-click or drag off to unassign.'}`; tone = 'danger'; const n = Object.keys(blkPlan).length; primary = { label: n ? `Confirm ${n} block${n > 1 ? 's' : ''}${short.length ? ' ⚠' : ''}` : 'No blocks', run: confirmBlocks, key: 'Enter' }; }
     else if (declaring) { const n = Object.keys(atkPlan).length; prompt = `⚔ Attack: click an opponent to aim (now: ${curAtkTarget !== undefined ? g.players[curAtkTarget].name : '-'}), then click your glowing creatures, or drag them onto an opponent.`; primary = { label: n ? `Attack with ${n}` : 'No attack', run: confirmAttacks, key: 'Enter', tone: n ? 'attack' : undefined }; secondary.push({ label: `All → ${curAtkTarget !== undefined ? g.players[curAtkTarget].name : ''}`, run: attackAll, key: 'A' }); }
     else if (myPriority && top) { prompt = `🔔 You have priority. Respond with an instant or ability, or pass. Top: ${topDesc}`; tone = 'prio'; primary = { label: 'Pass ▸ Resolve', run: doPass }; }
@@ -482,7 +561,7 @@ export default function App() {
     if (bdrag?.uid === c.uid && bdrag.moved) out.push('dragging');
     return out.join(' ');
   };
-  const ui: UI = { g, blockDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand };
+  const ui: UI = { canTapMana, tapMana, g, blockDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand };
   const hand = me.hand; const n = hand.length;
 
   return (
@@ -510,11 +589,16 @@ export default function App() {
         <div className="hand" style={{ ['--n' as string]: n }}>
           {hand.map((c, i) => { const ok = canPlayLand(g, HUMAN, c) || canCast(g, HUMAN, c); const off = i - (n - 1) / 2; return (
             <div key={c.uid} className={`hcard ${ok ? 'playable' : ''} ${pending?.uid === c.uid ? 'selected' : ''}`} style={{ ['--r' as string]: `${off * Math.min(4, 24 / Math.max(n, 1))}deg`, ['--y' as string]: `${Math.abs(off) * Math.abs(off) * 0.25}vh`, zIndex: i + 1 }}
-              draggable={ok && !!def(c).spell?.target} onDragStart={e => dragStart(c, e)} onDragEnd={() => { /* keep pending if not dropped on target */ }}
+              draggable={ok && spellSlots(def(c)).length > 0} onDragStart={e => dragStart(c, e)} onDragEnd={() => { /* keep pending if not dropped on target */ }}
               onClick={() => clickHand(c)} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}>
               <div className="hinner"><CardFace d={def(c)} /></div>
+              {(def(c).abilities ?? []).some(a => a.zone === 'hand') && <div className="handab">{(def(c).abilities ?? []).map((a, i) => a.zone === 'hand' ? <button key={i} data-handab={i} disabled={!canActivate(g, HUMAN, c, i)} title={a.label} onClick={e => { e.stopPropagation(); activateAb(c, i); }}>{abCost(a)}: {a.label.length > 22 ? a.label.slice(0, 20) + '…' : a.label}</button> : null)}</div>}
             </div>); })}
         </div>
+        {(() => { const gy = [...me.graveyard, ...me.exile].flatMap(c => [
+          ...(castZone(g, HUMAN, c) && canCast(g, HUMAN, c) ? [<button key={`c${c.uid}`} data-gycast={c.uid} onClick={() => startCast(c)} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}>{castZone(g, HUMAN, c) === 'flashback' ? '↺ Flashback' : '▶ Cast'} {def(c).name}</button>] : []),
+          ...(def(c).abilities ?? []).map((a, i) => a.zone === 'graveyard' && canActivate(g, HUMAN, c, i) ? <button key={`a${c.uid}-${i}`} onClick={() => activateAb(c, i)} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}>🪦 {def(c).name}: {abCost(a)}</button> : null).filter(Boolean)]);
+          return gy.length ? <div className="gyplay">{gy}</div> : null; })()}
         <StackView g={g} ui={ui} />
         <div className="actionbar">
           {secondary.map(b => <button key={b.label} className="sec" onClick={b.run}>{b.label}{b.key && <kbd>{b.key}</kbd>}</button>)}
@@ -538,6 +622,14 @@ export default function App() {
       <Arrows g={g} plan={atkPlan} blk={blkPlan} />
       {bdrag?.moved && <DragLine uid={bdrag.uid} x={bdrag.x} y={bdrag.y} color={bdrag.over === null ? '#9ec3ff' : blockReason(g, findCard(g, bdrag.uid)!, findCard(g, bdrag.over)!) ? '#ef5350' : '#42a5f5'} />}
       {toast && <div className="toast">{toast}</div>}
+      {humanDecision && <DecisionDialog key={humanDecision.key + humanDecision.kind} g={g} d={humanDecision} answer={a => act(g => { answerDecision(g, a); })} Face={CardFace} setHover={id => setHover(id ? { id } : null)} />}
+      {!humanDecision && flow && flowStage === 'kicker' && flowCard && <KickerDialog name={flowName} cost={costText(def(flowCard).kicker!)} cancel={() => setPending(null)} pick={k => begin2({ ...flow, kicked: k }, flowCard)} />}
+      {!humanDecision && flow && flowStage === 'x' && <XDialog name={flowName} max={flow.kind === 'ability' && flowCard ? maxX(g, HUMAN, flowCard, { abil: flowAb!.mana, exclude: flowAb!.tap ? flowCard.uid : undefined }) : flowCard ? maxX(g, HUMAN, flowCard, { kicked: flow.kicked }) : 0} cancel={() => setPending(null)} pick={x => advance({ ...flow, x })} />}
+      {!humanDecision && flow && flowStage === 'modes' && flowModes && <ModesDialog key={flow.uid} name={flowName} m={flowModes} avail={flowModes.list.map(md => (md.tslots ?? []).every(sl => sl.opt || [...g.players.map(q => ({ player: q.id })), ...g.players.flatMap(q => [...q.battlefield, ...q.graveyard].map(c => ({ card: c.uid }))), ...g.stack.map(it => ({ stack: it.id }))].some(t => validSlot(g, HUMAN, sl, t, tctx))))} cancel={flow.kind === 'trigger' ? undefined : () => setPending(null)} pick={ms => advance({ ...flow, modes: ms })} />}
+      {!humanDecision && curSlot?.who === 'card' && (() => { const cands = g.players.flatMap(q => [...q.graveyard]).filter(c => validSlot(g, HUMAN, curSlot, { card: c.uid }, tctx)); return (
+        <div className="modal choice"><div className="mbox wide" data-dialog="gytarget"><h2>{flowName}: choose {curSlot.label ?? 'a card'}</h2><p className="csub">Target a card in a graveyard.</p>
+          <div className="zgrid pickgrid">{cands.map(c => <div key={c.uid} className="zcard pick" data-pick={c.uid} onClick={() => targetClick({ card: c.uid })} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}><CardFace d={def(c)} /><span className="pickn">{g.players[c.owner].name}</span></div>)}</div>
+          <div className="cbtns">{curSlot.opt && <button className="sec" onClick={skipSlot}>Skip</button>}{flow!.kind !== 'trigger' && <button className="sec" onClick={() => setPending(null)}>Cancel</button>}</div></div></div>); })()}
 
       {modal && typeof modal === 'object' && <ZoneViewer g={g} pid={modal.pid} zone={modal.zone} close={() => setModal(null)} setHover={setHover} />}
       {modal === 'help' && <div className="modal" onClick={() => setModal(null)}><div className="mbox" onClick={e => e.stopPropagation()}>

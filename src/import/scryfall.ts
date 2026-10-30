@@ -1,5 +1,5 @@
 /** Client-side Scryfall lookup: /cards/collection in batches of 75, with /cards/named?fuzzy= fallback. ~8 req/s. */
-export interface ScryFace { name: string; mana_cost?: string; type_line?: string; oracle_text?: string; power?: string; toughness?: string; image_uris?: { normal: string; art_crop: string } }
+export interface ScryFace { name: string; mana_cost?: string; type_line?: string; oracle_text?: string; power?: string; toughness?: string; loyalty?: string; colors?: string[]; image_uris?: { normal: string; art_crop: string } }
 export interface ScryCard extends ScryFace {
   name: string; layout?: string; cmc?: number; type_line: string; colors?: string[]; color_identity: string[]; keywords: string[];
   legalities?: Record<string, string>; produced_mana?: string[]; card_faces?: ScryFace[];

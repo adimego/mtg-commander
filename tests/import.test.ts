@@ -100,11 +100,12 @@ describe('support classification', () => {
     expect(parseManaLine('{T}: Add {W}, {U}, or {B}.')).toEqual(['W|U|B']); expect(parseManaLine('{T}: Add {C}{C}.')).toEqual(['C', 'C']);
   });
   it('anything else is limited, with an honest reason', () => {
-    const atraxa = cls("Atraxa, Praetors' Voice"); expect(atraxa.support).toBe('limited'); expect(atraxa.reason).toMatch(/vanilla 4\/4 with flying, vigilance, deathtouch, lifelink/); expect(atraxa.reason).toMatch(/Proliferate/);
-    const blade = cls('Opt'); expect(blade.support).toBe('limited'); expect(blade.reason).toMatch(/no effect/);
+    const atraxa = cls("Atraxa, Praetors' Voice"); expect(atraxa.support).toBe('auto'); expect(atraxa.def.triggers?.[0].effects[0].op).toBe('proliferate');
+    const opt = cls('Opt'); expect(opt.support).toBe('auto'); expect(opt.def.spell?.effects.map(e => e.op)).toEqual(['scry', 'draw']);
+    const rats = cls('Relentless Rats'); expect(rats.support).toBe('limited'); expect(rats.reason).toMatch(/Relentless Rats gets/i);
     const goyf = cls('Tarmogoyf'); expect(goyf.support).toBe('limited'); expect(goyf.reason).toMatch(/variable power/);
     const delver = cls('Delver of Secrets // Insectile Aberration'); expect(delver.support).toBe('limited'); expect(delver.def.img).toBe('https://img/delver.jpg'); expect(delver.reason).toMatch(/front face/);
-    const shock = cls('Watery Grave'); expect(shock.support).toBe('limited'); expect(shock.def.mana).toEqual([{ add: ['U|B'] }]);
+    const shock = cls('Watery Grave'); expect(shock.support).toBe('auto'); expect(shock.def.mana).toEqual([{ add: ['U|B'] }]); expect(shock.def.shock).toBe(2);
     expect(cls('Fellwar Stone').support).toBe('limited');
   });
 });
@@ -135,11 +136,11 @@ describe('imported decks play in the engine', () => {
   it('builds, swaps limited cards for basics, exports, and runs a game', async () => {
     const r = await importText("1 Atraxa, Praetors' Voice *CMDR*\n1 Sol Ring\n1 Serra Angel\n1 Dimir Guildgate\n1 Opt\n1 Tarmogoyf\n30 Relentless Rats\n25 Island\n25 Swamp\n14 Plains");
     const keep = buildDeck(r, defaultCommanders(r), { name: 'Atraxa test', swapLimited: false, source: '', legal: true });
-    expect(keep.cards.length).toBe(99); expect(keep.stats.limited).toBe(32); // Opt, Goyf, 30 Rats (Atraxa is in the command zone)
+    expect(keep.cards.length).toBe(99); expect(keep.stats.limited).toBe(31); // Goyf, 30 Rats (Atraxa is in the command zone)
     const swap = buildDeck(r, defaultCommanders(r), { name: 'swap', swapLimited: true, source: '', legal: true });
-    expect(swap.stats.swapped).toBe(32); expect(swap.cards.length).toBe(99);
+    expect(swap.stats.swapped).toBe(31); expect(swap.cards.length).toBe(99);
     registerCards(keep.defs); registerDeck(toDeckDef(keep));
-    expect(CARDS['x-atraxa-praetors-voice'].limited).toMatch(/Limited support/);
+    expect(CARDS['x-atraxa-praetors-voice'].limited).toBeUndefined();
     expect(exportText(keep)).toMatch(/^1 Atraxa, Praetors' Voice \*CMDR\*\n/);
     const g = newGame({ decks: [keep.id, 'judith', 'ruric', 'benton'], seed: 7 });
     expect(g.players[0].command[0].id).toBe('x-atraxa-praetors-voice'); expect(g.players[0].identity.sort()).toEqual(['B', 'G', 'U', 'W']);

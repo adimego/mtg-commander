@@ -1,6 +1,5 @@
-import { Game, pass, defenders, canCast, canActivate, def, findCard, StackItem } from './engine';
-import { aiPriority, aiAttack, aiBlock, chooseTarget } from './ai';
-import { chooseTriggerTarget } from './engine';
+import { Game, pass, defenders, canCast, canActivate, def, StackItem, answerDecision, itemTargets, locate, castZone, chooseTriggerTargets, trigSlots, abilitySlots } from './engine';
+import { aiPriority, aiAttack, aiBlock, chooseTargets, chooseModes, decide } from './ai';
 
 export interface PassOpts { stopAll?: boolean; passUntilTurn?: number | null }
 
@@ -8,9 +7,9 @@ export interface PassOpts { stopAll?: boolean; passUntilTurn?: number | null }
  *  Non-interactive abilities (ramp, card draw) don't cause a smart-mode stop; use "Hold priority" for those. */
 export function humanCanRespond(g: Game, pid: number) {
   const p = g.players[pid];
-  return [...p.hand, ...p.command].some(c => canCast(g, pid, c)) || p.battlefield.some(c => (def(c).abilities ?? []).some((a, i) => !!a.target && canActivate(g, pid, c, i)));
+  return [...p.hand, ...p.command, ...p.graveyard, ...p.exile].some(c => castZone(g, pid, c) && canCast(g, pid, c)) || [...p.battlefield, ...p.hand, ...p.graveyard].some(c => (def(c).abilities ?? []).some((a, i) => !a.manaAb && (abilitySlots(a).length > 0 || !!a.modes) && canActivate(g, pid, c, i)));
 }
-const touches = (g: Game, it: StackItem, pid: number) => it.target?.player === pid || (it.target?.card !== undefined && findCard(g, it.target.card)?.owner === pid) || (it.target?.stack !== undefined && g.stack.find(s => s.id === it.target!.stack)?.controller === pid);
+const touches = (g: Game, it: StackItem, pid: number) => itemTargets(it).some(t => t.player === pid || (t.card !== undefined && locate(g, t.card)?.c.owner === pid) || (t.stack !== undefined && g.stack.find(s => s.id === t.stack)?.controller === pid));
 
 /** Smart auto-pass: only stop the human when it matters. */
 export function shouldAutoPass(g: Game, pid: number, o: PassOpts): boolean {
@@ -30,6 +29,7 @@ export function shouldAutoPass(g: Game, pid: number, o: PassOpts): boolean {
 
 export function waitingForHuman(g: Game, o: PassOpts = {}): boolean {
   if (g.winner !== null || !g.started) return true;
+  if (g.decision) return g.players[g.decision.pid].human;
   if (g.choice) return g.players[g.choice.controller].human;
   if (g.awaiting === 'attack') return g.players[g.active].human && !g.players[g.active].lost;
   if (g.awaiting === 'block') return defenders(g).some(d => g.players[d].human && !g.blockersDone.includes(d));
@@ -39,7 +39,14 @@ export function waitingForHuman(g: Game, o: PassOpts = {}): boolean {
 /** One automatic step: AI decisions or auto-pass. */
 export function tick(g: Game, o: PassOpts = {}) {
   if (g.winner !== null) return;
-  if (g.choice) { const c = g.choice; if (!g.players[c.controller].human) { const t = chooseTarget(g, c.controller, c.trig.target!, c.trig.effects, true); if (t) chooseTriggerTarget(g, t); } return; }
+  if (g.decision) { const d = g.decision; if (!g.players[d.pid].human) answerDecision(g, decide(g, d)); return; }
+  if (g.choice) {
+    const c = g.choice; if (g.players[c.controller].human) return;
+    const t = c.trig; const modes = t.modes ? chooseModes(g, c.controller, t.modes, c.sourceUid) : undefined;
+    const ts = chooseTargets(g, c.controller, trigSlots(t), t.effects, true, c.sourceUid) ?? [];
+    if (!chooseTriggerTargets(g, ts, modes)) { g.choice = null; }
+    return;
+  }
   if (g.awaiting === 'attack') { if (!g.players[g.active].human) aiAttack(g, g.active); return; }
   if (g.awaiting === 'block') { for (const d of defenders(g)) if (!g.players[d].human && !g.blockersDone.includes(d)) { aiBlock(g, d); return; } return; }
   if (g.priority === null) return;
