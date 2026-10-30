@@ -433,6 +433,20 @@ export function declareAttackers(g: Game, pid: number, list: { uid: number; defe
   givePriority(g); return true;
 }
 export const canBlock = (g: Game, b: Card, a: Card) => isType(b, 'Creature') && !b.tapped && b.blocking === undefined && a.attacking === b.owner && (!hasKw(a, 'flying') || hasKw(b, 'flying') || hasKw(b, 'reach'));
+/** Why b can't block a (null if it can). Used by the UI to explain invalid drops. */
+export function blockReason(g: Game, b: Card, a: Card): string | null {
+  if (!isType(b, 'Creature')) return 'Only creatures can block';
+  if (b.tapped) return 'Tapped creatures can\'t block';
+  if (b.blocking !== undefined) return 'Already blocking';
+  if (a.attacking !== b.owner) return 'Not attacking you';
+  if (hasKw(a, 'flying') && !hasKw(b, 'flying') && !hasKw(b, 'reach')) return 'Flying: needs a blocker with flying or reach';
+  return null;
+}
+/** Attackers in a planned block (blocker uid -> attacker uid) that have menace but exactly one blocker; those blocks would be dropped. */
+export function menaceShort(g: Game, plan: Record<number, number>): number[] {
+  const n: Record<number, number> = {}; for (const a of Object.values(plan)) n[a] = (n[a] ?? 0) + 1;
+  return Object.entries(n).filter(([a, k]) => k === 1 && hasKw(findCard(g, +a)!, 'menace')).map(([a]) => +a);
+}
 export const defenders = (g: Game) => [...new Set(attackers(g).map(a => a.attacking!))].filter(p => !g.players[p].lost);
 export function declareBlockers(g: Game, defender: number, list: { blocker: number; attacker: number }[]) {
   if (g.awaiting !== 'block' || g.blockersDone.includes(defender)) return false;

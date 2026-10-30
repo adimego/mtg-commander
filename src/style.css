@@ -164,3 +164,19 @@ html,body,#root,.app,.table{overflow:clip!important}
 .hand{right:24vw}
 .stackview{top:41vh!important}
 .stackview{top:34vh!important;left:auto!important;right:1vw!important;transform:none!important}
+/* drag-to-block */
+.slot{position:relative}.slot .why{position:absolute;left:50%;top:-.4vh;transform:translate(-50%,-100%);white-space:nowrap;font-size:.78rem;font-weight:700;padding:.15rem .45rem;border-radius:.4rem;z-index:30;pointer-events:none;box-shadow:0 .2rem .6rem #000a}
+.slot .why.ok{background:#1565c0;color:#fff}
+.slot .why.bad{background:#b71c1c;color:#fff}
+.slot .why.warn{background:#f9a825;color:#111}
+.perm.badtarget{filter:grayscale(.7) brightness(.6);outline:3px solid #ef535099;border-radius:.5rem}
+.perm.targetable{cursor:copy}
+.perm.dragover.targetable{outline:4px solid #42a5f5;box-shadow:0 0 1.6rem #42a5f5,0 0 0 .3rem #42a5f5}
+.perm.dragover.badtarget{outline:4px solid #ef5350;filter:grayscale(.4) brightness(.75)}
+.perm.dragging{opacity:.55}
+.perm.canact{cursor:grab}
+.arrows.dragline{z-index:90;pointer-events:none}
+.toast{position:fixed;left:50%;top:44vh;transform:translateX(-50%);background:#b71c1cf2;color:#fff;font-weight:700;padding:.7rem 1.2rem;border-radius:.7rem;z-index:200;box-shadow:0 .6rem 2rem #000c;pointer-events:none;animation:pop .2s}
+.slot:has(.perm.dragover) .why{z-index:35;font-size:.9rem}
+.opp .slot .why{top:auto;bottom:-.3vh;transform:translate(-50%,100%)}
+.opp .slot:first-child .why{left:0;transform:translate(0,100%)}

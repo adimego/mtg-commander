@@ -1,5 +1,5 @@
 import { DragEvent, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
-import { Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTarget, describeTarget, defenders, isCommander } from './engine/engine';
+import { Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTarget, describeTarget, defenders, isCommander, blockReason, menaceShort } from './engine/engine';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
 
 const HUMAN = 0;
@@ -48,7 +48,7 @@ function LifeTotal({ v, big }: { v: number; big?: boolean }) {
 
 interface UI {
   g: Game; setHover: (h: Hover) => void; clickPerm: (c: Card) => void; permCls: (c: Card) => string; activateAb: (c: Card, i: number) => void;
-  isTarget: (t: Target) => boolean; dropOn: (t: Target, e: DragEvent) => void; dragStart: (c: Card, e: DragEvent) => void;
+  isTarget: (t: Target) => boolean; blockDown: (c: Card, e: React.MouseEvent) => void; blockCtx: (c: Card, e: React.MouseEvent) => void; why: (c: Card) => string | null; dropOn: (t: Target, e: DragEvent) => void; dragStart: (c: Card, e: DragEvent) => void;
   clickPlayer: (pid: number) => void; atkPlan: Record<number, number>; atkTarget?: number; declaring: boolean; openZone: (pid: number, zone: 'graveyard' | 'exile') => void; clickCommand: (c: Card) => void;
 }
 
@@ -63,7 +63,7 @@ function Permanent({ ui, c }: { ui: UI; c: Card }) {
       onDragOver={e => { if (ui.isTarget(t)) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
       <div className={`perm ${c.attacking !== undefined ? 'attacking' : ''} ${c.blocking !== undefined ? 'blocking' : ''} ${ui.permCls(c)}`}
         draggable={mine && ui.declaring && canAttack(g, c)} onDragStart={e => ui.dragStart(c, e)}
-        onClick={() => ui.clickPerm(c)} onMouseEnter={() => ui.setHover({ id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)}>
+        onMouseDown={e => ui.blockDown(c, e)} onContextMenu={e => ui.blockCtx(c, e)} onClick={() => ui.clickPerm(c)} onMouseEnter={() => ui.setHover({ id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)}>
         <CardFace d={d} />
         {cr && <span className={`pt ${c.damage ? 'hurt' : ''} ${c.pp || c.pt ? 'pumped' : ''}`} title={`Power/toughness${c.damage ? ` (${c.damage} damage marked)` : ''}`}>{power(g, c)}/{toughness(g, c) - c.damage}</span>}
         {sick && <span className="badge sick" title="Summoning sick: can't attack or use {T} abilities this turn">💤</span>}
@@ -73,6 +73,7 @@ function Permanent({ ui, c }: { ui: UI; c: Card }) {
         {abs.length > 0 && <div className="abstrip">{abs.map(({ a, i, ok }) => (
           <button key={i} disabled={!ok} title={`${abCost(a)}: ${a.label}`} onClick={e => { e.stopPropagation(); ui.activateAb(c, i); }}><b>{abCost(a)}</b> {a.label}</button>))}</div>}
       </div>
+      {ui.why(c) && <span className={`why ${ui.why(c)!.startsWith('✓') ? 'ok' : ui.why(c)!.startsWith('⚠') ? 'warn' : 'bad'}`}>{ui.why(c)}</span>}
     </div>
   );
 }
@@ -197,6 +198,12 @@ function Arrows({ g, plan, blk }: { g: Game; plan: Record<number, number>; blk: 
   });
   return <svg ref={ref} className="arrows" />;
 }
+function DragLine({ uid, x, y, color }: { uid: number; x: number; y: number; color: string }) {
+  const el = document.querySelector(`[data-uid="${uid}"]`); if (!el) return null;
+  const r = el.getBoundingClientRect(); const ax = r.left + r.width / 2, ay = r.top + r.height / 2;
+  return <svg className="arrows dragline"><defs><marker id="dl-ah" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill={color} /></marker></defs>
+    <path d={`M${ax},${ay} Q${(ax + x) / 2},${(ay + y) / 2 - Math.abs(ax - x) * 0.15} ${x},${y}`} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" markerEnd="url(#dl-ah)" opacity="0.95" /></svg>;
+}
 function Preview({ g, h }: { g: Game | null; h: Hover }) {
   if (!h) return <div className="preview empty"><div className="hint">Hover any card to see it here.<br /><br /><kbd>?</kbd> shows keyboard shortcuts</div></div>;
   const d = CARDS[h.id]; const c = g && h.uid !== undefined ? findCard(g, h.uid) : undefined;
@@ -227,7 +234,7 @@ const TIPS = [
   ['🎯', 'The big button at the bottom right is always your next step. Press Space to use it.'],
   ['🖱️', 'Hover any card to see it large on the right. Click glowing cards in your hand to play them.'],
   ['⚔', 'To attack, click an opponent to choose them as the target, then click your glowing creatures. You can also drag a creature onto an opponent.'],
-  ['🛡', 'When you are attacked, click one of your creatures and then the attacker it should block.'],
+  ['🛡', 'When you are attacked, drag one of your untapped creatures onto the attacker it should block. Several creatures can block the same attacker (menace needs two). Right-click a blocker, or drag it onto empty space, to unassign it. Click-then-click still works too.'],
   ['📚', 'Spells and abilities go on the stack in the middle of the table. You get priority automatically when you can respond.'],
   ['★', 'Your commander waits in the command zone next to your life total. Every recast costs {2} more.'],
 ];
@@ -245,6 +252,9 @@ export default function App() {
   const [atkPlan, setAtkPlan] = useState<Record<number, number>>({});
   const [selBlocker, setSelBlocker] = useState<number | null>(null);
   const [blkPlan, setBlkPlan] = useState<Record<number, number>>({});
+  const [bdrag, setBdrag] = useState<{ uid: number; x0: number; y0: number; x: number; y: number; over: number | null; moved: boolean } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const dragRef = useRef<{ move: (e: MouseEvent) => void; up: (e: MouseEvent) => void }>({ move: () => {}, up: () => {} });
   const [hover, setHover] = useState<Hover>(null);
   const [modal, setModal] = useState<Modal>(null);
   const [logOpen, setLogOpen] = useState(true);
@@ -275,6 +285,7 @@ export default function App() {
   const spec: TargetSpec | undefined = humanChoice ? humanChoice.trig.target : pending && pendingCard ? (pending.kind === 'cast' ? def(pendingCard).spell?.target : def(pendingCard).abilities?.[pending.idx].target) : undefined;
   const isTarget = (t: Target) => !!g && !!spec && validTarget(g, HUMAN, spec, t);
   const blocking = !!g && g.awaiting === 'block' && defenders(g).includes(HUMAN) && !g.blockersDone.includes(HUMAN) && !me!.lost;
+  const short = g && blocking ? menaceShort(g, blkPlan) : [];
   const declaring = !!g && g.awaiting === 'attack' && g.active === HUMAN && !me!.lost;
   const myPriority = !!g && g.priority === HUMAN && !g.awaiting && !g.choice && g.winner === null && g.started && !shouldAutoPass(g, HUMAN, opts);
   const top = g?.stack[g.stack.length - 1];
@@ -307,10 +318,48 @@ export default function App() {
     if (spec) { targetClick({ card: c.uid }); return; }
     if (declaring && c.owner === HUMAN) return toggleAttacker(c);
     if (blocking) {
-      if (c.owner === HUMAN && isType(c, 'Creature') && !c.tapped) { if (blkPlan[c.uid] !== undefined) { const p = { ...blkPlan }; delete p[c.uid]; setBlkPlan(p); } else setSelBlocker(selBlocker === c.uid ? null : c.uid); return; }
-      if (c.attacking === HUMAN && selBlocker !== null) { const b = findCard(g, selBlocker)!; if (canBlock(g, b, c)) setBlkPlan({ ...blkPlan, [selBlocker]: c.uid }); setSelBlocker(null); }
+      if (c.owner === HUMAN && isType(c, 'Creature') && !c.tapped) return;
+      if (c.attacking === HUMAN && selBlocker !== null) { const b = findCard(g, selBlocker)!; const r = blockReason(g, b, c); if (r) flash(r); else setBlkPlan({ ...blkPlan, [selBlocker]: c.uid }); setSelBlocker(null); }
     }
   }
+  function toggleBlocker(c: Card) {
+    { if (blkPlan[c.uid] !== undefined) { const p = { ...blkPlan }; delete p[c.uid]; setBlkPlan(p); } else setSelBlocker(selBlocker === c.uid ? null : c.uid); }
+  }
+  function flash(m: string) { setToast(m); setTimeout(() => setToast(t => (t === m ? null : t)), 2600); }
+  const canBlockerStart = (c: Card) => blocking && c.owner === HUMAN && isType(c, 'Creature') && !c.tapped;
+  function blockDown(c: Card, e: React.MouseEvent) {
+    if (e.button !== 0 || !canBlockerStart(c)) return;
+    e.preventDefault(); setSelBlocker(null);
+    setBdrag({ uid: c.uid, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, over: null, moved: false });
+  }
+  function blockCtx(c: Card, e: React.MouseEvent) {
+    if (!blocking) return; e.preventDefault();
+    const p = { ...blkPlan };
+    if (p[c.uid] !== undefined) delete p[c.uid]; else if (c.attacking === HUMAN) for (const [b, a] of Object.entries(p)) if (a === c.uid) delete p[+b];
+    setBlkPlan(p); setSelBlocker(null);
+  }
+  dragRef.current = {
+    move: e => {
+      if (!bdrag || !g) return;
+      const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-uid]') as HTMLElement | null;
+      const u = el ? +el.dataset.uid! : NaN; const a = Number.isNaN(u) ? undefined : findCard(g, u);
+      setBdrag({ ...bdrag, x: e.clientX, y: e.clientY, over: a && a.attacking === HUMAN ? u : null, moved: bdrag.moved || Math.hypot(e.clientX - bdrag.x0, e.clientY - bdrag.y0) > 6 });
+    },
+    up: () => {
+      if (!bdrag || !g) return; const d = bdrag; setBdrag(null);
+      const b = findCard(g, d.uid); if (!b) return;
+      if (!d.moved) return toggleBlocker(b);
+      const p = { ...blkPlan };
+      if (d.over !== null) { const r = blockReason(g, b, findCard(g, d.over)!); if (r) { flash(`${def(b).name} can't block ${def(findCard(g, d.over)!).name}: ${r}`); return; } p[d.uid] = d.over; }
+      else delete p[d.uid];
+      setBlkPlan(p);
+    },
+  };
+  useEffect(() => {
+    const m = (e: MouseEvent) => dragRef.current.move(e), u = (e: MouseEvent) => dragRef.current.up(e);
+    window.addEventListener('mousemove', m); window.addEventListener('mouseup', u);
+    return () => { window.removeEventListener('mousemove', m); window.removeEventListener('mouseup', u); };
+  }, []);
   function clickPlayer(pid: number) { if (spec) { targetClick({ player: pid }); return; } if (declaring && !g!.players[pid].lost && pid !== HUMAN) setAtkTarget(pid); }
   function dragStart(c: Card, e: DragEvent) {
     e.dataTransfer.setData('text/plain', String(c.uid)); e.dataTransfer.effectAllowed = 'move';
@@ -339,7 +388,7 @@ export default function App() {
     else if (g.winner !== null) { prompt = g.winner === HUMAN ? '🏆 Victory! Every opponent is out.' : `${g.players[g.winner].name} wins the game.`; tone = 'end'; primary = { label: 'Play again', run: newMatch }; }
     else if (humanChoice) { prompt = `⚡ Your trigger: ${CARDS[humanChoice.sourceId].name}, ${humanChoice.trig.label}. Choose a target (it's required).`; tone = 'target'; }
     else if (pendingCard && spec) { prompt = `🎯 Choose a target for ${def(pendingCard).name}: ${spec.toLowerCase().endsWith('spell') ? 'a spell on the stack' : spec === 'any' ? 'a creature or an opponent/player' : 'a creature'} (highlighted in green).`; tone = 'target'; secondary.push({ label: 'Cancel', run: () => setPending(null), key: 'Esc' }); }
-    else if (blocking) { const dmg = incoming.reduce((s, a) => s + power(g, a), 0); prompt = `⚠ ${incoming.length} attacker${incoming.length > 1 ? 's' : ''}, ${dmg} damage coming at you. ${selBlocker !== null ? 'Now click the attacker to block.' : 'Click your creature, then the attacker it should block.'}`; tone = 'danger'; const n = Object.keys(blkPlan).length; primary = { label: n ? `Confirm ${n} block${n > 1 ? 's' : ''}` : 'No blocks', run: confirmBlocks, key: 'Enter' }; }
+    else if (blocking) { const dmg = incoming.reduce((s, a) => s + power(g, a), 0); prompt = `⚠ ${incoming.length} attacker${incoming.length > 1 ? 's' : ''}, ${dmg} damage coming at you. ${selBlocker !== null ? 'Now click the attacker to block.' : 'Drag your creatures onto attackers to block (several can block one). Right-click or drag off to unassign.'}`; tone = 'danger'; const n = Object.keys(blkPlan).length; primary = { label: n ? `Confirm ${n} block${n > 1 ? 's' : ''}${short.length ? ' ⚠' : ''}` : 'No blocks', run: confirmBlocks, key: 'Enter' }; }
     else if (declaring) { const n = Object.keys(atkPlan).length; prompt = `⚔ Attack: click an opponent to aim (now: ${curAtkTarget !== undefined ? g.players[curAtkTarget].name : '-'}), then click your glowing creatures, or drag them onto an opponent.`; primary = { label: n ? `Attack with ${n}` : 'No attack', run: confirmAttacks, key: 'Enter', tone: n ? 'attack' : undefined }; secondary.push({ label: `All → ${curAtkTarget !== undefined ? g.players[curAtkTarget].name : ''}`, run: attackAll, key: 'A' }); }
     else if (myPriority && top) { prompt = `🔔 You have priority. Respond with an instant or ability, or pass. Top: ${topDesc}`; tone = 'prio'; primary = { label: 'Pass ▸ Resolve', run: doPass }; }
     else if (myPriority && myTurn && inMain) {
@@ -383,17 +432,28 @@ export default function App() {
   );
 
   // ---------- table ----------
+  const dragSrc = bdrag?.moved ? bdrag.uid : selBlocker;
+  const why = (c: Card): string | null => {
+    if (!blocking || c.attacking !== HUMAN) return null;
+    const full = bdrag?.moved ? bdrag.over === c.uid : false; // full reason only on the hovered attacker
+    if (dragSrc !== null) { const r = blockReason(g, findCard(g, dragSrc)!, c); if (r) return '✕ ' + (full ? r : r.split(':')[0]); }
+    if (short.includes(c.uid)) return full || dragSrc === null ? '⚠ Menace: add 1 more blocker' : '⚠ Menace';
+    if (dragSrc !== null) return hasKw(c, 'menace') && !Object.values(blkPlan).includes(c.uid) ? (full ? '✓ Menace: needs 2+ blockers' : '✓ Menace') : (full ? '✓ Drop to block' : '✓');
+    return null;
+  };
   const permCls = (c: Card) => {
     const out: string[] = [];
     if (atkPlan[c.uid] !== undefined || blkPlan[c.uid] !== undefined) out.push('planned');
     if (selBlocker === c.uid) out.push('selected');
     if (isTarget({ card: c.uid })) out.push('targetable');
     if (declaring && canAttack(g, c) && atkPlan[c.uid] === undefined) out.push('canact');
-    if (blocking && c.owner === HUMAN && isType(c, 'Creature') && !c.tapped && blkPlan[c.uid] === undefined && selBlocker === null) out.push('canact');
-    if (blocking && selBlocker !== null && c.attacking === HUMAN && canBlock(g, findCard(g, selBlocker)!, c)) out.push('targetable');
+    if (blocking && c.owner === HUMAN && isType(c, 'Creature') && !c.tapped && blkPlan[c.uid] === undefined && dragSrc === null) out.push('canact');
+    if (blocking && dragSrc !== null && c.attacking === HUMAN) out.push(blockReason(g, findCard(g, dragSrc)!, c) ? 'badtarget' : 'targetable');
+    if (bdrag?.moved && bdrag.over === c.uid) out.push('dragover');
+    if (bdrag?.uid === c.uid && bdrag.moved) out.push('dragging');
     return out.join(' ');
   };
-  const ui: UI = { g, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand };
+  const ui: UI = { g, blockDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand };
   const hand = me.hand; const n = hand.length;
 
   return (
@@ -447,12 +507,14 @@ export default function App() {
       </aside>
 
       <Arrows g={g} plan={atkPlan} blk={blkPlan} />
+      {bdrag?.moved && <DragLine uid={bdrag.uid} x={bdrag.x} y={bdrag.y} color={bdrag.over === null ? '#9ec3ff' : blockReason(g, findCard(g, bdrag.uid)!, findCard(g, bdrag.over)!) ? '#ef5350' : '#42a5f5'} />}
+      {toast && <div className="toast">{toast}</div>}
 
       {modal && typeof modal === 'object' && <ZoneViewer g={g} pid={modal.pid} zone={modal.zone} close={() => setModal(null)} setHover={setHover} />}
       {modal === 'help' && <div className="modal" onClick={() => setModal(null)}><div className="mbox" onClick={e => e.stopPropagation()}>
         <h2>Keyboard shortcuts<button className="x" onClick={() => setModal(null)}>✕</button></h2>
         <table className="keys"><tbody>{SHORTCUTS.map(([k, v]) => <tr key={k}><td><kbd>{k}</kbd></td><td>{v}</td></tr>)}</tbody></table>
-        <h3>Mouse</h3><p className="muted">Click glowing cards to play them. Targets glow green. You can drag a targeted spell from your hand onto its target, or drag an attacker onto an opponent. Hover anything for a large preview. Click 🪦 or ⛔ to view a graveyard or exile.</p>
+        <h3>Mouse</h3><p className="muted">Click glowing cards to play them. Targets glow green. You can drag a targeted spell from your hand onto its target, drag an attacker onto an opponent, or drag a blocker onto an attacking creature (right-click a blocker to unassign it). Hover anything for a large preview. Click 🪦 or ⛔ to view a graveyard or exile.</p>
       </div></div>}
       {modal === 'settings' && <div className="modal" onClick={() => setModal(null)}><div className="mbox" onClick={e => e.stopPropagation()}>
         <h2>Settings<button className="x" onClick={() => setModal(null)}>✕</button></h2>

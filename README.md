@@ -82,3 +82,9 @@ Built for PC, full screen (tuned for 1920×1080; checked at 1440×900 and 2560×
 | ? / H | Help overlay |
 
 Attacking: click an opponent's panel to pick who you attack, then click creatures or drag them onto a player. Targets glow while you are choosing. ⚙ Settings has AI speed, smart auto-pass, hold priority and animations, and can show the first-game tips again. Click 🪦 or ⛔ on any player to view their graveyard or exile.
+
+**Blocking:** when you're attacked, drag an untapped creature onto an attacker.
+- While you drag, a live arrow follows the cursor. Attackers you can legally block glow ✓; illegal ones dim and show the reason (✕ Flying, for example). Menace attackers are flagged until they have at least two blockers.
+- A planned block shows as a dashed blue line. Several creatures can block the same attacker.
+- To unassign a blocker, right-click it or drag it onto empty space. Right-clicking an attacker clears all of its blockers.
+- Click your creature, then click the attacker, still works. Enter or Space confirms.

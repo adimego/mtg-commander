@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newGame, startGame, Game, Card, costOf, castSpell, destroy, findPayment, declareAttackers, declareBlockers, pass, DECKS, validateDeck, mulligan, CARDS, activate, canActivate, power, alive, playLand } from '../src/engine/engine';
+import { newGame, startGame, Game, Card, costOf, castSpell, destroy, findPayment, declareAttackers, declareBlockers, pass, DECKS, validateDeck, mulligan, CARDS, activate, canActivate, power, alive, playLand, blockReason, menaceShort } from '../src/engine/engine';
 import '../src/engine/ai';
 import { tick, waitingForHuman } from '../src/engine/controller';
 
@@ -165,6 +165,17 @@ describe('combat', () => {
     const ground = put(g, 1, VANILLA3); const spider = put(g, 1, id('Giant Spider'));
     declareBlockers(g, 1, [{ blocker: ground.uid, attacker: a.uid }, { blocker: spider.uid, attacker: a.uid }]);
     expect(ground.blocking).toBeUndefined(); expect(spider.blocking).toBe(a.uid);
+  });
+  it('blockReason explains invalid blocks; menaceShort flags single-blocked menace', () => {
+    const g = setup(); const f = put(g, 0, FLYER); const m = put(g, 0, id('Boggart Brute'));
+    attack(g, [{ uid: f.uid, defender: 1 }, { uid: m.uid, defender: 1 }]);
+    const ground = put(g, 1, VANILLA3); const spider = put(g, 1, id('Giant Spider')); const tapped = put(g, 1, BEAR); tapped.tapped = true;
+    expect(blockReason(g, ground, f)).toMatch(/Flying/); expect(blockReason(g, spider, f)).toBeNull();
+    expect(blockReason(g, tapped, m)).toMatch(/Tapped/); expect(blockReason(g, ground, m)).toBeNull();
+    expect(menaceShort(g, { [ground.uid]: m.uid })).toEqual([m.uid]);
+    expect(menaceShort(g, { [ground.uid]: m.uid, [spider.uid]: m.uid })).toEqual([]);
+    declareBlockers(g, 1, [{ blocker: ground.uid, attacker: m.uid }, { blocker: spider.uid, attacker: m.uid }]);
+    expect(m.blockedBy).toEqual([ground.uid, spider.uid]);
   });
   it('menace can\'t be blocked by just one creature', () => {
     const g = setup(); const a = put(g, 0, id('Boggart Brute')); attack(g, [{ uid: a.uid, defender: 1 }]); const b = put(g, 1, VANILLA3);
