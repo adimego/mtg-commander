@@ -52,7 +52,7 @@ function mainPhase(g: Game, pid: number): boolean {
   const lands = p.hand.filter(c => canPlayLand(g, pid, c));
   if (lands.length) {
     const need = (col: string) => p.hand.filter(c => (def(c).cost as unknown as Record<string, number>)[col]).length;
-    const score = (c: Card) => def(c).mana![0].add.reduce((s, m) => s + (m === 'IDENTITY' ? 10 : need(m)), 0);
+    const score = (c: Card) => (def(c).mana?.[0].add ?? []).reduce((s, m) => s + (m === 'IDENTITY' ? 10 : m.split('|').reduce((x, k) => Math.max(x, need(k)), 0)), 0);
     return playLand(g, pid, lands.sort((a, b) => score(b) - score(a))[0].uid);
   }
   const opts = [...p.hand, ...p.command].filter(c => canCast(g, pid, c) && !isCounter(def(c)) && !isPump(def(c)))

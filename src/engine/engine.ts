@@ -3,7 +3,8 @@ import deckData from '../data/decks.json';
 
 // ---------------- types ----------------
 export type Color = 'W' | 'U' | 'B' | 'R' | 'G';
-export type ManaSym = Color | 'C' | 'ANY' | 'IDENTITY';
+/** A mana unit; 'W|U' means one mana of either color (dual lands). */
+export type ManaSym = Color | 'C' | 'ANY' | 'IDENTITY' | `${string}|${string}`;
 export const COLORS: Color[] = ['W', 'U', 'B', 'R', 'G'];
 export interface Cost { generic: number; W?: number; U?: number; B?: number; R?: number; G?: number }
 export type TargetSpec = 'any' | 'creature' | 'oppCreature' | 'tappedCreature' | 'nonblackCreature' | 'nonartifactCreature' | 'spell' | 'noncreatureSpell' | 'creatureSpell';
@@ -16,10 +17,19 @@ export interface CardDef {
   keywords?: string[]; text: string; typeLine?: string; img?: string; art?: string;
   mana?: ManaAbility[]; abilities?: ActAbility[]; triggers?: TriggerDef[]; spell?: { target?: TargetSpec; effects: Effect[] };
   static?: { p: number; t: number; others?: boolean }; mustAttack?: boolean; uncounterable?: boolean;
+  /** Enters the battlefield tapped. */ etbTapped?: boolean;
+  /** Set for imported cards whose rules text is not (fully) modelled: explains what the game does with it. */ limited?: string;
+  /** Scryfall color identity (imported cards); overrides the computed one. */ identity?: Color[];
 }
 export interface DeckDef { id: string; name: string; commander: string; cards: string[] }
 export const CARDS: Record<string, CardDef> = Object.fromEntries((cardData as unknown as CardDef[]).map(c => [c.id, c]));
 export const DECKS = deckData as DeckDef[];
+export const BUILTIN_DECKS = DECKS.length;
+/** Register imported card definitions (built-in ids are never overwritten). */
+export function registerCards(defs: CardDef[]) { for (const d of defs) if (!CARDS[d.id]) CARDS[d.id] = d; }
+/** Add or replace an imported deck in the deck registry. */
+export function registerDeck(d: DeckDef) { const i = DECKS.findIndex(x => x.id === d.id); if (i >= BUILTIN_DECKS) DECKS[i] = d; else if (i < 0) DECKS.push(d); }
+export function unregisterDeck(id: string) { const i = DECKS.findIndex(x => x.id === id); if (i >= BUILTIN_DECKS) DECKS.splice(i, 1); }
 
 export interface Card { uid: number; id: string; owner: number; tapped: boolean; sick: boolean; damage: number; pp: number; pt: number; deathtouched?: boolean; attacking?: number; blockedBy?: number[]; blocking?: number }
 export interface Player { id: number; name: string; human: boolean; life: number; deckName: string; commanderId: string; commanderCasts: number; identity: Color[]; library: Card[]; hand: Card[]; battlefield: Card[]; graveyard: Card[]; exile: Card[]; command: Card[]; cmdDamage: Record<number, number>; lost: boolean; landPlayed: boolean; mulligans: number; drewEmpty?: boolean }
@@ -53,7 +63,7 @@ const firstAliveFrom = (g: Game, pid: number) => (g.players[pid].lost ? nextAliv
 export function findCard(g: Game, uid: number): Card | undefined { for (const p of g.players) { const c = p.battlefield.find(x => x.uid === uid); if (c) return c; } }
 export const creatures = (p: Player) => p.battlefield.filter(c => isType(c, 'Creature'));
 
-export function colorIdentity(d: CardDef): Color[] { return COLORS.filter(k => d.colors.includes(k) || (d.cost[k] || 0) > 0 || new RegExp(`\\{${k}\\}`).test(d.text)); }
+export function colorIdentity(d: CardDef): Color[] { if (d.identity) return d.identity; return COLORS.filter(k => d.colors.includes(k) || (d.cost[k] || 0) > 0 || new RegExp(`\\{${k}\\}`).test(d.text)); }
 export function validateDeck(d: DeckDef): string[] {
   const errs: string[] = []; const cmd = CARDS[d.commander];
   if (!cmd || !cmd.legendary || !cmd.types.includes('Creature')) errs.push('commander must be a legendary creature');
@@ -153,7 +163,7 @@ export const power = (g: Game, c: Card) => (def(c).power ?? 0) + c.pp + anthem(g
 export const toughness = (g: Game, c: Card) => (def(c).toughness ?? 0) + c.pt + anthem(g, c, 't');
 
 // ---------------- mana ----------------
-const symColors = (p: Player, s: ManaSym): string[] => s === 'ANY' ? COLORS : s === 'IDENTITY' ? (p.identity.length ? p.identity : ['C']) : [s];
+const symColors = (p: Player, s: ManaSym): string[] => s.includes('|') ? s.split('|') : s === 'ANY' ? COLORS : s === 'IDENTITY' ? (p.identity.length ? p.identity : ['C']) : [s];
 const canTapNow = (c: Card) => !c.tapped && (!isType(c, 'Creature') || !c.sick || hasKw(c, 'haste'));
 export const manaSources = (p: Player) => p.battlefield.filter(c => def(c).mana && canTapNow(c));
 export const manaAvailable = (p: Player) => manaSources(p).reduce((s, c) => s + def(c).mana![0].add.length, 0);
@@ -221,7 +231,7 @@ export const hasPriority = (g: Game, pid: number) => g.started && g.winner === n
 export function canPlayLand(g: Game, pid: number, c: Card) { const p = g.players[pid]; return hasPriority(g, pid) && sorceryTiming(g, pid) && !p.landPlayed && isType(c, 'Land') && p.hand.includes(c); }
 export function playLand(g: Game, pid: number, uid: number) {
   const p = g.players[pid]; const c = p.hand.find(x => x.uid === uid); if (!c || !canPlayLand(g, pid, c)) return false;
-  p.hand = p.hand.filter(x => x !== c); p.battlefield.push(c); p.landPlayed = true; log(g, `${p.name} plays ${nm(c)}.`); return true;
+  p.hand = p.hand.filter(x => x !== c); if (def(c).etbTapped) c.tapped = true; p.battlefield.push(c); p.landPlayed = true; log(g, `${p.name} plays ${nm(c)}.`); return true;
 }
 export const instantSpeed = (d: CardDef) => d.types.includes('Instant') || !!d.keywords?.includes('flash');
 export function canCast(g: Game, pid: number, c: Card) {
@@ -330,7 +340,7 @@ function resolveTop(g: Game) {
   }
   if (it.kind === 'spell' && isPermanentCard(def(it.card!))) {
     const c = it.card!; Object.assign(c, { tapped: false, damage: 0, pp: 0, pt: 0, sick: isType(c, 'Creature') });
-    p.battlefield.push(c); log(g, `${nm(c)} enters the battlefield under ${p.name}'s control.`);
+    if (def(c).etbTapped) c.tapped = true; p.battlefield.push(c); log(g, `${nm(c)} enters the battlefield under ${p.name}'s control.`);
     emit(g, 'etb', {}, c); checkState(g); return;
   }
   log(g, `${it.label} resolves.`);

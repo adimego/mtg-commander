@@ -88,3 +88,33 @@ Attacking: click an opponent's panel to pick who you attack, then click creature
 - A planned block shows as a dashed blue line. Several creatures can block the same attacker.
 - To unassign a blocker, right-click it or drag it onto empty space. Right-clicking an attacker clears all of its blockers.
 - Click your creature, then click the attacker, still works. Enter or Space confirms.
+
+## Importing your own decks
+
+On the start screen, click **＋ Import deck**. Paste a list, or load a `.txt` or `.dek` file. The game then looks the cards up on Scryfall from your browser, using `/cards/collection` in batches of 75. Any name it can't find goes through `/cards/named?fuzzy=`, and the report shows what it matched.
+
+**Formats:**
+- Simple lines: `1 Sol Ring`, `1x Sol Ring`, or a bare `Sol Ring`.
+- Set codes and collector numbers: `1 Sol Ring (CMR) 472`. Foil and etched markers such as `*F*` are ignored.
+- Commander markers: `*CMDR*`, or Archidekt `[Commander]` categories. Archidekt colour tags are ignored.
+- Arena and Moxfield `Commander` / `Deck` section headers.
+- MTGO `.txt`, where the commander is in `SIDEBOARD:`; Moxfield plain exports, where the commander is in a trailing block after a blank line; and MTGO `.dek` XML.
+- Maybeboard, Considering, Tokens and Companion sections are skipped.
+
+**Support check:** every card gets one of three levels.
+- **Fully supported:** it's one of the built-in cards, or every line of its rules text is something the engine handles. That covers supported keywords, `{T}: Add …` mana abilities (including "W or U" duals and "any color"), and "enters tapped".
+- **Limited support:** anything else.
+  - Permanents play with their printed power/toughness and supported keywords only.
+  - Instants and sorceries resolve with no effect.
+  - Lands keep their mana ability.
+  - X costs count as 0, and hybrid or Phyrexian symbols count as generic mana. Variable P/T plays as printed numbers, or 0/1.
+  - Double-faced and split cards use the front face.
+  - In game these cards carry a yellow **Limited** badge, and the preview explains exactly what is simplified.
+  - When importing you can keep them, or swap nonland limited cards for basics of your colors.
+
+**Legality:**
+- The checks: 100 cards including the commander; singleton, except basics and "any number of cards named" cards; color identity from Scryfall; Commander bans and legality; the commander must be a legendary creature or say "can be your commander"; partner pairs.
+- Problems are listed. You can still **Save anyway (casual)**, and the deck is tagged *Casual*.
+- Partner pairs are checked, but the engine has a single command-zone slot: the second partner is shuffled into your library.
+
+**Your decks:** saved decks are stored in your browser (`localStorage`) and listed under **My decks** with the commander's art. Each one has Rename, Export (copies a `*CMDR*`-marked list to the clipboard and downloads it as `.txt`) and Delete. Under **AI opponents use** you can let the AI play your imported decks too.

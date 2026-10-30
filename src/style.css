@@ -180,3 +180,52 @@ html,body,#root,.app,.table{overflow:clip!important}
 .slot:has(.perm.dragover) .why{z-index:35;font-size:.9rem}
 .opp .slot .why{top:auto;bottom:-.3vh;transform:translate(-50%,100%)}
 .opp .slot:first-child .why{left:0;transform:translate(0,100%)}
+/* ---- deck library & import ---- */
+.setup{gap:.9vh;justify-content:flex-start;padding-top:4vh;overflow:auto}
+.setup h1{font-size:4rem}
+.dsec{margin:1.2vh 0 0;color:var(--gold);font-size:1.15rem;letter-spacing:.06em;text-transform:uppercase}
+.deckpick{margin:.6vh 0}
+.deckpick .deckopt{width:19vh}
+.deckpick .dimg{height:24vh;overflow:hidden;border-radius:.6rem}
+.deckpick.mine{flex-wrap:wrap;justify-content:center;max-width:92vw}
+.deckopt.saved{cursor:pointer;width:24vh;position:relative;text-align:center}
+.deckopt.saved b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dart{height:13vh;border-radius:.6rem;background:#223 center/cover;position:relative}
+.dtag{position:absolute;top:.4rem;left:.4rem;font-size:.7rem;font-weight:800;padding:.1rem .4rem;border-radius:.3rem}
+.dtag.casual{background:#f9a825;color:#111}
+.dacts{display:flex;justify-content:center;gap:.4rem;margin-top:.2rem}
+.dacts button{background:#ffffff12;border:1px solid #ffffff25;color:#fff;padding:.2rem .6rem;border-radius:.4rem;font-size:.95rem}
+.dacts button:hover{background:#ffffff28}
+.deckopt.addnew{border-style:dashed;justify-content:center;align-items:center;min-height:19vh;width:20vh;cursor:pointer}
+.addnew .plus{font-size:3rem;color:var(--gold);line-height:1}
+.setopts{color:var(--muted);font-size:1rem}.setopts select{margin-left:.5rem;background:#0008;color:#fff;border:1px solid var(--line);padding:.3rem .5rem;border-radius:.4rem}
+.limtag{background:#f9a825;color:#111;font-weight:800;border-radius:.3rem;padding:0 .35rem;font-size:.85em}
+.limbadge{position:absolute;left:50%;top:42%;transform:translateX(-50%);background:#f9a825e8;color:#111;font-weight:800;font-size:.62rem;padding:.05rem .35rem;border-radius:.3rem;pointer-events:none;letter-spacing:.03em;text-transform:uppercase;box-shadow:0 .1rem .4rem #0009;z-index:3}
+.perm,.hinner,.zcard,.pvcard,.dimg,.cmdzone{position:relative}
+.limnote{background:#f9a82522;border-left:3px solid #f9a825;color:#ffe082;padding:.35rem .5rem;margin:.3rem 0;font-size:.9rem}
+.importbox{width:78vw;max-height:90vh;text-align:left}
+.improw{display:flex;gap:1.5vw;align-items:stretch}
+.decktext{flex:1;min-height:58vh;background:#0009;color:#e8f0ec;border:1px solid var(--line);border-radius:.6rem;padding:.8rem;font:0.95rem/1.35 ui-monospace,Consolas,monospace;resize:vertical}
+.impside{width:24vw;display:flex;flex-direction:column;gap:.8rem}
+.impside label,.impcmd label{display:flex;flex-direction:column;gap:.3rem;color:var(--muted);font-size:.9rem}
+.impside input,.impcmd input,.impcmd select{background:#0009;color:#fff;border:1px solid var(--line);border-radius:.4rem;padding:.45rem .6rem;font-size:1rem}
+.impside button,.impbtns button{background:#ffffff14;color:#fff;border:1px solid #ffffff30;padding:.55rem 1rem;border-radius:.5rem}
+.impside .big,.impbtns .big{background:var(--gold);color:#111;font-weight:800;border:none}
+.impbtns .big.warnbtn{background:#f9a825}
+.impside button:disabled{opacity:.6}
+.small{font-size:.85rem}.bad{color:#ff8a80}
+.report .impcmd{width:19vw;display:flex;flex-direction:column;gap:.8rem}
+.cmdart{width:100%;aspect-ratio:63/88;border-radius:.8rem;overflow:hidden;background:#0006}
+.impsum{flex:1;display:flex;flex-direction:column;gap:.8rem;min-width:0}
+.stats{display:flex;gap:1rem}.stat{flex:1;background:#0006;border:1px solid var(--line);border-radius:.6rem;padding:.6rem;text-align:center}
+.stat b{display:block;font-size:2.2rem}.stat span{color:var(--muted)}
+.stat.good b{color:#81c784}.stat.lim b{color:#f9a825}.stat.badc b{color:#ff8a80}
+.issues{border-radius:.6rem;padding:.6rem .9rem;font-size:.92rem}.issues ul{margin:.3rem 0 0;padding-left:1.2rem}
+.issues.bad{background:#b71c1c22;border:1px solid #ef535066;color:#ffcdd2}
+.issues.warn{background:#f9a82514;border:1px solid #f9a82555;color:#ffe082}
+.issues.lim{background:#0005;border:1px solid var(--line)}
+.issues table{width:100%;border-collapse:collapse;margin-top:.4rem;font-size:.86rem}.issues td{padding:.2rem .4rem;border-top:1px solid #ffffff12;vertical-align:top}.issues td:first-child{white-space:nowrap;font-weight:700;width:1%}
+.issues .link{background:none;border:none;color:#90caf9;padding:.3rem 0;cursor:pointer}
+.swap{display:flex;gap:1.5rem;margin-top:.5rem}
+.impbtns{display:flex;justify-content:space-between;margin-top:1rem}
+.deckopt .limtag{color:#111}.dacts button{font-size:.8rem}
