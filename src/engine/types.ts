@@ -50,7 +50,7 @@ export interface TriggerDef {
 export interface Static { k: 'flashIfTapped' | 'flashIfOppCast' | 'ramonda' | 'propaganda' | 'atkMostLife' | 'angelTokens' | 'noLegendRule' | 'pt' | 'kw' | 'cantBlock' | 'cantAttack' | 'costLess' | 'costMore' | 'unblockable' | 'mustAttack' | 'noMaxHand' | 'cantBeBlockedBy' | 'doesntUntap' | 'playerHexproof' | 'drawLimit' | 'oppsSorcery' | 'noSearch' | 'winOnEmptyDraw' | 'tokenDouble' | 'pwInstant' | 'manaExtra' | 'cantBeAttacked' | 'atkLimit1' | 'etbExtra' | 'grantMana' | 'dmgPlus1' | 'preventToAttachedCtr' | 'preventOppToYou' | 'basePT'; add?: string[]; mana?: ManaAbility[]; who: 'self' | 'attached' | 'others' | 'all'; f?: Filter; p?: number | Amt; t?: number | Amt; kws?: string[]; n?: number; spellF?: Filter; cond?: Cond }
 export interface CardDef {
   /** 'If you control a commander, you may cast this spell without paying its mana cost.' */
-  freeCmdr?: boolean;
+  freeCmdr?: boolean; /** Molecule Man: nonland cards in your hand have miracle {0} */ miracle0?: boolean; /** Annie Joins Up: triggered abilities of your legendary creatures trigger an additional time */ legendTrigTwice?: boolean;
   id: string; name: string; types: string[]; legendary?: boolean; basic?: boolean; cost: Cost; colors: Color[]; power?: number; toughness?: number;
   keywords?: string[]; text: string; typeLine?: string; img?: string; art?: string; sub?: string[];
   mana?: ManaAbility[]; abilities?: ActAbility[]; triggers?: TriggerDef[]; spell?: { target?: TargetSpec; effects: Effect[]; tslots?: TSlot[]; modes?: Modes };

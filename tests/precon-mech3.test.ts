@@ -3,7 +3,7 @@ import { compileScry } from '../src/import/classify';
 import type { ScryCard } from '../src/import/scryfall';
 import { dealDamage, enter, matches, condOk, becomeMonarch, declareBlockers, canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters, costOf, createToken, blockReason, atkBlocked } from '../src/engine/engine';
 import type { CardDef } from '../src/engine/types';
-import { emit } from '../src/engine/engine';
+import { emit, draw } from '../src/engine/engine';
 import '../src/engine/ai';
 let n = 0;
 function card(name: string, type_line: string, mana_cost: string, oracle_text: string, o: Partial<ScryCard> = {}): CardDef {
@@ -414,5 +414,55 @@ describe('precon scripts: batch 8b', () => {
   it('Collective Effort: a single non-first mode hits its own target, no escalate tap', () => {
     const g = setup(); const en = put(g, 1, card('PM Ench3', 'Enchantment', '{1}', '')); const t1 = put(g, 0, BEAR());
     cast(g, 0, pc('Collective Effort'), { modes: [1], targets: [undefined, { card: en.uid }] }); expect(findCard(g, en.uid)).toBeFalsy(); expect(t1.tapped).toBe(false);
+  });
+});
+
+function until(g: Game, pred: () => boolean, max = 1500) { for (const p of g.players) p.human = false; let i = 0; while (!pred() && i++ < max) { if (g.decision) answerDecision(g, false); else pass(g, g.priority!); } return pred(); }
+describe('precon scripts: batch 9 (phasing, suspend, miracle, coin flip)', () => {
+  it('Clever Concealment: targets phase out (gone, keep counters) and phase back in on your next turn', () => {
+    const g = setup(); const b = put(g, 0, BEAR()); b.counters = { '+1/+1': 2 }; const r = put(g, 0, ROCK()); const v = put(g, 0, VAMP());
+    cast(g, 0, pc('Clever Concealment'), { targets: [{ card: b.uid }, { card: r.uid }] });
+    expect(findCard(g, b.uid)).toBeFalsy(); expect(findCard(g, r.uid)).toBeFalsy(); expect(findCard(g, v.uid)).toBeTruthy();
+    expect(until(g, () => g.active !== 0)).toBe(true); expect(findCard(g, b.uid)).toBeFalsy();
+    expect(until(g, () => g.active === 0 && g.step === 'main1')).toBe(true); expect(findCard(g, b.uid)?.counters?.['+1/+1']).toBe(2); expect(findCard(g, r.uid)).toBeTruthy();
+  });
+  it('Vision: a spell cast off-turn lets you phase Vision out (or grow it)', () => {
+    const g = setup(); const vi = put(g, 0, pc('Vision, Synthezoid Avenger'));
+    const ins = card('PM Insight', 'Instant', '{U}', 'Draw a card.', { colors: ['U'] }); const c = mk(g, 1, ins); g.players[1].hand.push(c); mana(g, 1);
+    g.priority = 1; expect(castSpell(g, 1, c.uid)).toBe(true); run(g, { color: 'Vision phases out' }); expect(findCard(g, vi.uid)).toBeFalsy(); expect(g.players[0].phased?.includes(vi)).toBe(true);
+    const g2 = setup(); const v2 = put(g2, 0, pc('Vision, Synthezoid Avenger')); cast(g2, 0, ins); expect(ctr(v2, '+1/+1')).toBe(0);
+  });
+  it("Kang Prime: exiles until a nonland card, suspends it with two time counters; it's cast free with haste later", () => {
+    const g = setup(); const b = mk(g, 0, BEAR()); const l = mk(g, 0, card('PM Wastes', 'Land', '', '')); g.players[0].library.push(b, l);
+    cast(g, 0, pc('Kang Prime')); expect(g.players[0].exile).toContain(b); expect(b.suspended).toBe(true); expect(b.counters?.time).toBe(2);
+    expect(until(g, () => !!findCard(g, b.uid))).toBe(true); expect(g.active).toBe(0); expect(b.kw).toContain('haste');
+  });
+  it("Doom's Time Platform: whenever you attack, a nonland card from your graveyard gets suspended", () => {
+    const g = setup(); const s = put(g, 0, pc("Doom's Time Platform")); const b = mk(g, 0, BEAR()); g.players[0].graveyard.push(b);
+    emit(g, 'youAttack', { player: 0, amount: 1 }); flushTriggers(g); run(g, { tgt: () => ({ card: b.uid }) }); expect(s).toBeTruthy(); expect(g.players[0].exile).toContain(b); expect(b.counters?.time).toBe(2);
+  });
+  it('Molecule Man: the first card you draw each turn can be cast for {0}', () => {
+    const g = setup(); put(g, 0, pc('Molecule Man')); const b = mk(g, 0, BEAR()); const b2 = mk(g, 0, VAMP()); g.players[0].library.push(b2, b); delete g.players[0].drawn;
+    draw(g, 0, 1); draw(g, 0, 1); flushTriggers(g); expect(g.players[0].pool.length).toBe(0); run(g, { cast: true }); expect(findCard(g, b.uid)).toBeTruthy(); expect(findCard(g, b2.uid)).toBeFalsy();
+  });
+  it('Negative Zone Portal: tags exiled cards; with 4+ creatures exiled it flips at upkeep', () => {
+    const g = setup(); const z = put(g, 0, pc('Negative Zone Portal')); const b = mk(g, 1, BEAR()); g.players[1].graveyard.push(b); mana(g, 0); const h = g.players[0].hand.length;
+    activate(g, 0, z.uid, 0, { card: b.uid } as never); run(g); expect(b.exBy).toBe(z.uid); expect(g.players[0].hand.length).toBe(h + 1);
+    for (let i = 0; i < 3; i++) { const x = mk(g, 1, BEAR()); x.exBy = z.uid; g.players[1].exile.push(x); }
+    let lost = false; for (let k = 0; k < 12 && !lost; k++) { emit(g, 'upkeep', { player: 0 }); flushTriggers(g); run(g); lost = !findCard(g, z.uid); }
+    expect(lost).toBe(true); expect(g.players[1].hand.length).toBe(1); expect(g.players[1].exile.filter(x => x.exBy === z.uid).length).toBe(3);
+  });
+});
+describe('precon scripts: batch 10 (trigger copying / doubling)', () => {
+  it('Annie Joins Up: a legendary creature you control triggers an additional time', () => {
+    const g = setup(); put(g, 0, pc('Annie Joins Up')); const leg = card('PM Legend', 'Legendary Creature — Human', '{1}{W}', 'Whenever you cast a spell, you gain 1 life.', { power: '2', toughness: '2' }); put(g, 0, leg);
+    const non = card('PM Grunt', 'Creature — Human', '{1}{W}', 'Whenever you cast a spell, you gain 1 life.', { power: '2', toughness: '2' }); put(g, 0, non);
+    const l0 = g.players[0].life; cast(g, 0, card('PM Insight2', 'Instant', '{U}', 'Draw a card.')); expect(g.players[0].life).toBe(l0 + 3);
+  });
+  it('Mister Fantastic: copies a triggered ability you control twice', () => {
+    const g = setup(); const mf = put(g, 0, pc('Mister Fantastic')); put(g, 0, card('PM Healer', 'Creature — Human', '{1}{W}', 'Whenever you cast a spell, you gain 1 life.', { power: '2', toughness: '2' }));
+    const c = mk(g, 0, card('PM Insight3', 'Instant', '{U}', 'Draw a card.')); g.players[0].hand.push(c); mana(g, 0); expect(castSpell(g, 0, c.uid)).toBe(true); flushTriggers(g);
+    const tr = g.stack.find(s => s.kind === 'trigger')!; expect(tr).toBeTruthy(); mana(g, 0); const l0 = g.players[0].life;
+    activate(g, 0, mf.uid, mf ? def(mf).abilities!.length - 1 : 0, { stack: tr.id } as never); run(g); expect(g.players[0].life).toBe(l0 + 3);
   });
 });

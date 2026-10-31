@@ -153,6 +153,16 @@ export const SCRIPTS: Record<string, Record<string, Patch>> = {
       { label: 'Destroy target enchantment', tslots: [{ who: 'perm', f: { types: ['Enchantment'] }, harm: true }], effects: [{ op: 'destroy', who: 't1' }] },
       { label: 'Put a +1/+1 counter on each creature target player controls', tslots: [{ who: 'player' }], effects: [S('tpCounters')] }] } }; },
   },
+  'Clever Concealment': { 'any number of target nonland permanents you control phase out': d => spell(d, [S('phaseT')], Array.from({ length: 10 }, () => ({ who: 'perm' as const, f: { notTypes: ['Land'], ctrl: 'you' } as Filter, opt: true, grp: 1 }))) },
+  'Vision, Synthezoid Avenger': { "whenever a player casts a spell, if it isn't that player's turn, choose one —\n• put a +1/+1 counter on ~.\n• ~ phases out": d => trig(d, T('cast', [S('vision')], { pl: 'any', label: "+1/+1 counter or phase out (spell cast on another player's turn)" })) },
+  "Doom's Time Platform": { "whenever you attack, exile target nonland card from your graveyard with two time counters on it. if it doesn't have suspend, it gains suspend": d => trig(d, T('youAttack', [S('suspendT0')], { pl: 'you', label: 'exile target nonland card from your graveyard with two time counters (suspend)', tslots: [{ who: 'card', zoneOwner: 'you', f: { notTypes: ['Land'] } }] })) },
+  'Kang Prime': { "whenever ~ enters or attacks, exile cards from the top of your library until you exile a nonland card. put two time counters on that card. if it doesn't have suspend, it gains suspend": d => trig(d, ...['etb', 'attacks'].map(ev => T(ev, [S('kang')], { subj: 'self', label: 'exile until a nonland card; suspend it with two time counters' }))) },
+  'Molecule Man': { 'nonland cards in your hand have miracle {0}': d => { d.miracle0 = true; } },
+  'Negative Zone Portal': { "at the beginning of your upkeep, if there are four or more creature cards exiled with ~, flip a coin. if you lose the flip, sacrifice ~ and return a card exiled with it at random to its owner's hand": d => { const a = d.abilities?.[0]; if (a) a.effects.splice(1, a.effects.length - 1, S('nzpTag')); trig(d, T('upkeep', [S('nzpFlip')], { pl: 'you', label: 'if four or more creature cards are exiled with it, flip a coin' })); } },
+
+  'Mister Fantastic': { '{r}{g}{w}{u}, {t}: copy target triggered ability you control twice. you may choose new targets for the copies': d => { (d.abilities ??= []).push({ label: 'Copy target triggered ability you control twice', tap: true, mana: { generic: 0, R: 1, G: 1, W: 1, U: 1 }, tslots: [{ who: 'ability', label: 'triggered ability you control' }], effects: [S('copyTrig')] }); } },
+  'Annie Joins Up': { 'if a triggered ability of a legendary creature you control triggers, that ability triggers an additional time': d => { d.legendTrigTwice = true; } },
+
 };
 
 /** Apply scripts for lines the compiler couldn't parse; covered lines are removed from `unparsed`. */
