@@ -8,10 +8,11 @@ import { tick } from '../src/engine/controller';
 import type { CardDef } from '../src/engine/types';
 
 const [path = '/workspace/bulk/slim.json', gamesS = '20', seedS = '1', mode = ''] = process.argv.slice(2);
-const WALK = mode === 'walkers';
+const WALK = mode === 'walkers'; const SETS = mode === 'sets';
+const NEW = new Set<string>(SETS ? (JSON.parse(fs.readFileSync('docs/sets-firstprint.json', 'utf8')) as { cards: string[] }[]).flatMap(v => v.cards) : []);
 const all = JSON.parse(fs.readFileSync(path, 'utf8')) as any[];
 let seed = +seedS; const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
-const top = all.filter(c => (c.edhrec_rank && c.edhrec_rank < 6000) || (WALK && /Planeswalker/.test(c.type_line ?? '')));
+const top = all.filter(c => (c.edhrec_rank && c.edhrec_rank < 6000) || (WALK && /Planeswalker/.test(c.type_line ?? '')) || NEW.has(c.name));
 const defs: CardDef[] = []; const ok: CardDef[] = [];
 for (const c of top) { try { const r = compileScry(c); defs.push(r.def); if (r.support === 'auto' && !r.def.types.includes('Land') || (r.support === 'auto' && !r.def.basic)) ok.push(r.def); } catch (e) { console.log('COMPILE CRASH', c.name, (e as Error).message); } }
 registerCards(defs);
@@ -27,6 +28,7 @@ for (let gi = 0; gi < +gamesS; gi++) {
     const cmd = cmdrs[Math.floor(rnd() * cmdrs.length)]; const id = colorIdentity(cmd);
     const pool = ok.filter(d => d !== cmd && colorIdentity(d).every(k => id.includes(k)) && !d.legendary);
     const cards: string[] = []; const used = new Set<string>();
+    if (SETS) { const nw = ok.filter(d => d !== cmd && NEW.has(d.name) && !d.types.includes('Land') && colorIdentity(d).every(k => id.includes(k))); for (let k = 0; k < 80 && cards.length < 30 && nw.length; k++) { const d = nw[Math.floor(rnd() * nw.length)]; if (!used.has(d.id)) { used.add(d.id); cards.push(d.id); } } }
     if (WALK) { const pws = ok.filter(d => d !== cmd && d.types.includes('Planeswalker') && colorIdentity(d).every(k => id.includes(k))); for (let k = 0; k < 40 && cards.length < 15 && pws.length; k++) { const d = pws[Math.floor(rnd() * pws.length)]; if (!used.has(d.id)) { used.add(d.id); cards.push(d.id); } } }
     while (cards.length < 62 && used.size < pool.length) { const d = pool[Math.floor(rnd() * pool.length)]; if (!used.has(d.id)) { used.add(d.id); cards.push(d.id); } }
     const cols = id.length ? id : ['W'];

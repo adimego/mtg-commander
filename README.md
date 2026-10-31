@@ -100,7 +100,8 @@ Cards whose text doesn't fully compile keep a **Limited** badge and play only th
 
 ## Known gaps
 
-- Planeswalkers: 90/296 walkers compile fully, including all 20 of the most popular (see docs/coverage.md). Supported now: reflexive "when you do" triggers, "becomes a <type>" effects with ability loss (layer system with timestamps), cast-from-exile-now (Chandra, Ugin), delayed "next end step" returns, poison counters. Still missing: phasing, die rolls, copy-next-spell (Ral), face-down permanents, granting quoted mana abilities to lands (Wrenn and Realmbreaker), retrace emblem (Wrenn and Six). Emblems aren't restored from a saved game. Battles aren't implemented.
+- Newest sets (2025–2026): warp + void, station/Spacecraft, crew, saddle, mobilize, firebending, Start your engines!/max speed, prepared (Strixhaven prepare cards), empower Jace, job select, Lander and Heartwood tokens. Per-set coverage: docs/coverage.md "By set" (`npx vite-node scripts/sets.ts`).
+- Planeswalkers: 91/296 walkers compile fully, including all 20 of the most popular (see docs/coverage.md). Supported now: reflexive "when you do" triggers, "becomes a <type>" effects with ability loss (layer system with timestamps), cast-from-exile-now (Chandra, Ugin), delayed "next end step" returns, poison counters. Still missing: phasing, die rolls, copy-next-spell (Ral), face-down permanents, granting quoted mana abilities to lands (Wrenn and Realmbreaker), retrace emblem (Wrenn and Six). Emblems aren't restored from a saved game. Battles aren't implemented.
 - Replacement effects are missing (Doubling Season, Hardened Scales), as are emblems, sagas, vehicles, delayed "next upkeep" triggers and cumulative upkeep.
 - Most planeswalker ultimates and choose-a-creature-type cards are not supported.
 - Library arranging (Ponder, Sensei's Top) is not supported.

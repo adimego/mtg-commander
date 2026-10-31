@@ -142,6 +142,7 @@ function amount(s: string, cx: Cx): Amt | null {
   s = s.trim();
   const n = num(s); if (n !== null) return n;
   if (s === 'that much' || s === 'that many') return 'ev';
+  if (/^(?:equal to )?your speed$/.test(s)) return 'speed';
   const eq = /^(?:equal to )?(.+)$/.exec(s)![1];
   let m: RegExpExecArray | null;
   if ((m = /^(its|~'s|that creature's|the sacrificed creature's|target creature's|the exiled creature's|that card's|that permanent's|that spell's|the exiled card's) (power|toughness|mana value)$/.exec(eq))) {
@@ -193,6 +194,12 @@ function cond(s: string, cx: Cx): Cond | null {
   if (/^your library has no cards in it$/.test(s)) return { k: 'libEmpty' };
   if (/^(~|it) is attacking$|^(~|it)'s attacking$/.test(s)) return { k: 'attacking' };
   if (/^~ is tapped$/.test(s)) return { k: 'tapped' };
+  if (/^~ is prepared$/.test(s)) return { k: 'prepared' };
+  if (/^~ is saddled$/.test(s)) return { k: 'saddled' };
+  { const mm = /^your opponents control (\w+) or more lands$/.exec(s); const nn = num(mm?.[1]); if (typeof nn === 'number') return { k: 'oppLandsGE', n: nn }; }
+  if (/^you have max speed$/.test(s)) return { k: 'maxSpeed' };
+  if (/^a nonland permanent left the battlefield this turn or a spell was warped this turn$/.test(s)) return { k: 'void' };
+  if (/^~ isn't prepared$/.test(s)) return { k: 'not', c: { k: 'prepared' } };
   if (/^~ is untapped$/.test(s)) return { k: 'untapped' };
   if (/^you gained life this turn$|^you've gained life this turn$/.test(s)) return { k: 'lifeGainedThisTurn', n: 1 };
   if ((m = /^you(?:'ve)? gained (\d+) or more life this turn$/.exec(s))) return { k: 'lifeGainedThisTurn', n: +m[1] };
@@ -207,22 +214,24 @@ function cond(s: string, cx: Cx): Cond | null {
 }
 
 // ---------- tokens ----------
-const PRESETS = ['treasure', 'food', 'clue', 'blood', 'gold', 'powerstone', 'map'];
+const PRESETS = ['lander', 'heartwood', 'treasure', 'food', 'clue', 'blood', 'gold', 'powerstone', 'map'];
 function tokenSpec(s: string): TokenSpec | null {
-  s = s.trim(); const w = s.split(' '); let i = 0; let p: number | undefined, t: number | undefined; const colors: Color[] = []; const types: string[] = []; const sub: string[] = []; let legendary = false;
+  s = s.trim(); const w = s.split(' '); let i = 0; let p: number | undefined, t: number | undefined; const colors: Color[] = []; const types: string[] = []; const sub: string[] = []; let legendary = false; let named = '';
   const pt = /^(\d+)\/(\d+)$/.exec(w[i] ?? ''); if (pt) { p = +pt[1]; t = +pt[2]; i++; }
   for (; i < w.length; i++) {
     const x = w[i];
+    if (x.startsWith('named:')) { named = x.slice(6).split('_').map(y => y[0].toUpperCase() + y.slice(1)).join(' '); continue; }
     if (COLOR_OF[x]) colors.push(COLOR_OF[x]); else if (x === 'and' || x === 'colorless') continue;
     else if (x === 'legendary') legendary = true;
     else if (['artifact', 'creature', 'enchantment', 'land'].includes(x)) types.push(TYPES[x]);
     else if (SUB.has(x)) sub.push(SUB.get(x)!);
+    else if (PRESETS.includes(x) && w.length - i === 1 && !types.length) sub.push(x[0].toUpperCase() + x.slice(1));
     else if (/^[a-z]+$/.test(x) && !types.length && w.slice(i + 1).some(y => ['artifact', 'creature', 'enchantment'].includes(y)) && !['tapped', 'attacking', 'token', 'tokens', 'named', 'with', 'that', 'copy'].includes(x)) sub.push(x[0].toUpperCase() + x.slice(1));
     else return null;
   }
-  if (!types.length && sub.length === 1 && PRESETS.includes(sub[0].toLowerCase())) return { name: sub[0], colors: [], types: ['Artifact'], preset: sub[0] as TokenSpec['preset'] };
+  if (!types.length && sub.length === 1 && PRESETS.includes(sub[0].toLowerCase())) return { name: sub[0], colors: sub[0] === 'Heartwood' ? ['R', 'G'] : [], types: ['Artifact'], preset: sub[0] as TokenSpec['preset'] };
   if (!types.length || (types.includes('Creature') && p === undefined)) return null;
-  return { name: sub.join(' ') || types.join(' '), p, t, colors, types, sub, legendary: legendary || undefined };
+  return { name: named || sub.join(' ') || types.join(' '), p, t, colors, types, sub, legendary: legendary || undefined };
 }
 function kwList(s: string): string[] | null {
   const parts = s.replace(/, and |, | and /g, '|').split('|').map(x => x.trim());
@@ -265,6 +274,14 @@ function tokenAbil(body: string, tokName: string): TokenSpec['ext'] | null {
   const r = compile({ name: tokName, oracle_text: text, type_line: 'Creature' }, d); CUR_NAME = owner;
   if (!r.ok) return null;
   return { text: pretty(text, tokName).replace(/^./, x => x.toUpperCase()) + '.', mana: d.mana, abilities: d.abilities, triggers: d.triggers, statics: d.statics, keywords: d.keywords };
+}
+let JACE: TokenSpec | null = null;
+/** The Jace planeswalker token that "empower Jace N" creates. */
+function jaceTok(): TokenSpec {
+  if (JACE) return JACE; const owner = CUR_NAME;
+  const d: CardDef = { id: 'jace-tok', name: 'Jace', types: ['Planeswalker'], cost: { generic: 0 }, colors: ['U'], text: '' };
+  compile({ name: 'Jace', oracle_text: '−1: Surveil 1.\n−3: Draw a card.', type_line: 'Legendary Planeswalker — Jace' }, d); CUR_NAME = owner;
+  return (JACE = { name: 'Jace', colors: ['U'], types: ['Planeswalker'], sub: ['Jace'], ext: { text: '[−1]: Surveil 1.\n[−3]: Draw a card.', abilities: d.abilities } });
 }
 const UNTIL_NEXT = (fx: Effect[] | null) => { if (!fx || !fx.length || !fx.every(e => e.op === 'pump' || e.op === 'grant')) return null; for (const e of fx) e.until = 'yourNext'; return fx; };
 /** Parse the description after "becomes": "a 0/0 elemental creature with vigilance and haste that's still a land". */
@@ -371,6 +388,11 @@ const PATS: Pat[] = [
   [/^§lookone ([a-z ]+)$/, m => { const fp = parseFilter(m[1] + ' card'); return fp ? [{ op: 'look', n: 1, take: 1, f: fp.f, dest: 'hand', rest: 'top', text: m[1] + ' card' }] : null; }],
   [/^§revtop (\w+)\|([a-z ]+)\|([a-z ]+)\|([a-z ]+)$/, m => { const n = num(m[1]); const fp = parseFilter(m[2] + ' card'); if (typeof n !== 'number' || !fp) return null; return [{ op: 'revealTop', n, f: fp.f, dest: m[3].startsWith('onto') ? 'battlefield' : 'hand', tapped: /tapped/.test(m[3]), rest: m[4].startsWith('on the bottom') ? 'bottom' : m[4] === 'into your graveyard' ? 'graveyard' : 'hand', text: m[2] }]; }],
   [/^§revuntil ([a-z ]+)\|([a-z ]+)$/, m => { const fp = parseFilter(m[1] + ' card'); return fp ? [{ op: 'revealUntil', f: fp.f, dest: m[2].startsWith('onto') ? 'battlefield' : 'hand', text: m[1] }] : null; }],
+  [/^(.+?) becomes (un)?prepared$/, (m, cx) => { const o = obj(m[1], cx, false); return o && !o.card ? [{ op: 'prep', who: o.ref, n: m[2] ? 0 : 1 }] : null; }],
+  [/^§mobilize (\d+)$/, m => [{ op: 'token', n: +m[1], pl: 'you', tok: { name: 'Warrior', p: 1, t: 1, colors: ['R'], types: ['Creature'], sub: ['Warrior'] }, tapped: true, attacking: true }, { op: 'delaySac', who: 'created' }]],
+  [/^§firebend (\w+)$/, (m, cx) => { const n = num(m[1]) ?? amount(m[1], cx); return n === null ? null : [{ op: 'fireMana', n }]; }],
+  [/^§jobselect$/, () => [{ op: 'token', n: 1, pl: 'you', tok: { name: 'Hero', p: 1, t: 1, colors: [], types: ['Creature'], sub: ['Hero'] } }, { op: 'attach', who: 'self', other: 'created' }]],
+  [/^empower jace (.+)$/, (m, cx) => { const n0 = num(m[1]); const n = n0 !== null ? n0 : amount(m[1], cx); return n !== null ? [{ op: 'empower', n, tok: jaceTok() }] : null; }],
   [/^investigate$/, () => [{ op: 'token', n: 1, pl: 'you', tok: { name: 'Clue', colors: [], types: ['Artifact'], preset: 'Clue' } }]],
   [new RegExp(`^(?:${P_RE} )?creates? (${N}|that many|x) (tapped )?(.+?) tokens?(?: with (.+?))?( that are tapped and attacking| that's tapped and attacking| tapped and attacking)?(?: for each (.+))?$`), (m, cx) => {
     const p = pl(m[1], cx, false); const a = num(m[2]) ?? 'ev'; if (!p) return null;
@@ -439,7 +461,8 @@ function dmg(srcS: string, n: Amt, toS: string, cx: Cx, fe?: string): Effect[] |
 }
 
 function clause(s: string, cx: Cx): Effect[] | null {
-  s = s.trim().replace(/^then /, '').replace(/\.$/, '').replace(/\beach of (up to \w+|\w+) target\b/, '$1 target');
+  s = s.trim().replace(/^then /, '').replace(/\.$/, '').replace(/\beach of (up to \w+|\w+) target\b/, '$1 target')
+    .replace(/ (tokens?) named ([a-z'-]+(?: [a-z'-]+){0,3}?)(?= with |$| that )/, (_, t, nm) => ` named:${nm.replace(/ /g, '_')} ${t}`);
   if (!s) return [];
   let m: RegExpExecArray | null;
   if ((m = /^if (.+?), (.+)$/.exec(s))) { const c = cond(m[1], cx); const sub = c && clause(m[2], cx); if (c && sub) return [{ op: 'if', cond: c, sub }]; }
@@ -564,7 +587,7 @@ export function normalize(text: string, name: string): string {
   const short = name.split(',')[0].split(' of ')[0];
   t = t.split(name).join('~');
   if (short.length > 3 && short !== name) t = t.replace(new RegExp(`\\b${short.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), '~');
-  t = t.toLowerCase().replace(/[−–]/g, '-').replace(/\b(this (creature|artifact|enchantment|land|permanent|spell|card|equipment|aura|vehicle|planeswalker|token))\b/g, '~');
+  t = t.toLowerCase().replace(/[−–]/g, '-').replace(/\b(this (creature|artifact|enchantment|land|permanent|spell|card|equipment|aura|vehicle|planeswalker|token|spacecraft|planet))\b/g, '~');
   t = t.replace(/ of (?:their|his or her|your) choice/g, '').replace(/enters the battlefield/g, 'enters').replace(/enters under your control/g, 'enters under your control').replace(/ +/g, ' ').replace(/ \./g, '.');
   return t;
 }
@@ -611,6 +634,8 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if (/^you discard a card$/.test(h)) return { defs: [{ ev: 'discard', pl: 'you' }], cx: { it: 'self' } };
   if (/^you attack$|^you attack with one or more creatures$/.test(h)) return { defs: [{ ev: 'youAttack', pl: 'you' }], cx: { it: 'self' } };
   if ((m = /^you sacrifice (a|an|another|one or more) (.+)$/.exec(h))) { const fp = parseFilter(m[2]); if (!fp) return null; if (m[1] === 'another') fp.f.other = true; return { defs: [{ ev: 'sacrificed', subj: 'any', f: fp.f, pl: 'you' }], cx: { it: 'ev', that: 'ev' } }; }
+  if (/^~ becomes saddled for the first time each turn$/.test(h)) return { defs: [{ ev: 'saddled', subj: 'self' }], cx: {} };
+  if (/^~ becomes crewed$/.test(h)) return { defs: [{ ev: 'crewed', subj: 'self' }], cx: {} };
   if (/^you create (?:a|one or more) tokens?$/.test(h)) return { defs: [{ ev: 'tokenCreated', subj: 'any', pl: 'you' }], cx: { it: 'ev', that: 'ev' } };
   if ((m = /^(?:one or more|a) \+1\/\+1 counters? (?:is|are) put on (~|a creature you control|another creature you control)$/.exec(h))) return { defs: [{ ev: 'counterPut', kindF: '+1/+1', subj: m[1] === '~' ? 'self' : m[1].startsWith('another') ? 'other' : 'any', f: { types: ['Creature'], ctrl: 'you' } }], cx: { it: m[1] === '~' ? 'self' : 'ev', that: 'ev' } };
   if ((m = /^a land enters you control$/.exec(h))) return { defs: [{ ev: 'etb', subj: 'any', f: { types: ['Land'], ctrl: 'you' } }], cx: { it: 'self', that: 'ev' } };
@@ -631,7 +656,30 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   let spellFx: Effect[] = []; let spellSlots: TSlot[] = []; let spellModes: Modes | undefined;
   const fail = (l: string) => unparsed.push(l);
   for (const raw of lines) {
-    const l = cleanLine(raw).replace(/\.$/, '');
+    let l = cleanLine(raw).replace(/\.$/, '');
+    { let x: RegExpExecArray | null;
+      if ((x = /^mobilize (\d+)$/.exec(l))) l = `whenever ~ attacks, §mobilize ${x[1]}`;
+      else if ((x = /^firebending (\w+(?:, where x is .+)?)$/.exec(l))) l = `whenever ~ attacks, §firebend ${x[1]}`;
+      else if (/^job select$/.test(l)) l = 'when ~ enters, §jobselect';
+      l = l.replace(/^void — /, '').replace(/^whenever ~ attacks while saddled, /, 'whenever ~ attacks, if ~ is saddled, ');
+      if (/^start your engines!?$/.test(l)) { d.engines = true; continue; }
+      if (/^station$/.test(l)) { abilities.push({ label: 'Station', sorcery: true, station: true, effects: [{ op: 'addC', kind: 'charge', n: 'X', who: 'self' }] }); continue; }
+      const cb = /^(\d+)\+ \| (.+)$/s.exec(l) ?? /^max speed — (.+)$/s.exec(l);
+      if (cb) {
+        const thr = cb.length === 3 ? +cb[1] : 0; const body = cb.length === 3 ? cb[2] : cb[1];
+        const cond: Cond = thr ? { k: 'ctrGE', kind: 'charge', n: thr } : { k: 'maxSpeed' };
+        if (thr) d.stationAt = Math.max(d.stationAt ?? 0, thr);
+        const owner = CUR_NAME; const t: CardDef = { id: 'cb', name: d.name, types: d.types, sub: d.sub, cost: { generic: 0 }, colors: [], text: '' };
+        const r = compile({ name: sc.name, oracle_text: body, type_line: sc.type_line }, t); CUR_NAME = owner;
+        const bad = !r.ok || t.mana || t.spell || t.ward || t.kicker || t.etbTapped || t.statics?.some(s => s.cond) || t.triggers?.some(x => x.ifc) || t.abilities?.some(a => a.cond);
+        if (bad) { fail(raw); continue; }
+        if (t.keywords?.length) statics.push({ k: 'kw', who: 'self', kws: t.keywords, cond });
+        for (const s of t.statics ?? []) statics.push({ ...s, cond });
+        for (const x2 of t.triggers ?? []) triggers.push({ ...x2, ifc: cond });
+        for (const a of t.abilities ?? []) abilities.push({ ...a, cond });
+        continue;
+      }
+    }
     // keyword line
     const kparts = l.split(/[,;] /);
     if (kparts.every(p => isKeyword(p.trim(), d, kws, abilities, sc))) continue;
@@ -652,6 +700,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
     }
     { let x: RegExpExecArray | null;
       if ((x = /^whenever you tap an? ([a-z ]+?) for mana, add an additional \{([wubrgc])\}$/.exec(l))) { const fp = parseFilter(x[1]); if (fp) { statics.push({ k: 'manaExtra', who: 'all', f: { ...fp.f, ctrl: 'you' }, add: [x[2].toUpperCase()] }); continue; } }
+      if (/^~ enters prepared$/.test(l)) { d.etbPrepared = true; continue; }
       if ((x = /^as long as ~ isn't on the battlefield, it's an? (\d+)\/(\d+) ([a-z]+) creature in addition to its other types$/.exec(l))) { const sb = SUB.get(x[3]) ?? x[3][0].toUpperCase() + x[3].slice(1); d.offBf = { addTypes: ['Creature'], addSub: [sb], p: +x[1], t: +x[2] }; continue; }
       if (/^as long as ~ is attached to a creature, ~ can't be attacked and has "whenever equipped creature deals combat damage during your turn, put that many loyalty counters on ~\.?"$/.test(l)) {
         statics.push({ k: 'cantBeAttacked', who: 'self', cond: { k: 'attachedCreature' } });
@@ -758,6 +807,9 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
     if (m[1]) { const fp = parseFilter(m[1]); if (!fp) return false; f = { ...fp.f, types: [...(fp.f.types ?? []), 'Creature'], ctrl: 'you' }; }
     abilities.push({ label: `Equip ${m[2].toUpperCase()}`, mana: c, sorcery: true, equip: true, tslots: [{ who: 'perm', f, harm: false }], effects: [{ op: 'attach', who: 'self', other: 't0' }] }); return true;
   }
+  if ((m = /^warp (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.warp = c; return true; }
+  if ((m = /^saddle (\d+)$/.exec(p))) { abilities.push({ label: `Saddle ${m[1]}`, crew: +m[1], sorcery: true, effects: [{ op: 'saddled' }] }); return true; }
+  if ((m = /^crew (\d+)$/.exec(p))) { abilities.push({ label: `Crew ${m[1]}`, crew: +m[1], effects: [{ op: 'becomes', who: 'self', ce: { addTypes: ['Creature'] }, until: 'eot' }, { op: 'crewed' }] }); return true; }
   if ((m = /^kicker (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.kicker = c; return true; }
   if ((m = /^flashback (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.flashback = c; return true; }
   if ((m = /^(?:(basic land|plains|island|swamp|mountain|forest|land)?)cycling (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p.replace(/^(basic land|plains|island|swamp|mountain|forest)\s?cycling/, '$1cycling')))) {

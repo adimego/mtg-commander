@@ -3,8 +3,8 @@ import { compileScry } from './import/classify';
 import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
 import { DragEvent, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
-import { emblemsOf, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards } from './engine/engine';
-import { DecisionDialog, KickerDialog, XDialog, ModesDialog } from './Dialogs';
+import { emblemsOf, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards } from './engine/engine';
+import { DecisionDialog, KickerDialog, WarpDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
 
@@ -24,7 +24,7 @@ const KW_HELP: Record<string, string> = {
 type AbLike = { tap?: boolean; untap?: boolean; mana?: Cost; sac?: boolean; loyalty?: number; loyX?: boolean; sacF?: { n: number }; discard?: number; life?: number; remC?: { kind: string; n: number }; exileGy?: { n: number; self?: boolean }; tapF?: { n: number } };
 const abCost = (a: AbLike) => [a.loyalty !== undefined ? (a.loyX ? '−X' : `${a.loyalty > 0 ? '+' : a.loyalty === 0 ? '±' : '−'}${Math.abs(a.loyalty)}`) : '', a.mana ? costText(a.mana) : '', a.tap ? '{T}' : '', a.untap ? '{Q}' : '', a.sac ? 'Sac' : '', a.sacF ? `Sac ${a.sacF.n}` : '', a.discard ? `Discard ${a.discard}` : '', a.life ? `${a.life} life` : '', a.remC ? `−${a.remC.n} ${a.remC.kind}` : '', a.exileGy ? (a.exileGy.self ? 'Exile from gy' : `Exile ${a.exileGy.n} from gy`) : '', a.tapF ? `Tap ${a.tapF.n}` : ''].filter(Boolean).join(', ');
 /** A cast or activation being set up: kicker → X → modes → one target per active slot. */
-type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; kicked?: boolean; x?: number; modes?: number[]; ts: (Target | undefined)[] };
+type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; warp?: boolean; kicked?: boolean; x?: number; modes?: number[]; ts: (Target | undefined)[] };
 type PendingAct = Flow;
 const SAVED0 = decks.activateAll();
 type Hover = { id: string; uid?: number } | null;
@@ -134,6 +134,11 @@ function CommandZone({ ui, pid }: { ui: UI; pid: number }) {
         <span className="tax">TAX +{tax}</span>
         {inZone ? <span className="czcost"><ManaCost c={costOf(g, inZone)} /></span> : <span className="czlabel">{p.battlefield.some(c => c.id === cmd.id) ? 'IN PLAY' : 'AWAY'}</span>}
       </div>);
+  })}{p.command.filter(c => c.prepFor !== undefined).map(c => {
+    const d = CARDS[c.id]; const castable = pid === HUMAN && canCast(g, HUMAN, c);
+    return <div key={c.uid} data-prep={c.uid} className={`cmdzone prepcopy ${castable ? 'playable' : ''}`} onClick={() => pid === HUMAN && ui.clickCommand(c)}
+      onMouseEnter={() => ui.setHover({ id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)} title={`Prepared spell: cast a copy of ${d.name} (unprepares its permanent)`}>
+      <CardFace d={d} /><span className="tax">PREPARED</span><span className="czcost"><ManaCost c={costOf(g, c)} /></span></div>;
   })}</>;
 }
 function PlayerHeader({ ui, pid, big }: { ui: UI; pid: number; big?: boolean }) {
@@ -249,6 +254,8 @@ function Preview({ g, h }: { g: Game | null; h: Hover }) {
       <div className="pvtext">
         <div className="pvname">{d.name} <ManaCost c={d.cost} /></div>
         <div className="pvtype">{d.typeLine}</div>
+        {c && g && def(c).typeLine && def(c).typeLine !== d.typeLine && <div className="pvtype pvnow" data-now-type>Now: {def(c).typeLine}{c.prepared ? ' · prepared' : ''}</div>}
+        {c && g && c.prepared && !(def(c).typeLine && def(c).typeLine !== d.typeLine) && <div className="pvtype pvnow">Prepared — a copy of its spell is castable from your command zone</div>}
         {c && g && isType(c, 'Creature') && <div className="pvstate">Now: <b>{power(g, c)}/{toughness(g, c)}</b>{c.damage ? ` · ${c.damage} damage` : ''}{c.tapped ? ' · tapped' : ''}{c.sick && !hasKw(c, 'haste') ? ' · summoning sick' : ''}{c.attacking !== undefined ? ` · attacking ${g.players[c.attacking].name}` : ''}</div>}
         {d.limited && <div className="limnote">⚠ {d.limited}</div>}
         {kws.map(k => <div key={k} className="kwhelp"><b>{k[0].toUpperCase() + k.slice(1)}</b>: {KW_HELP[k]}</div>)}
@@ -302,9 +309,9 @@ export default function App() {
   const g = gref.current;
   const opts: PassOpts = { stopAll, passUntilTurn: passUntil };
 
-  const act = useCallback((f: (g: Game) => void) => { if (gref.current) { f(gref.current); bump(); } }, []);
+  const act = useCallback((f: (g: Game) => void) => { if (gref.current) { f(gref.current); layer(gref.current); bump(); } }, []);
   // test/debug hook (only with ?debug in the URL): lets scripted screenshots stage a board
-  useEffect(() => { if (/[?&]debug\b/.test(location.search)) (window as unknown as Record<string, unknown>).__ca = { game: () => gref.current, act, CARDS, compile: (o: Record<string, unknown>) => { const d = compileScry({ colors: [], color_identity: [], keywords: [], mana_cost: '', ...o } as unknown as ScryCard).def; registerCards([d]); return d.id; } }; }, [act]);
+  useEffect(() => { if (/[?&]debug\b/.test(location.search)) (window as unknown as Record<string, unknown>).__ca = { game: () => gref.current, act, CARDS, compile: (o: Record<string, unknown>) => { const d = compileScry({ colors: [], color_identity: [], keywords: [], mana_cost: '', ...o } as unknown as ScryCard).def; registerCards([d, ...(d.prepDef ? [d.prepDef] : [])]); return d.id; } }; }, [act]);
   function newMatch() {
     localStorage.setItem('ca_deck', deck);
     const pre = DECKS.slice(0, 4).map(d => d.id).filter(x => x !== deck);
@@ -337,7 +344,8 @@ export default function App() {
   const flowSlots: TSlot[] = !flow ? [] : flow.kind === 'trigger' ? trigSlots(humanChoice!.trig) : flow.kind === 'ability' ? (flowAb ? abilitySlots(flowAb) : []) : flowCard ? spellSlots(def(flowCard)) : [];
   const flowModes: Modes | undefined = !flow ? undefined : flow.kind === 'trigger' ? humanChoice!.trig.modes : flow.kind === 'ability' ? flowAb?.modes : flowCard ? def(flowCard).spell?.modes : undefined;
   const flowActive = flowModes ? (flow?.modes ?? []).flatMap(i => modeRange(flowModes, i)) : flowSlots.map((_, i) => i);
-  const flowStage: null | 'kicker' | 'x' | 'modes' | 'targets' = !g || !flow ? null
+  const flowStage: null | 'warp' | 'kicker' | 'x' | 'modes' | 'targets' = !g || !flow ? null
+    : flow.kind === 'cast' && flowCard && flow.warp === undefined && def(flowCard).warp && me!.hand.includes(flowCard) ? 'warp'
     : flow.kind === 'cast' && flowCard && def(flowCard).kicker && flow.kicked === undefined ? 'kicker'
     : flow.x === undefined && (flow.kind === 'cast' ? !!flowCard && !!costOf(g, flowCard).x : flow.kind === 'ability' ? !!flowAb?.mana?.x || !!flowAb?.loyX : false) ? 'x'
     : flowModes && !flow.modes ? 'modes'
@@ -377,7 +385,7 @@ export default function App() {
     setPending(null);
     act(g => {
       if (f.kind === 'trigger') chooseTriggerTargets(g, full, f.modes);
-      else if (f.kind === 'cast') { if (!castSpell(g, HUMAN, f.uid, { targets: full, modes: f.modes, x: f.x, kicked: f.kicked })) flash("Couldn't cast that (targets or mana no longer valid)."); }
+      else if (f.kind === 'cast') { if (!castSpell(g, HUMAN, f.uid, { targets: full, modes: f.modes, x: f.x, kicked: f.kicked, warp: f.warp })) flash("Couldn't cast that (targets or mana no longer valid)."); }
       else if (!activate(g, HUMAN, f.uid, f.idx!, { targets: full, modes: f.modes, x: f.x })) flash("Couldn't activate that.");
     });
   }
@@ -390,9 +398,11 @@ export default function App() {
     if (!g) return;
     const d = def(c); const f: Flow = { kind: 'cast', uid: c.uid, ts: [] };
     if (d.kicker && !canCast(g, HUMAN, c, { kicked: true })) f.kicked = false;
+    if (d.warp && me!.hand.includes(c)) { const n = canCast(g, HUMAN, c), w = canCast(g, HUMAN, c, { warp: true }); if (n && !w) f.warp = false; else if (w && !n) f.warp = true; else { setPending(f); return; } }
     if (d.kicker && f.kicked === undefined) { setPending(f); return; }
     begin2(f, c);
   }
+  function startCast2(f: Flow, c: Card) { if (!g) return; const d = def(c); if (d.kicker && !canCast(g, HUMAN, c, { kicked: true, warp: f.warp })) f.kicked = false; if (d.kicker && f.kicked === undefined) { setPending(f); return; } begin2(f, c); }
   function begin2(f: Flow, c: Card) {
     if (!g) return;
     if (f.x === undefined && costOf(g, c).x) { setPending(f); return; }
@@ -497,7 +507,7 @@ export default function App() {
     if (!g.started) { prompt = `Opening hand: keep it, or mulligan for a fresh 7 (${me.mulligans === 0 ? 'the first mulligan is free' : `next one bottoms ${me.mulligans}`}).`; primary = { label: 'Keep hand', run: () => act(g => startGame(g)), key: 'Enter' }; if (me.mulligans < 6) secondary.push({ label: 'Mulligan', run: () => act(g => mulligan(g, HUMAN)) }); }
     else if (g.winner !== null) { prompt = g.winner === HUMAN ? '🏆 Victory! Every opponent is out.' : `${g.players[g.winner].name} wins the game.`; tone = 'end'; primary = { label: 'Play again', run: newMatch }; }
     else if (humanDecision) { prompt = `❓ ${humanDecision.src ? `${CARDS[humanDecision.src]?.name}: ` : ''}${humanDecision.text}`; tone = 'target'; }
-    else if (flow && flowStage && flowStage !== 'targets') { prompt = `${flowName}: ${flowStage === 'kicker' ? 'kick it?' : flowStage === 'x' ? 'choose X' : 'choose mode(s)'}`; tone = 'target'; }
+    else if (flow && flowStage && flowStage !== 'targets') { prompt = `${flowName}: ${flowStage === 'warp' ? 'warp it?' : flowStage === 'kicker' ? 'kick it?' : flowStage === 'x' ? 'choose X' : 'choose mode(s)'}`; tone = 'target'; }
     else if (flow && curSlot) {
       const n = flowActive.length; const k = flow.ts.length + 1;
       prompt = `${flow.kind === 'trigger' ? '⚡ Your trigger' : '🎯'} ${flowName}: choose ${curSlot.label ?? 'a target'}${n > 1 ? ` (target ${k} of ${n})` : ''}${curSlot.who === 'card' ? ' from a graveyard' : ''}. Legal targets glow green.`;
@@ -651,6 +661,7 @@ export default function App() {
       {bdrag?.moved && <DragLine uid={bdrag.uid} x={bdrag.x} y={bdrag.y} color={bdrag.over === null ? '#9ec3ff' : blockReason(g, findCard(g, bdrag.uid)!, findCard(g, bdrag.over)!) ? '#ef5350' : '#42a5f5'} />}
       {toast && <div className="toast">{toast}</div>}
       {blockDec && <DecisionDialog key={blockDec.key + blockDec.kind} g={g} d={blockDec} castNow={u => { const c = g.players[HUMAN].exile.find(x => x.uid === u); if (c) startCast(c); }} answer={a => act(g => { answerDecision(g, a); })} Face={CardFace} setHover={id => setHover(id ? { id } : null)} />}
+      {!blockDec && flow && flowStage === 'warp' && flowCard && <WarpDialog name={flowName} cost={costText(def(flowCard).warp!)} normal={costText(def(flowCard).cost)} cancel={() => setPending(null)} pick={w => startCast2({ ...flow, warp: w }, flowCard)} />}
       {!blockDec && flow && flowStage === 'kicker' && flowCard && <KickerDialog name={flowName} cost={costText(def(flowCard).kicker!)} cancel={() => setPending(null)} pick={k => begin2({ ...flow, kicked: k }, flowCard)} />}
       {!blockDec && flow && flowStage === 'x' && <XDialog name={flowName} max={flow.kind === 'ability' && flowCard && flowAb?.loyX ? ctr(flowCard, 'loyalty') : flow.kind === 'ability' && flowCard ? maxX(g, HUMAN, flowCard, { abil: flowAb!.mana, exclude: flowAb!.tap ? flowCard.uid : undefined }) : flowCard ? maxX(g, HUMAN, flowCard, { kicked: flow.kicked }) : 0} cancel={() => setPending(null)} pick={x => advance({ ...flow, x })} />}
       {!blockDec && flow && flowStage === 'modes' && flowModes && <ModesDialog key={flow.uid} name={flowName} m={flowModes} avail={flowModes.list.map(md => (md.tslots ?? []).every(sl => sl.opt || [...g.players.map(q => ({ player: q.id })), ...g.players.flatMap(q => [...q.battlefield, ...q.graveyard].map(c => ({ card: c.uid }))), ...g.stack.map(it => ({ stack: it.id }))].some(t => validSlot(g, HUMAN, sl, t, tctx))))} cancel={flow.kind === 'trigger' ? undefined : () => setPending(null)} pick={ms => advance({ ...flow, modes: ms })} />}

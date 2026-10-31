@@ -70,11 +70,14 @@ export function compileScry(c: ScryCard): Classified {
   const sub = typeLine.split('—')[1]?.trim().split(/\s+/); if (sub?.length) d.sub = sub;
   const isCreature = types.includes('Creature');
   const pStar = isCreature && !(/^\d+$/.test(front.power ?? '') && /^\d+$/.test(front.toughness ?? ''));
+  if (!isCreature && /\b(Vehicle|Spacecraft)\b/.test(typeLine) && /^\d+$/.test(front.power ?? '')) { d.power = +front.power!; d.toughness = parseInt(front.toughness ?? '0') || 0; }
   if (isCreature) { d.power = parseInt(front.power ?? '0') || 0; d.toughness = parseInt(front.toughness ?? '0') || 0; }
   if (types.includes('Planeswalker') && (front as ScryCard).loyalty) d.loyalty = parseInt((front as ScryCard).loyalty!) || 0;
   if (types.includes('Background')) { d.partner = true; d.canBeCommander = true; }
   const problems: string[] = [];
-  if (f) problems.push(`${c.layout ?? 'multi-face'} card: only the front face is used`);
+  let prepUn: string[] = [];
+  if (f && c.layout === 'prepare' && f[1]) { const b = compileScry({ ...(f[1] as ScryCard), name: f[1].name, layout: 'normal', card_faces: undefined, colors: (f[1] as ScryCard).colors ?? c.colors, color_identity: c.color_identity } as ScryCard); b.def.id = d.id + '--prep'; delete b.def.limited; d.prepDef = b.def; if (b.support !== 'auto') prepUn = (b.unparsed?.length ? b.unparsed : [b.reason ?? 'prepare spell']).map(x => `prepare spell: ${x}`); }
+  else if (f) problems.push(`${c.layout ?? 'multi-face'} card: only the front face is used`);
   if (!exact && front.mana_cost) problems.push(`mana cost ${front.mana_cost} simplified to ${costStr(d.cost)}`);
   const res = compile({ ...front, name: c.name, oracle_text: front.oracle_text ?? (f ? '' : c.oracle_text) } as ScryLike, d);
   if (pStar && !d.statics?.some(s => s.k === 'pt' && s.who === 'self' && typeof s.p !== 'number')) { if (!d.toughness) d.toughness = 1; problems.push(`variable power/toughness (${front.power}/${front.toughness}) played as ${d.power}/${d.toughness}`); }
@@ -84,7 +87,8 @@ export function compileScry(c: ScryCard): Classified {
   if (types.includes('Land') && !d.mana && c.produced_mana?.length && res.unparsed.length) {
     const pm = c.produced_mana.filter(x => 'WUBRGC'.includes(x)); if (pm.length) d.mana = [{ add: [pm.length === 1 ? pm[0] as ManaSym : pm.join('|') as ManaSym] }];
   }
-  if (types.includes('Saga') || types.includes('Vehicle') || d.sub?.includes('Saga') || d.sub?.includes('Vehicle')) problems.push(`${d.sub?.includes('Saga') ? 'Saga chapters' : 'crewing'} not modelled`);
+  if (types.includes('Saga') || d.sub?.includes('Saga') || (d.sub?.includes('Vehicle') && !d.abilities?.some(a => a.crew !== undefined))) problems.push(`${d.sub?.includes('Saga') ? 'Saga chapters' : 'crewing'} not modelled`);
+  res.unparsed.push(...prepUn);
   if (!res.unparsed.length && !problems.length) return { def: d, support: 'auto' };
   const works = describeWorks(d);
   const why = [res.unparsed.length ? `not modelled: "${res.unparsed.slice(0, 3).map(x => pretty(x, c.name)).map(x => x.length > 70 ? x.slice(0, 67) + '…' : x).join('" / "')}"${res.unparsed.length > 3 ? ` (+${res.unparsed.length - 3} more)` : ''}` : '', ...problems].filter(Boolean).join('; ');
