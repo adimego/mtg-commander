@@ -106,7 +106,7 @@ describe('support classification', () => {
     const goyf = cls('Tarmogoyf'); expect(goyf.support).toBe('limited'); expect(goyf.reason).toMatch(/variable power/);
     const delver = cls('Delver of Secrets // Insectile Aberration'); expect(delver.support).toBe('limited'); expect(delver.def.img).toBe('https://img/delver.jpg'); expect(delver.reason).toMatch(/Not modelled: "At the/);
     const shock = cls('Watery Grave'); expect(shock.support).toBe('auto'); expect(shock.def.mana).toEqual([{ add: ['U|B'] }]); expect(shock.def.shock).toBe(2);
-    expect(cls('Fellwar Stone').support).toBe('limited');
+    expect(cls('Fellwar Stone').support).toBe('auto'); expect(cls('Fellwar Stone').def.mana).toEqual([{ add: ['OPP'] }]);
   });
 });
 

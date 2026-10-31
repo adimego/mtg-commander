@@ -264,6 +264,8 @@ function manaAdd(s: string, cx: Cx): { mana: ManaSym[]; n?: Amt } | null {
   if ((m = /^an amount of (\{[wubrgc]\}) equal to (.+)$/.exec(s))) { const a = amount(m[2], cx); return a === null ? null : { mana: [m[1][1].toUpperCase() as ManaSym], n: a }; }
   if (/^one mana of any colou?r$/.test(s)) return { mana: ['ANY'] };
   if (/^one mana of any colou?r in your commander's colou?r identity$/.test(s)) return { mana: ['IDENTITY'] };
+  if (/^one mana of any colou?r that a land an opponent controls could produce$/.test(s)) return { mana: ['OPP'] };
+  if (/^one mana of any colou?r among legendary permanents you control$/.test(s)) return { mana: ['LEGEND'] };
   if ((m = /^(two|three|x) mana (?:of any one colou?r|in any combination of colou?rs)$/.exec(s))) { const n = num(m[1]); return n === 'X' ? { mana: ['ANY'], n: 'X' } : { mana: Array(n as number).fill('ANY') }; }
   if ((m = /^(\{[wubrgc]\}(?:, \{[wubrgc]\})*,? or \{[wubrgc]\})$/.exec(s))) return { mana: [[...s.matchAll(/\{([wubrgc])\}/g)].map(x => x[1].toUpperCase()).join('|') as ManaSym] };
   if ((m = /^((?:\{[wubrgc]\})+)$/.exec(s))) return { mana: [...s.matchAll(/\{([wubrgc])\}/g)].map(x => x[1].toUpperCase() as ManaSym) };
@@ -797,6 +799,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       // mana abilities
       let only: string | undefined;
       body = body.replace(/\. (?:spend this mana only to (.+)|this mana can't be spent to cast (?:a )?nonartifact spells?)$/, (_, w?: string) => { only = !w ? 'artifact' : ({ 'cast a creature spell of the chosen type': 'ctypeSpell', 'cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type': 'ctypeAny', 'cast a hero spell or to activate an ability of a hero source': 'hero', 'cast a villain spell or to activate an ability of a villain source': 'villain', 'cast a legendary spell': 'legendary', 'cast artifact spells or activate abilities of artifacts': undefined } as Record<string, string | undefined>)[w] ?? '§'; return ''; });
+      body = body.replace(/^(add one mana of any color in your commander's color identity)\. when that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1$/, (_, x) => { only = 'path'; return x; });
       if (only === '§') { fail(raw); continue; }
       if (only) { const r = /^add (.+)$/.exec(body) && manaAdd(body.slice(4), newCx()); if (!r || !ab.tap || Object.keys(pc.ab).length !== 1) { fail(raw); continue; } manaLines.push({ add: r.mana, n: r.n, only }); continue; }
       const pm = /^add (.+?)\. ~ deals (\d) damage to you$/.exec(body);
@@ -830,8 +833,8 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   // merge mana lines
   if (manaLines.length) {
     if (manaLines.length === 1) d.mana = [manaLines[0]];
-    else if (manaLines.every(m => m.add.length === 1 && !m.n && !m.sac && !m.only)) { const pain = Math.max(0, ...manaLines.map(m => m.pain ?? 0)); d.mana = [{ add: [[...new Set(manaLines.flatMap(m => m.add[0].split('|')))].join('|') as ManaSym], pain: pain || undefined }]; if (pain) notes.push('pain: damage is dealt whenever it is tapped for mana, even for {C}'); }
-    else { d.mana = [manaLines[0]]; unparsed.push('additional mana abilities'); }
+    else if (manaLines.every(m => m.add.length === 1 && !m.n && !m.sac && !m.only && !/ANY|IDENTITY|OPP|LEGEND/.test(m.add[0]))) { const pain = Math.max(0, ...manaLines.map(m => m.pain ?? 0)); d.mana = [{ add: [[...new Set(manaLines.flatMap(m => m.add[0].split('|')))].join('|') as ManaSym], pain: pain || undefined }]; if (pain) notes.push('pain: damage is dealt whenever it is tapped for mana, even for {C}'); }
+    else d.mana = manaLines;
   }
   if (abilities.length) d.abilities = [...(d.abilities ?? []), ...abilities];
   if (triggers.length) d.triggers = triggers;

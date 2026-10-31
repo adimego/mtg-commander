@@ -140,5 +140,37 @@ describe('precon shared mechanics', () => {
     expect(kd.triggers?.map(t => t.ev)).toEqual(['etb', 'attacks']);
     const g = setup(); const b = put(g, 0, bast); layer(g); expect(condOk(g, 0, bast.statics![0].cond!, b)).toBe(true); put(g, 0, BEAR()); put(g, 0, BEAR()); layer(g); expect(condOk(g, 0, bast.statics![0].cond!, b)).toBe(false);
   });
+  it('multiple mana abilities: {C} or restricted any-color; the restricted one only for Hero spells', () => {
+    const t = card('PM Tower2', 'Land', '', '{T}: Add {C}.\n{T}: Add one mana of any color. Spend this mana only to cast a Hero spell or to activate an ability of a Hero source.');
+    expect(t.mana?.length).toBe(2); expect(t.mana?.[1].only).toBe('hero');
+    const g = setup(); put(g, 0, t);
+    expect(planPayment(g.players[0], { generic: 0, G: 1 } as never, { spend: { spell: HERO() } })).toBeTruthy();
+    expect(planPayment(g.players[0], { generic: 0, G: 1 } as never, { spend: { spell: BEAR() } })).toBeNull();
+    expect(planPayment(g.players[0], { generic: 1 } as never, { spend: { spell: BEAR() } })).toBeTruthy();
+    expect(planPayment(g.players[0], { generic: 2 } as never, { spend: { spell: HERO() } })).toBeNull(); // one land, one mana
+    const l = g.players[0].battlefield[0]; expect(tapForMana(g, 0, l.uid, 1)).toBe(true); expect(g.players[0].pool[0]).toMatch(/@hero/);
+  });
+  it("Exotic Orchard / Plaza: colors opponents' lands could produce, colors among your legendaries", () => {
+    const orch = card('PM Orchard', 'Land', '', '{T}: Add one mana of any color that a land an opponent controls could produce.');
+    const plaza = card('PM Plaza', 'Land', '', '{T}: Add {C}.\n{T}: Add one mana of any color among legendary permanents you control.');
+    const g = setup(); put(g, 0, orch); layer(g);
+    expect(planPayment(g.players[0], { generic: 0, U: 1 } as never)).toBeNull();
+    put(g, 1, card('Island', 'Basic Land — Island', '', '({T}: Add {U}.)')); layer(g);
+    expect(planPayment(g.players[0], { generic: 0, U: 1 } as never)).toBeTruthy(); expect(planPayment(g.players[0], { generic: 0, R: 1 } as never)).toBeNull();
+    const g2 = setup(); put(g2, 0, plaza); layer(g2); expect(planPayment(g2.players[0], { generic: 0, R: 1 } as never)).toBeNull();
+    put(g2, 0, card('PM Legend', 'Legendary Creature — Human', '{R}', '', { power: '1', toughness: '1', colors: ['R'] })); layer(g2);
+    expect(planPayment(g2.players[0], { generic: 0, R: 1 } as never)).toBeTruthy();
+  });
+  it('Path of Ancestry: scry 1 only when its mana is spent on a creature sharing a type with your commander', () => {
+    const path = card('PM Path', 'Land', '', "PM Path enters tapped.\n{T}: Add one mana of any color in your commander's color identity. When that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1.");
+    expect(path.mana?.[0].only).toBe('path');
+    const g = setup(); const P = g.players[0]; const cmd = BEAR(); P.commanderIds = [cmd.id]; P.identity = ['G']; put(g, 0, path); layer(g);
+    const b = mk(g, 0, BEAR()); P.hand.push(b); expect(castSpell(g, 0, b.uid)).toBe(false); // {1}{G} — one land
+    const b2 = mk(g, 0, card('PM Cub', 'Creature — Bear', '{G}', '', { power: '1', toughness: '1', colors: ['G'] })); P.hand.push(b2);
+    expect(castSpell(g, 0, b2.uid)).toBe(true); expect(g.pending.length + g.stack.filter(x => x.kind !== 'spell').length).toBeGreaterThan(0);
+    const g2 = setup(); const Q = g2.players[0]; Q.commanderIds = [cmd.id]; Q.identity = ['G']; put(g2, 0, path); layer(g2);
+    const v = mk(g2, 0, card('PM Elf', 'Creature — Elf', '{G}', '', { power: '1', toughness: '1', colors: ['G'] })); Q.hand.push(v);
+    expect(castSpell(g2, 0, v.uid)).toBe(true); expect(g2.pending.length).toBe(0);
+  });
 });
 function until(g: Game, pred: () => boolean, max = 800) { for (const p of g.players) p.human = false; let i = 0; while (!pred() && i++ < max) { if (g.decision) answerDecision(g, false); else pass(g, g.priority!); } return pred(); }

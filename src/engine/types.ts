@@ -1,7 +1,7 @@
 // Shared engine types. The data-driven ability system: compiled Oracle text and hand-written card data both produce these.
 export type Color = 'W' | 'U' | 'B' | 'R' | 'G';
 /** A mana unit; 'W|U' means one mana of either color (dual lands). */
-export type ManaSym = Color | 'C' | 'ANY' | 'IDENTITY' | `${string}|${string}`;
+export type ManaSym = Color | 'C' | 'ANY' | 'IDENTITY' | 'OPP' | 'LEGEND' | `${string}|${string}`;
 export const COLORS: Color[] = ['W', 'U', 'B', 'R', 'G'];
 /** Mana cost. `x` = number of {X}; `hyb` = hybrid units like 'W|U' or '2|W'; `phy` = Phyrexian colored symbols (pay color or 2 life). */
 export interface Cost { generic: number; W?: number; U?: number; B?: number; R?: number; G?: number; C?: number; x?: number; hyb?: string[]; phy?: Color[] }
