@@ -3,7 +3,7 @@ import { compileScry } from '../src/import/classify';
 import type { ScryCard } from '../src/import/scryfall';
 import { dealDamage, enter, matches, condOk, becomeMonarch, declareBlockers, canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters, costOf, createToken, blockReason, atkBlocked } from '../src/engine/engine';
 import type { CardDef } from '../src/engine/types';
-import { emit, draw, checkState as cs2 } from '../src/engine/engine';
+import { emit, draw, costOf as costOf2, discardCard as discardCard2 } from '../src/engine/engine';
 import '../src/engine/ai';
 let n = 0;
 function card(name: string, type_line: string, mana_cost: string, oracle_text: string, o: Partial<ScryCard> = {}): CardDef {
@@ -501,5 +501,81 @@ describe('precon scripts: batch 11 (token copies, granted triggers, redirection,
   });
   it('Captain America, Living Legend: a creature tapped for the first time on your turn untaps', () => {
     const g = setup(); put(g, 0, pc('Captain America, Living Legend')); const b = put(g, 0, BEAR()); b.tapped = true; flushTriggers(g); expect(b.tapped).toBe(false); b.tapped = true; flushTriggers(g); expect(b.tapped).toBe(true);
+  });
+});
+const SORC = (nm = 'PM Divination') => card(nm, 'Sorcery', '{2}{U}', 'Draw two cards.', { colors: ['U'] });
+describe('precon scripts: batch 12 (the one-offs)', () => {
+  it('Scarlet Witch: exiles top two face down, casts a noncreature one free', () => {
+    const g = setup(); const s = put(g, 0, pc('Scarlet Witch, Chaotic Avenger')); const so = mk(g, 0, SORC()); const b = mk(g, 0, BEAR()); g.players[0].library.push(b, so); const h = g.players[0].hand.length;
+    emit(g, 'combatDamagePlayer', { player: 1, amount: 3 }, s); flushTriggers(g); run(g, { pick: u => u.slice(0, 1), cast: true }); expect(g.players[0].hand.length).toBe(h + 2); expect(g.players[0].exile).toContain(b);
+  });
+  it('Gift of Immortality: the creature returns; the Aura returns attached at the next end step', () => {
+    const g = setup(); const b = put(g, 0, BEAR()); const gf = put(g, 0, pc('Gift of Immortality')); gf.attachedTo = b.uid; destroy(g, b); checkState(g); flushTriggers(g); run(g);
+    expect(findCard(g, b.uid)).toBeTruthy(); expect(findCard(g, gf.uid)).toBeFalsy(); expect(until(g, () => !!findCard(g, gf.uid))).toBe(true); expect(findCard(g, gf.uid)!.attachedTo).toBe(b.uid);
+  });
+  it('Conduit of Worlds: play lands from graveyard; tap to cast a permanent card from graveyard, then no more spells', () => {
+    const g = setup(); const cw = put(g, 0, pc('Conduit of Worlds')); const l = mk(g, 0, card('PM Land2', 'Land', '', '')); g.players[0].graveyard.push(l); g.players[0].landsPlayed = 0;
+    expect(playLand(g, 0, l.uid)).toBe(true); const b = mk(g, 0, BEAR()); g.players[0].graveyard.push(b); mana(g, 0);
+    activate(g, 0, cw.uid, def(cw).abilities!.length - 1, { card: b.uid } as never); run(g, { cast: true }); expect(findCard(g, b.uid)).toBeTruthy();
+    const c2 = mk(g, 0, VAMP()); g.players[0].hand.push(c2); expect(canCast(g, 0, c2)).toBe(false);
+  });
+  it('Coveted Jewel: unblocked attackers at you → attacker draws three and takes it', () => {
+    const g = setup(); const j = put(g, 1, pc('Coveted Jewel')); const b = put(g, 0, BEAR()); toAttack(g); for (const p of g.players) p.human = true; const h = g.players[0].hand.length;
+    declareAttackers(g, 0, [{ uid: b.uid, defender: 1 }]); let i = 0; while (g.awaiting !== 'block' && i++ < 20) pass(g, g.priority!); for (const d of [1, 2, 3]) declareBlockers(g, d, []); run(g);
+    expect(g.players[0].hand.length).toBe(h + 3); expect(g.players[0].battlefield).toContain(j); expect(j.tapped).toBe(false);
+  });
+  it('The Thing: pay RGWU on attack to double counters', () => {
+    const g = setup(); const t = put(g, 0, pc('The Thing')); const b = put(g, 0, BEAR()); b.counters = { '+1/+1': 2 }; mana(g, 0); emit(g, 'attacks', { player: 0 }, t); flushTriggers(g); run(g, { may: true, pick: u => u }); expect(ctr(b, '+1/+1')).toBe(4);
+  });
+  it('Dragon Man: power = greatest MV of noncreature permanents/gy cards; castable from graveyard by discarding', () => {
+    const g = setup(); const dm = put(g, 0, pc('Dragon Man, Reformed Robot')); g.players[0].graveyard.push(mk(g, 0, card('PM Big', 'Sorcery', '{5}{U}', 'Draw a card.'))); layer(g); expect(power(g, dm)).toBe(6);
+    const d2 = mk(g, 0, pc('Dragon Man, Reformed Robot')); g.players[0].graveyard.push(d2); const junk = mk(g, 0, VAMP()); g.players[0].hand.push(junk); mana(g, 0);
+    expect(castZone(g, 0, d2)).toBe('graveyard'); expect(castSpell(g, 0, d2.uid)).toBe(true); expect(g.players[0].graveyard).toContain(junk);
+  });
+  it('Power Pack: exiles a random instant/sorcery; cast free at your next upkeep, then exiled', () => {
+    const g = setup(); const pp = put(g, 0, pc('Power Pack')); const so = mk(g, 0, SORC()); g.players[0].graveyard.push(so); emit(g, 'combatDamagePlayer', { player: 1, amount: 1 }, pp); flushTriggers(g); run(g);
+    expect(g.players[0].exile).toContain(so); expect(until(g, () => g.players[0].exile.includes(so) && so.exileAfter === undefined && g.turn > 4 && g.active === 0 && g.step === 'main1')).toBe(true); expect(g.players[0].graveyard).not.toContain(so);
+  });
+  it("Mind's Dilation: opponent's first spell → you may cast their top card free", () => {
+    const g = setup(); put(g, 0, pc("Mind's Dilation")); const b = mk(g, 1, BEAR()); g.players[1].library.push(b);
+    const ins = mk(g, 1, card('PM Insight4', 'Instant', '{U}', 'Draw a card.')); g.players[1].hand.push(ins); mana(g, 1); g.priority = 1; expect(castSpell(g, 1, ins.uid)).toBe(true); run(g, { cast: true });
+    expect(g.players[0].battlefield).toContain(b);
+  });
+  it('Extract Power: exiles each top card; you may play them free', () => {
+    const g = setup(); const b = mk(g, 1, BEAR()); g.players[1].library.push(b); cast(g, 0, pc('Extract Power')); expect(g.players[0].exile).toContain(b); expect(costOf2(g, b).generic + (costOf2(g, b).G ?? 0)).toBe(0);
+    expect(castSpell(g, 0, b.uid)).toBe(true); run(g); expect(g.players[0].battlefield).toContain(b);
+  });
+  it('Helmut Zemo: on attack, cast an instant/sorcery from graveyard (MV ≤ power), exile it after, +1/+1 counter', () => {
+    const g = setup(); const z = put(g, 0, pc('Helmut Zemo, Mastermind')); const so = mk(g, 0, card('PM Opt', 'Sorcery', '{U}', 'You gain 1 life.')); g.players[0].graveyard.push(so); mana(g, 0);
+    emit(g, 'attacks', { player: 0 }, z); flushTriggers(g); run(g, { tgt: () => ({ card: so.uid }), cast: true }); expect(g.players[0].exile).toContain(so); expect(ctr(z, '+1/+1')).toBe(1);
+  });
+  it("Klaw: exiles that player's top card, playable with any mana; playing from exile grants indestructible", () => {
+    const g = setup(); const k = put(g, 0, pc('Klaw, Master of Sound')); const b = mk(g, 1, BEAR()); g.players[1].library.push(b); emit(g, 'combatDamagePlayer', { player: 1, amount: 1 }, k); flushTriggers(g); run(g);
+    expect(g.players[0].exile).toContain(b); expect(costOf2(g, b).G ?? 0).toBe(0); g.players[0].pool.push('R', 'R'); expect(castSpell(g, 0, b.uid)).toBe(true); run(g); expect(hasKw(k, 'indestructible')).toBe(true);
+  });
+  it('Lady Loki: first instant/sorcery/villain spell is exiled; damage = MV difference; cast the found card free', () => {
+    const g = setup(); put(g, 0, pc('Lady Loki, Agent of Chaos')); const b = mk(g, 0, BEAR()); g.players[0].library.push(b); const l1 = g.players[1].life;
+    cast(g, 0, SORC(), undefined, { cast: true }); expect(g.players[1].life).toBe(l1 - 1); expect(findCard(g, b.uid)).toBeTruthy();
+  });
+  it("Stilt-Man: Villains connecting steal a noncreature, nonland permanent until end of your next turn; it can't be sacrificed", () => {
+    const g = setup(); const s = put(g, 0, pc('Stilt-Man, Towering Terror')); const r = put(g, 1, ROCK()); emit(g, 'combatDamagePlayer', { player: 1, amount: 2 }, s); flushTriggers(g); run(g, { tgt: () => ({ card: r.uid }) });
+    expect(g.players[0].battlefield).toContain(r); expect(r.noSacT).toBeGreaterThan(g.turn);
+  });
+  it('Lethal Scheme: destroy; each convoking creature connives', () => {
+    const g = setup(); const v = put(g, 1, BEAR()); const a = put(g, 0, BEAR()); const b2 = put(g, 0, BEAR()); g.players[0].library.push(mk(g, 0, VAMP()), mk(g, 0, VAMP()));
+    const c = mk(g, 0, pc('Lethal Scheme')); g.players[0].hand.push(c, mk(g, 0, SORC('PM Disc'))); g.players[0].pool.push('B', 'B'); expect(castSpell(g, 0, c.uid, { card: v.uid } as never)).toBe(true); run(g, { pick: u => u.slice(-1) });
+    expect(findCard(g, v.uid)).toBeFalsy(); expect(a.tapped && b2.tapped).toBe(true); expect(ctr(a, '+1/+1') + ctr(b2, '+1/+1')).toBeGreaterThan(0);
+  });
+  it('Currency Converter: exile discarded cards; tap to bin one for a token', () => {
+    const g = setup(); const cc = put(g, 0, pc('Currency Converter')); const b = mk(g, 0, BEAR()); g.players[0].hand.push(b); discardCard2(g, b); flushTriggers(g); run(g, { may: true }); expect(b.exBy).toBe(cc.uid);
+    activate(g, 0, cc.uid, def(cc).abilities!.length - 1); run(g); expect(g.players[0].graveyard).toContain(b); expect(g.players[0].battlefield.some(x => x.token && def(x).name === 'Rogue')).toBe(true);
+  });
+  it("Progenitor's Icon: next spell of the chosen type has flash", () => {
+    const g = setup(); const ic = put(g, 0, pc("Progenitor's Icon")); ic.chosenType = 'Bear'; activate(g, 0, ic.uid, def(ic).abilities!.length - 1); run(g);
+    const b = mk(g, 0, BEAR()); g.players[0].hand.push(b); mana(g, 0); g.step = 'end' as never; expect(canCast(g, 0, b)).toBe(true);
+  });
+  it('Superior Foes: MV 4+ spell → exile top; playable until another is exiled', () => {
+    const g = setup(); const sf = put(g, 0, pc('Superior Foes of Spider-Man')); const b = mk(g, 0, BEAR()); const v = mk(g, 0, VAMP()); g.players[0].library.push(v, b);
+    const big = card('PM Big2', 'Sorcery', '{3}{U}', 'You gain 1 life.'); cast(g, 0, big, undefined, { may: true }); expect(b.mayPlay).toBeGreaterThan(g.turn); cast(g, 0, big, undefined, { may: true }); expect(b.mayPlay).toBeUndefined(); expect(v.exBy).toBe(sf.uid);
   });
 });
