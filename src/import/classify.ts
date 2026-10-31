@@ -52,6 +52,7 @@ const ETB_TAPPED = /^(?:this \w+|.+) enters(?: the battlefield)? tapped\.$/i;
 function faces(c: ScryCard) { return c.card_faces?.length ? c.card_faces : null; }
 export function images(c: ScryCard) { const f = faces(c); const iu = c.image_uris ?? f?.[0]?.image_uris; return { img: iu?.normal, art: iu?.art_crop }; }
 
+import { applyScripts } from '../engine/scripts';
 export function classify(c: ScryCard): Classified {
   const b = builtinByName(c.name); if (b) return { def: b, support: 'builtin' };
   return compileScry(c);
@@ -85,6 +86,7 @@ export function compileScry(c: ScryCard): Classified {
   else if (f) problems.push(`${c.layout ?? 'multi-face'} card: only the front face is used`);
   if (!exact && front.mana_cost) problems.push(`mana cost ${front.mana_cost} simplified to ${costStr(d.cost)}`);
   const res = compile({ ...front, name: f ? front.name ?? c.name : c.name, oracle_text: front.oracle_text ?? (f ? '' : c.oracle_text) } as ScryLike, d);
+  applyScripts(c.name, d, res.unparsed);
   if (pStar && !d.statics?.some(s => s.k === 'pt' && s.who === 'self' && typeof s.p !== 'number')) { if (!d.toughness) d.toughness = 1; problems.push(`variable power/toughness (${front.power}/${front.toughness}) played as ${d.power}/${d.toughness}`); }
   const basicT: Record<string, string> = { Plains: 'W', Island: 'U', Swamp: 'B', Mountain: 'R', Forest: 'G' };
   const intrinsic = (d.sub ?? []).map(t => basicT[t]).filter(Boolean);

@@ -41,6 +41,7 @@ export interface Target { player?: number; card?: number; stack?: number }
 export interface GameEvent { /** nth spell this turn by kind (cast events) */ nth?: { n: number; nonc: number; isv: number }; /** mana spent to cast the spell */ spent?: number; player?: number; mv?: number; amount?: number; kind?: string; from?: string }
 export interface StackItem {
   id: number; kind: 'spell' | 'ability' | 'trigger'; controller: number; sourceId: string; sourceUid: number; card?: Card; effects: Effect[]; targetSpec?: TargetSpec; target?: Target; label: string; event?: GameEvent; uncounterable?: boolean;
+  /** where a resolved spell goes instead of the graveyard */ awayTo?: 'bottom' | 'exile';
   targets?: (Target | undefined)[]; tslots?: TSlot[]; modes?: number[]; modeDef?: Modes; x?: number; kicked?: boolean; teamwork?: boolean; flashback?: boolean; rebound?: boolean; evCard?: Card; ifc?: Cond; srcLki?: { p: number; t: number }; chapter?: boolean;
 }
 export interface Pending { controller: number; sourceId: string; sourceUid: number; trig: TriggerDef; event?: GameEvent; evCard?: Card; srcLki?: { p: number; t: number } }
@@ -274,6 +275,7 @@ export function matches(g: Game, c: Card, f: Filter | undefined, pid: number, sr
   if (f.tapped && !c.tapped) return false;
   if (f.untapped && c.tapped) return false;
   if (f.other && c.uid === srcUid) return false;
+  if (f.defP) { const s = srcUid !== undefined ? findCard(g, srcUid) : undefined; if (!s || s.attacking === undefined || ctl(c) !== s.attacking) return false; }
   if (f.token && !c.token) return false;
   if (f.nontoken && c.token) return false;
   const onBf = !!findCard(g, c.uid);
@@ -367,6 +369,7 @@ export function layer(g: Game) {
     const d = def(src);
     if (d.static) for (const c of g.players[src.owner].battlefield) if (isType(c, 'Creature') && !(d.static.others && c === src)) { c.sp! += d.static.p; c.st! += d.static.t; }
     for (const s of d.statics ?? []) {
+      if (s.k === 'basePT') { for (const c of all) if (staticApplies(g, s, src, c)) c.eff = { ...def(c), power: s.p as number, toughness: s.t as number }; continue; }
       if (s.k === 'grantMana') { for (const c of all) if (staticApplies(g, s, src, c)) c.eff = { ...def(c), mana: [...(def(c).mana ?? []), ...(s.mana ?? [])] }; continue; }
       if (s.k === 'manaExtra') { for (const c of g.players[ctl(src)].battlefield) if (matches(g, c, s.f, ctl(src)) && def(c).mana?.[0]) (c.manaX ??= []).push(...((s.add ?? []) as ManaSym[])); continue; }
       if (s.k !== 'pt' && s.k !== 'kw' && s.k !== 'cantBlock' && s.k !== 'unblockable' && s.k !== 'mustAttack' && s.k !== 'cantAttack' && s.k !== 'doesntUntap') continue;
@@ -897,6 +900,8 @@ export function condOk(g: Game, pid: number, c: Cond, src?: Card, ev?: GameEvent
     case 'monarch': return g.monarch === pid;
     case 'noMonarch': return g.monarch === undefined || !!g.players[g.monarch]?.lost;
     case 'handHas': return p.hand.some(x => x !== src && matches(g, x, c.f, pid));
+    case 'yourUpkeep': return g.active === pid && g.step === 'upkeep';
+    case 'atkMeGE': return attackers(g).filter(a => a.attacking === pid).length >= (c.n ?? 2);
     case 'otherLandsLE': return p.battlefield.filter(x => x !== src && isType(x, 'Land')).length <= (c.n ?? 0);
     case 'descended': return p.graveyard.some(x => isPermanentCard(def(x)));
     default: return true;
@@ -1151,6 +1156,8 @@ function spellAway(g: Game, it: StackItem, resolved = false) { if (!it.card) ret
   if (resolved && it.rebound && !it.flashback) { const c = it.card; frontFace(c); g.players[c.owner].exile.push(c); c.reboundT = g.turn; (g.delayed ??= []).push({ at: 'upkeep', pid: it.controller, turnAfter: g.turn, controller: it.controller, sourceId: c.id, sourceUid: c.uid, label: `Rebound — you may cast ${nm(c)} from exile without paying its mana cost.`, effects: [{ op: 'rebound' }] }); log(g, `${nm(c)} is exiled (rebound).`); return; }
   if (resolved && !it.flashback && def(it.card).adventure) { const c = it.card; frontFace(c); g.players[c.owner].exile.push(c); c.onAdv = true; log(g, `${nm(c)} goes on an adventure (exiled; its creature may be cast later).`); return; }
   frontFace(it.card);
+  if (resolved && it.awayTo === 'bottom') { g.players[it.card.owner].library.unshift(it.card); log(g, `${nm(it.card)} is put on the bottom of its owner's library.`); return; }
+  if (resolved && it.awayTo === 'exile') { g.players[it.card.owner].exile.push(it.card); log(g, `${nm(it.card)} is exiled.`); return; }
   if (it.flashback) { g.players[it.card.owner].exile.push(it.card); log(g, `${nm(it.card)} is exiled (flashback).`); } else toGraveyardOrCommand(g, it.card); }
 function continueRes(g: Game): boolean {
   const ctx = g.res!;
@@ -1589,7 +1596,21 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
       break; }
     case 'delayRet': for (const c of who()) addDelayed(g, ctx, { at: 'endStep', label: `return ${nm(c)} to the battlefield`, effects: [{ op: 'ret', who: `uid:${c.uid}`, dest: 'battlefield', zone: e.zone ?? 'graveyard' }] }); break;
     case 'addManaOne': { const k = n(); const col = ask<string>(g, ctx, key, { pid: me, kind: 'color', options: COLORS, text: `Choose a color: add ${k} mana of that color.` }); for (let i = 0; i < k; i++) P.pool.push(col); log(g, `${P.name} adds ${k} {${col}}.`); break; }
+    case 'script': scriptOp(g, ctx, e, key); break;
     case 'sacThis': { const s = findCard(g, ctx.item.sourceUid); if (s) { log(g, `${P.name} sacrifices ${nm(s)}.`); sacrifice(g, s); } break; }
+  }
+}
+/** Card-specific resolution steps (src/engine/scripts.ts maps exact Oracle lines to these). Each must be replay-safe: state changes happen once, guarded by ctx.ans keys, before or after any ask(). */
+function scriptOp(g: Game, ctx: ResCtx, e: Effect, key: string): void {
+  const me = ctx.item.controller; const P = g.players[me]; const srcName = CARDS[ctx.item.sourceId]?.name ?? '';
+  const once = (k: string, f: () => void) => { const dk = `once:${key}:${k}`; if (ctx.ans[dk]) return; f(); ctx.ans[dk] = true; };
+  switch (e.kind) {
+    case 'selfAway': ctx.item.awayTo = e.dest as 'bottom' | 'exile'; break;
+    case 'cutDeal': once('d', () => { let k = 0; for (const o of opponents(g, me)) { if (o.library.length) { draw(g, o.id, 1); k++; log(g, `${o.name} draws a card.`); } } if (k) { draw(g, me, k); log(g, `${P.name} draws ${k} card${k > 1 ? 's' : ''}.`); } }); break;
+    case 'herb': { const cands = creatures(P); if (!cands.length) break;
+      const a = ask<number[]>(g, ctx, key, { pid: me, kind: 'pick', cards: cands, min: 0, max: 1, zone: 'battlefield', text: `${srcName}: you may sacrifice a creature. If you do, it returns with three +1/+1 counters and you become the monarch.` });
+      const c = cands.find(x => x.uid === a[0]); if (!c) break;
+      once('s', () => { log(g, `${P.name} sacrifices ${nm(c)}.`); sacrifice(g, c); const l = locate(g, c.uid); if (l && l.zone === 'graveyard') { moveCard(g, c, 'battlefield'); addCounters(g, c, '+1/+1', 3); log(g, `${nm(c)} returns to the battlefield with three +1/+1 counters.`); } becomeMonarch(g, me); }); break; }
   }
 }
 /** Path of Ancestry: mana spent on a creature spell sharing a creature type with your commander → scry 1 (one trigger per such mana). */
