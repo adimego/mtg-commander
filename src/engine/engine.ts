@@ -402,6 +402,7 @@ export function costOf(g: Game, c: Card, o: { kicked?: boolean; flashback?: bool
   if (isCommander(g, c) && p.command.includes(c)) base.generic += 2 * (p.casts[c.id] ?? 0); // commander tax
   if (o.kicked && d.kicker) for (const k of ['generic', ...COLORS, 'C'] as const) (base as unknown as Record<string, number>)[k] = ((base as unknown as Record<string, number>)[k] ?? 0) + ((d.kicker as unknown as Record<string, number>)[k] ?? 0);
   if (base.x) base.generic += (o.x ?? 0) * base.x;
+  if (o.flashback && d.flashback && d.flashbackLife) base.life = d.flashbackLife;
   if (d.selfCostLess) base.generic = Math.max(0, base.generic - d.selfCostLess.n * amtStatic(g, d.selfCostLess.per, c));
   // cost reduction / increase statics
   for (const q of g.players) for (const s of [...q.battlefield, ...emblemsOf(q)]) for (const st of def(s).statics ?? []) {
@@ -442,6 +443,7 @@ export function planPayment(p: Player, cost: Cost, o: PayOpts = {}): Payment | n
   for (const r of req) if (!take(u => u.some(x => r.includes(x)), false, 0)) return null;
   for (let i = 0; i < generic; i++) if (!take(() => true, true, generic - i)) return null;
   if (life && p.life <= life) return null;
+  if (cost.life) { if (p.life < life + cost.life) return null; life += cost.life; }
   const all = [...chosen];
   const used = all.filter(s => s.c && s.rank < 4);
   return { abs: used.map(s => s.i ?? 0), tags: all.flatMap(s => s.units.map(u => (u as Tagged).tag).filter((t): t is string => !!t)), srcs: used.map(s => s.c!), pool: all.filter(s => s.pi !== undefined).map(s => s.pi!), life, left: pool.map(u => (u.length >= 5 ? 'ANY' : u.join('|')) + ((u as Tagged).tag ? '@' + (u as Tagged).tag : '')), conv: all.filter(s => s.rank === 4).map(s => s.c!) };
@@ -887,6 +889,7 @@ export function condOk(g: Game, pid: number, c: Cond, src?: Card, ev?: GameEvent
     default: return true;
   }
 }
+const MELEE: TriggerDef = { on: '_melee', label: 'melee', effects: [{ op: 'melee' }] };
 const PROWESS: TriggerDef = { on: '_prowess', label: 'prowess +1/+1', effects: [{ op: 'pumpSelf', n: 1, m: 1 }] };
 /** Collect triggered abilities for an event. `subj` is the card the event is about (it may already have left the battlefield). */
 export function emit(g: Game, type: string, ev: GameEvent, subj?: Card) {
@@ -895,8 +898,9 @@ export function emit(g: Game, type: string, ev: GameEvent, subj?: Card) {
   for (const src of sources) {
     const trigs = [...(def(src).triggers ?? [])];
     if (hasKw(src, 'prowess') && type === 'cast' && ev.player === src.owner && !isType(subj!, 'Creature') && sources.includes(src) && findCard(g, src.uid)) trigs.push(PROWESS);
+    if (type === 'attacks' && subj === src && hasKw(src, 'melee')) trigs.push(MELEE);
     for (const t of trigs) {
-      if (t.on === '_prowess' || trigMatches(g, src, t, type, ev, subj)) {
+      if (t.on === '_prowess' || t.on === '_melee' || trigMatches(g, src, t, type, ev, subj)) {
         if (!findCard(g, src.uid) && !isEmblem(src) && !(t.on === 'dies' || (t.on === 'x' && (t.ev === 'dies' || t.ev === 'ltb' || t.ev === 'sacrificed') && t.subj === 'self'))) continue;
         if (t.once) src.usedLoyalty = -1000 - g.turn;
         g.pending.push({ controller: ctl(src), sourceId: src.id, sourceUid: src.uid, trig: t, event: { ...ev }, evCard: subj, srcLki: src.lki ?? (isType(src, 'Creature') ? { p: power(g, src), t: toughness(g, src) } : undefined) });
@@ -1272,7 +1276,7 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
     case 'counter': {
       const ti = typeof e.who === 'string' && /^t\d+$/.test(e.who) ? +e.who.slice(1) : 0; const t = ctx.item.targets?.[ti] ?? legacyT; const s = g.stack.find(x => x.id === t?.stack); if (!s) break;
       if (s.uncounterable || (s.kind === 'spell' && s.card && isType(s.card, 'Creature') && g.players[s.controller].uncCreatures === g.turn)) { log(g, `${s.label} can't be countered.`); break; }
-      g.stack = g.stack.filter(x => x !== s); log(g, `${s.label} is countered.`); if (s.card) spellAway(g, s); break;
+      (ctx as unknown as { counteredCtl?: number }).counteredCtl = s.controller; g.stack = g.stack.filter(x => x !== s); log(g, `${s.label} is countered.`); if (s.card) spellAway(g, s); break;
     }
     case 'pump': { const p = n(); const m = amt(g, ctx, e.m ?? 0); for (const c of onBf(g, e.who ? who() : tc ? [tc] : [])) { if (e.until === 'yourNext') { const x = (c.nx ??= { by: me, p: 0, t: 0, kw: [] }); x.p += p; x.t += m; } else { c.pp += p; c.pt += m; } } break; }
     case 'emblem': { const d = e.emb as CardDef | undefined; if (!d) break; CARDS[d.id] ??= d; for (const pid of refPlayers(g, ctx, e.pl ?? 'you')) { { const em = inst(g, d.id, pid); em.ts = nextTs(g); (g.players[pid].emblems ??= []).push(em); } { const nmP = g.players[pid].name; log(g, `${nmP} ${nmP === 'You' ? 'get' : 'gets'} an emblem: ${(d.text ?? d.name).replace(/\.$/, '')}.`); } } layer(g); break; }
@@ -1510,6 +1514,29 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
       if (!cast && e.else) runSub(g, ctx, e.else, `${key}e`);
       break; }
     case 'rebound': { const c = P.exile.find(x => x.uid === ctx.item.sourceUid && x.reboundT !== undefined); if (c) { const cast = castNowStep(g, ctx, `${key}:cast`, me, c, true); if (cast || key + ':cast' in ctx.ans) delete c.reboundT; } break; }
+    case 'melee': { const s0 = findCard(g, ctx.item.sourceUid!); if (!s0) break; const k = new Set(attackers(g).filter(c => g.players[me].battlefield.includes(c) && c.atkPw === undefined).map(c => c.attacking)).size; if (k) exec(g, ctx, { op: 'pumpSelf', n: k, m: k }, `${key}m`); break; }
+    case 'connive': for (const c of who()) { // draw, then discard; a nonland discard puts a +1/+1 counter on it
+      const pid = locate(g, c.uid)?.p.id ?? c.owner; const Pc = g.players[pid]; const dk = `cv:${key}:${c.uid}`;
+      if (!(dk in ctx.ans)) { draw(g, pid, 1); ctx.ans[dk] = 1; }
+      const h = Pc.hand; let dc: Card | undefined;
+      if (h.length === 1) dc = h[0]; else if (h.length) { const a = ask<number[]>(g, ctx, `${dk}:d`, { pid, kind: 'pick', cards: [...h], min: 1, max: 1, zone: 'hand', text: `${nm(c)} connives: discard a card.` }); dc = h.find(x => x.uid === a[0]); }
+      if (dc) { discardCard(g, dc); if (!isType(dc, 'Land') && findCard(g, c.uid)) addCounters(g, c, '+1/+1', 1); }
+      log(g, `${nm(c)} connives.`); emit(g, 'connive', { player: pid }, c);
+    } break;
+    case 'discover': { // discover N / cascade: exile until a nonland card with lesser MV; cast it free or (discover) put it in hand; rest on the bottom at random
+      const ck = `dv:${key}`; const k = amt(g, ctx, e.n);
+      if (!(ck in ctx.ans)) { const seen: Card[] = []; let hit: Card | undefined;
+        while (P.library.length) { const c = P.library.pop()!; if (!isType(c, 'Land') && (e.kind === 'cascade' ? cmc(def(c)) < k : cmc(def(c)) <= k)) { hit = c; P.exile.push(c); break; } seen.push(c); }
+        shuffle(g, seen); P.library.unshift(...seen);
+        log(g, `${P.name} ${e.kind === 'cascade' ? 'cascades' : `discovers ${k}`}: ${seen.length} card(s) to the bottom${hit ? `, hits ${nm(hit)}` : ''}.`); ctx.ans[ck] = hit ? hit.uid : -1; }
+      const hit = P.exile.find(x => x.uid === ctx.ans[ck]);
+      const cast = !!hit && castNowStep(g, ctx, `${key}:cast`, me, hit, true);
+      if (hit && !cast && P.exile.includes(hit)) { P.exile = P.exile.filter(x => x !== hit); if (e.kind === 'cascade') P.library.unshift(hit); else { P.hand.push(hit); log(g, `${P.name} puts ${nm(hit)} into their hand.`); } }
+      break; }
+    case 'arcaneDraws': { const cp = (ctx as unknown as { counteredCtl?: number }).counteredCtl;
+      if (e.kind === 'you') (g.delayed ??= []).push({ at: 'upkeep', label: 'Arcane Denial: you draw a card', effects: [{ op: 'draw', n: 1 }], turnAfter: g.turn, controller: me, sourceId: ctx.item.sourceId, sourceUid: ctx.item.sourceUid });
+      if (e.kind === 'ctl' && cp !== undefined) (g.delayed ??= []).push({ at: 'upkeep', label: 'Arcane Denial: may draw up to two cards', effects: [{ op: 'may', text: 'draw a card', sub: [{ op: 'draw', n: 1 }] }, { op: 'may', text: 'draw a card', sub: [{ op: 'draw', n: 1 }] }], turnAfter: g.turn, controller: cp, sourceId: ctx.item.sourceId, sourceUid: ctx.item.sourceUid });
+      break; }
     case 'mayCastFree': for (const c of who()) { const l = locate(g, c.uid); if (l?.zone === 'exile') { c.mayPlay = g.turn; c.mayFree = g.turn; } } if (who().length) log(g, `${P.name} may cast ${who().map(nm).join(', ')} without paying their mana costs this turn.`); break;
     case 'exileLinkTok': { // Ugin, the Ineffable: exile top face down, create a token; when it leaves, the card goes to hand
       const ck = `c:${key}`; if (!(ck in ctx.ans)) { const c = P.library.pop(); if (c) { c.faceDown = true; P.exile.push(c); } ctx.ans[ck] = c ? c.uid : -1; log(g, `${P.name} exiles the top card of their library face down.`); }

@@ -7,7 +7,7 @@ import type { ActAbility, Amt, CardDef, CEFx, Color, Cond, Cost, Effect, Filter,
 const SUB = new Map<string, string>((SUBTYPES as string[]).map(s => [s.toLowerCase(), s]));
 const TYPES: Record<string, string> = { creature: 'Creature', artifact: 'Artifact', enchantment: 'Enchantment', land: 'Land', planeswalker: 'Planeswalker', instant: 'Instant', sorcery: 'Sorcery', battle: 'Battle', permanent: 'Permanent', legendary: 'Legendary', historic: 'Historic', outlaw: 'Outlaw' };
 const COLOR_OF: Record<string, Color> = { white: 'W', blue: 'U', black: 'B', red: 'R', green: 'G' };
-export const KWS = ['compleated', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted'];
+export const KWS = ['compleated', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'melee', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted'];
 const IRREG: Record<string, string> = { elves: 'elf', dwarves: 'dwarf', wolves: 'wolf', werewolves: 'werewolf', fungi: 'fungus', mice: 'mouse', sorceries: 'sorcery', allies: 'ally', faeries: 'faerie', zombies: 'zombie', zombie: 'zombie', thieves: 'thief', leeches: 'leech', octopi: 'octopus', 'cyclopes': 'cyclops', 'sphinxes': 'sphinx', 'foxes': 'fox', 'boars': 'boar', 'mercenaries': 'mercenary', 'slivers': 'sliver' };
 function typeWord(w: string): string | null {
   const cands = [IRREG[w], w, w.replace(/ies$/, 'y'), w.replace(/es$/, ''), w.replace(/s$/, '')].filter(Boolean) as string[];
@@ -446,6 +446,10 @@ const PATS: Pat[] = [
   [new RegExp(`^(?:${P_RE} )?blights? (\\d+)$`), (m, cx) => { const p = pl(m[1], cx); return p ? [{ op: 'blight', n: +m[2], pl: p }] : null; }],
   [/^transform ~$/, () => [{ op: 'transform', who: 'self' }]],
   [/^exile ~, then return (?:it|~) to the battlefield transformed under your control$/, () => [{ op: 'exileRetT', who: 'self' }]],
+  [/^discover (\d+)$/, m => [{ op: 'discover', n: +m[1] }]],
+  [/^(.+?) connives?$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'connive', who: o.ref }] : null; }],
+  [/^its controller may draw up to two cards at the beginning of the next turn's upkeep$/, () => [{ op: 'arcaneDraws', kind: 'ctl' }]],
+  [/^you draw a card at the beginning of the next turn's upkeep$/, () => [{ op: 'arcaneDraws', kind: 'you' }]],
   [/^(.+?) explores?$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'explore', who: o.ref }] : null; }],
   [/^sacrifice ~$/, () => [{ op: 'sacThis' }]],
   [new RegExp(`^(?:${P_RE} )?sacrifices? (${N}|another) (.+)$`), (m, cx) => { const p = pl(m[1], cx); const n = m[2] === 'another' ? 1 : num(m[2]); const fp = parseFilter(m[3]); if (!p || n === null || !fp) return null; if (m[2] === 'another') fp.f.other = true; return [{ op: 'sac', n, pl: p, f: fp.f, text: m[3] }]; }],
@@ -621,7 +625,10 @@ export function normalize(text: string, name: string): string {
   const short = name.split(',')[0].split(' of ')[0];
   t = t.split(name).join('~');
   if (short.length > 3 && short !== name) t = t.replace(new RegExp(`\\b${short.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), '~');
+  for (const sh of [name.split(',')[0].split(' and ')[0], name.split(',')[0].split(' the ')[0]]) if (sh.length > 3 && sh !== name && sh !== short) t = t.replace(new RegExp(`\\b${sh.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b(?!['’]s? [A-Z])`, 'g'), '~');
   t = t.toLowerCase().replace(/[−–]/g, '-').replace(/\b(this (creature|artifact|enchantment|land|permanent|spell|card|equipment|aura|vehicle|planeswalker|token|spacecraft|planet|class|saga|mount))\b/g, '~');
+  // MSC-style personal pronouns for the card itself
+  t = t.replace(/\b(?:he|she) (gains|gets|deals|has|can't|enters|attacks|blocks|dies|was|is|connives|explores)\b/g, '~ $1').replace(/\b(on|exile|sacrifice|untap|tap|return) (him|her)\b(?! own)/g, '$1 ~').replace(/\b(his|her) (power|toughness)\b/g, "~'s $2");
   t = t.replace(/ of (?:their|his or her|your) choice/g, '').replace(/enters the battlefield/g, 'enters').replace(/enters under your control/g, 'enters under your control').replace(/ +/g, ' ').replace(/ \./g, '.');
   return t;
 }
@@ -677,6 +684,8 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   { const ch = /^§chapter ([\d+]+)$/.exec(h); if (ch) return { defs: ch[1].split('+').map(n => ({ ev: 'chapter', subj: 'self', ifc: { k: 'evAmt', n: +n } })), cx: {} } as never; }
   { const lv = /^~ becomes level (\d+)$/.exec(h); if (lv) return { defs: [{ ev: 'classLevel', subj: 'self', ifc: { k: 'evAmt', n: +lv[1] } }], cx: {} } as never; }
   if (/^~ becomes saddled for the first time each turn$/.test(h)) return { defs: [{ ev: 'saddled', subj: 'self' }], cx: {} };
+  if (/^~ connives$/.test(h)) return { defs: [{ ev: 'connive', subj: 'self' }], cx: { it: 'self' } };
+  if ((m = /^(a|another) creature you control connives$/.exec(h))) return { defs: [{ ev: 'connive', subj: m[1] === 'another' ? 'other' : 'any', f: { types: ['Creature'], ctrl: 'you' } }], cx: { it: 'ev', that: 'ev' } };
   if (/^~ becomes crewed$/.test(h)) return { defs: [{ ev: 'crewed', subj: 'self' }], cx: {} };
   if (/^you create (?:a|one or more) tokens?$/.test(h)) return { defs: [{ ev: 'tokenCreated', subj: 'any', pl: 'you' }], cx: { it: 'ev', that: 'ev' } };
   if ((m = /^(?:one or more|a) \+1\/\+1 counters? (?:is|are) put on (~|a creature you control|another creature you control)$/.exec(h))) return { defs: [{ ev: 'counterPut', kindF: '+1/+1', subj: m[1] === '~' ? 'self' : m[1].startsWith('another') ? 'other' : 'any', f: { types: ['Creature'], ctrl: 'you' } }], cx: { it: m[1] === '~' ? 'self' : 'ev', that: 'ev' } };
@@ -737,6 +746,8 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
     }
     if (/^if you control a commander, you may cast ~ without paying its mana cost\.?$/.test(l) && !d.types.includes('Land')) { d.freeCmdr = true; continue; }
     // keyword line
+    { const fl = /^flashback—(\{[^}]+\}(?:\{[^}]+\})*), pay (\d+) life\.?$/.exec(l); if (fl) { const c = parseCost(fl[1].toUpperCase()); if (c) { d.flashback = c; d.flashbackLife = +fl[2]; continue; } } }
+    if (l === 'cascade') { const mvv = d.cost.generic + (['W', 'U', 'B', 'R', 'G', 'C'] as const).reduce((a, k) => a + (d.cost[k] ?? 0), 0) + (d.cost.hyb?.length ?? 0); triggers.push({ on: 'x', label: 'Cascade', ev: 'castSelf', subj: 'self', effects: [{ op: 'discover', kind: 'cascade', n: mvv }] } as TriggerDef); continue; }
     const kparts = l.split(/[,;] /);
     if (kparts.every(p => isKeyword(p.trim(), d, kws, abilities, sc))) continue;
     // modal
@@ -842,7 +853,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   if (spellFx.length || spellModes) d.spell = { effects: spellFx, tslots: spellSlots.length ? spellSlots : undefined, modes: spellModes };
   if (kws.size) d.keywords = [...kws];
   if (d.aura) { const bad = statics.some(s => s.who === 'attached' && ((s.k === 'pt' && typeof s.t === 'number' && s.t < 0) || s.k === 'cantBlock' || s.k === 'cantAttack')); d.aura.harm = bad; if (!bad && d.aura.f && !d.aura.f.ctrl) d.aura = { ...d.aura }; }
-  if (isSpell && !d.spell && unparsed.length === 0 && text.trim()) unparsed.push('(no effect)');
+  if (isSpell && !d.spell && !triggers.some(t => (t as TriggerDef & { ev?: string }).ev === 'castSelf') && unparsed.length === 0 && text.trim()) unparsed.push('(no effect)');
   d.compiled = true;
   return { unparsed, notes, ok: unparsed.length === 0 };
 }

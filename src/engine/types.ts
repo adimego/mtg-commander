@@ -4,7 +4,7 @@ export type Color = 'W' | 'U' | 'B' | 'R' | 'G';
 export type ManaSym = Color | 'C' | 'ANY' | 'IDENTITY' | 'OPP' | 'LEGEND' | `${string}|${string}`;
 export const COLORS: Color[] = ['W', 'U', 'B', 'R', 'G'];
 /** Mana cost. `x` = number of {X}; `hyb` = hybrid units like 'W|U' or '2|W'; `phy` = Phyrexian colored symbols (pay color or 2 life). */
-export interface Cost { generic: number; W?: number; U?: number; B?: number; R?: number; G?: number; C?: number; x?: number; hyb?: string[]; phy?: Color[] }
+export interface Cost { generic: number; W?: number; U?: number; B?: number; R?: number; G?: number; C?: number; x?: number; hyb?: string[]; phy?: Color[]; life?: number }
 /** Legacy target specs (hand-written cards). */
 export type TargetSpec = 'any' | 'creature' | 'oppCreature' | 'tappedCreature' | 'nonblackCreature' | 'nonartifactCreature' | 'spell' | 'noncreatureSpell' | 'creatureSpell';
 
@@ -58,7 +58,7 @@ export interface CardDef {
   /** Enters the battlefield tapped. */ etbTapped?: boolean;
   /** Set for imported cards whose rules text is not (fully) modelled: explains what the game does with it. */ limited?: string;
   /** Scryfall color identity (imported cards); overrides the computed one. */ identity?: Color[];
-  kicker?: Cost; flashback?: Cost; ward?: number; loyalty?: number; aura?: TSlot; convoke?: boolean; etbCounters?: { kind: string; n: Amt }; token?: boolean;
+  kicker?: Cost; flashback?: Cost; flashbackLife?: number; ward?: number; loyalty?: number; aura?: TSlot; convoke?: boolean; etbCounters?: { kind: string; n: Amt }; token?: boolean;
   /** "Partner" / "Choose a Background" etc.: can be one of two commanders. */ partner?: boolean; canBeCommander?: boolean;
   /** 'As this enters, choose a creature type.' */ chooseType?: boolean; /** Rebound (rule 702.88) */ rebound?: boolean; /** '~ is the chosen type in addition to its other types' */ addChosen?: boolean;
   /** Shockland: may pay this much life to enter untapped. */ shock?: number; /** Enters tapped unless the condition holds. */ etbTappedUnless?: Cond;
