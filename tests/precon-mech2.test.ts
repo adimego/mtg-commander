@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { compileScry } from '../src/import/classify';
 import type { ScryCard } from '../src/import/scryfall';
-import { enter, matches, condOk, becomeMonarch, declareBlockers, canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters } from '../src/engine/engine';
+import { dealDamage, enter, matches, condOk, becomeMonarch, declareBlockers, canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters } from '../src/engine/engine';
 import type { CardDef } from '../src/engine/types';
 import '../src/engine/ai';
 let n = 0;
@@ -148,5 +148,27 @@ describe('precon mechanics 3', () => {
     const g = setup(); const d = card('PM Robot', 'Artifact Creature — Robot', '{4}{W}', 'Affinity for artifacts', { power: '4', toughness: '4' });
     put(g, 0, ROCK()); put(g, 0, ROCK()); put(g, 0, ROCK()); put(g, 0, card('Plains', 'Basic Land — Plains', '', '({T}: Add {W}.)')); put(g, 0, FOREST());
     const c = mk(g, 0, d); g.players[0].hand.push(c); expect(canCast(g, 0, c)).toBe(true);
+  });
+  it('Chromatic Lantern grants any-color mana to lands', () => {
+    const g = setup(); put(g, 0, card('PM Lantern', 'Artifact', '{3}', 'Lands you control have "{T}: Add one mana of any color."\n{T}: Add one mana of any color.'));
+    const land = put(g, 0, card('PM Waste', 'Land', '', '{T}: Add {C}.')); layer(g);
+    expect(def(land).mana!.length).toBe(2);
+  });
+  it('extra combat after this main phase (Seize the Day style)', () => {
+    const g = setup(); const sp = card('PM Seize', 'Sorcery', '{3}{R}', 'Untap target creature. After this main phase, there is an additional combat phase followed by an additional main phase.');
+    expect(JSON.stringify(sp)).toContain('extraCombat');
+  });
+  it('Thor +1, Panther Habit prevention to counters, Herb prevents 1', () => {
+    const g = setup();
+    put(g, 0, card('PM Thor', 'Legendary Creature — God', '{2}{R}{W}', 'If another source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus 1 instead.', { power: '4', toughness: '4' }));
+    const zap = put(g, 0, ROCK()); const b = put(g, 1, BEAR());
+    const l1 = g.players[1].life; dealDamage(g, zap.id, zap, { player: 1 }, 2); expect(g.players[1].life).toBe(l1 - 3);
+    dealDamage(g, zap.id, zap, { card: b }, 1); expect(b.damage).toBe(2);
+    const l0 = g.players[0].life; const own = put(g, 0, ROCK()); dealDamage(g, own.id, own, { player: 0 }, 2); expect(g.players[0].life).toBe(l0 - 2);
+    const hab = put(g, 1, card('PM Habit', 'Artifact — Equipment', '{2}', 'If equipped creature would be dealt damage, prevent that damage and put that many +1/+1 counters on it.'));
+    const b2 = put(g, 1, BEAR()); hab.attachedTo = b2.uid; layer(g);
+    dealDamage(g, zap.id, zap, { card: b2 }, 2); expect(b2.damage).toBe(0); expect(b2.counters?.['+1/+1']).toBe(3);
+    put(g, 1, card('PM Herb', 'Artifact', '{1}', 'If a source an opponent controls would deal damage to you, prevent 1 of that damage.'));
+    const l2 = g.players[1].life; dealDamage(g, zap.id, zap, { player: 1 }, 1); expect(g.players[1].life).toBe(l2 - 1);
   });
 });

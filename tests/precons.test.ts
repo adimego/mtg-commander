@@ -5,7 +5,7 @@ import '../src/engine/ai';
 
 /** Supported-card floors per official Marvel Super Heroes Commander precon. Target is 100/100;
  * these floors only stop regressions. The cards still missing are listed by scripts/precon-check.ts and docs/coverage.md. */
-const FLOOR: Record<string, number> = { 'Avengers Assemble': 72, 'Wakanda Forever': 67, 'The Fantastic Four': 62, 'Doom Prevails': 61 };
+const FLOOR: Record<string, number> = { 'Avengers Assemble': 73, 'Wakanda Forever': 71, 'The Fantastic Four': 66, 'Doom Prevails': 63 };
 
 describe('official precons', () => {
   const ps = loadPrecons();

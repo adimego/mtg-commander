@@ -47,7 +47,7 @@ export interface TriggerDef {
   // compiled triggers (on === 'x')
   ev?: string; subj?: 'self' | 'other' | 'any' | 'attached'; f?: Filter; pl?: 'you' | 'opp' | 'any' | 'notyou'; tslots?: TSlot[]; ifc?: Cond; modes?: Modes; kindF?: string; zoneFrom?: string; once?: boolean; combat?: boolean; /** 'your second card each turn' (draw), 'first noncreature spell each turn' */ nth?: { k: 'draw' | 'n' | 'nonc' | 'isv'; n: number };
 }
-export interface Static { k: 'pt' | 'kw' | 'cantBlock' | 'cantAttack' | 'costLess' | 'costMore' | 'unblockable' | 'mustAttack' | 'noMaxHand' | 'cantBeBlockedBy' | 'doesntUntap' | 'playerHexproof' | 'drawLimit' | 'oppsSorcery' | 'noSearch' | 'winOnEmptyDraw' | 'tokenDouble' | 'pwInstant' | 'manaExtra' | 'cantBeAttacked' | 'atkLimit1' | 'etbExtra'; add?: string[]; who: 'self' | 'attached' | 'others' | 'all'; f?: Filter; p?: number | Amt; t?: number | Amt; kws?: string[]; n?: number; spellF?: Filter; cond?: Cond }
+export interface Static { k: 'pt' | 'kw' | 'cantBlock' | 'cantAttack' | 'costLess' | 'costMore' | 'unblockable' | 'mustAttack' | 'noMaxHand' | 'cantBeBlockedBy' | 'doesntUntap' | 'playerHexproof' | 'drawLimit' | 'oppsSorcery' | 'noSearch' | 'winOnEmptyDraw' | 'tokenDouble' | 'pwInstant' | 'manaExtra' | 'cantBeAttacked' | 'atkLimit1' | 'etbExtra' | 'grantMana' | 'dmgPlus1' | 'preventToAttachedCtr' | 'preventOppToYou'; add?: string[]; mana?: ManaAbility[]; who: 'self' | 'attached' | 'others' | 'all'; f?: Filter; p?: number | Amt; t?: number | Amt; kws?: string[]; n?: number; spellF?: Filter; cond?: Cond }
 export interface CardDef {
   /** 'If you control a commander, you may cast this spell without paying its mana cost.' */
   freeCmdr?: boolean;

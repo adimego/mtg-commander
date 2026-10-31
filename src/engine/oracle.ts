@@ -154,7 +154,7 @@ function amount(s: string, cx: Cx): Amt | null {
     const r: Ref = m[1] === "~'s" ? 'self' : m[1] === 'its' ? cx.it ?? 'self' : m[1] === "the sacrificed creature's" ? 'ev' : m[1] === "target creature's" ? 't0' : cx.that ?? cx.it ?? 'ev';
     return m[2] === 'power' ? { pow: r } : m[2] === 'toughness' ? { tough: r } : { mv: r };
   }
-  if ((m = /^the number of cards in (your|target player's|that player's|their) hand$/.exec(eq))) return { cards: 'hand', pl: playerRef(m[1], cx) ?? 'you' };
+  if ((m = /^the number of cards in (your|target player's|target opponent's|that player's|their) hand$/.exec(eq))) return { cards: 'hand', pl: playerRef(m[1], cx) ?? 'you' };
   if ((m = /^the number of (.+?) ?cards in your graveyard$/.exec(eq))) { const fp = m[1] ? parseFilter(m[1]) : { f: {} }; return fp ? { cards: 'graveyard', pl: 'you', f: fp.f } : null; }
   if ((m = /^the number of (?:\+1\/\+1 )?counters on ~$/.exec(eq))) return { ctr: '+1/+1', who: 'self' };
   if (/^the number of opponents you have$/.test(eq)) return { opps: true };
@@ -449,6 +449,7 @@ const PATS: Pat[] = [
   [new RegExp(`^(?:${P_RE} )?blights? (\\d+)$`), (m, cx) => { const p = pl(m[1], cx); return p ? [{ op: 'blight', n: +m[2], pl: p }] : null; }],
   [/^transform ~$/, () => [{ op: 'transform', who: 'self' }]],
   [/^exile ~, then return (?:it|~) to the battlefield transformed under your control$/, () => [{ op: 'exileRetT', who: 'self' }]],
+  [/^after this main phase, there is an additional combat phase followed by an additional main phase$/, () => [{ op: 'extraCombat' }]],
   [/^monstrosity (\d+)$/, m => [{ op: 'monstrosity', n: +m[1] }]],
   [/^discover (\d+)$/, m => [{ op: 'discover', n: +m[1] }]],
   [/^(.+?) connives?$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'connive', who: o.ref }] : null; }],
@@ -927,6 +928,9 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   const dm = /^during your turn, (.+)$/.exec(s); if (dm) { c = { k: 'yourTurn' }; s = dm[1]; }
   { const um = /^(~ can't attack or block|~ can't attack|~ can't block) unless (.+)$/.exec(s); if (um && !c) { const cc = cond(um[2], newCx()); if (!cc) return false; const nc: Cond = { k: 'not', c: cc } as Cond; const ks: Static['k'][] = um[1].endsWith('attack or block') ? ['cantAttack', 'cantBlock'] : um[1].endsWith('attack') ? ['cantAttack'] : ['cantBlock']; for (const k of ks) statics.push({ k, who: 'self', cond: nc }); return true; } }
   if (/^~ enters tapped$/.test(s) && !c) { d.etbTapped = true; return true; }
+  if (!c && /^if another source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus 1 instead$/.test(s)) { statics.push({ k: 'dmgPlus1', who: 'self' }); return true; }
+  if (!c && /^if equipped creature would be dealt damage, prevent that damage and put that many \+1\/\+1 counters on it$/.test(s)) { statics.push({ k: 'preventToAttachedCtr', who: 'attached' }); return true; }
+  if (!c && (m = /^if a source an opponent controls would deal damage to you, prevent (\d+) of that damage$/.exec(s))) { statics.push({ k: 'preventOppToYou', who: 'self', n: +m[1] }); return true; }
   if ((m = /^as ~ enters, you may pay (\d) life\. if you don't, it enters tapped$/.exec(s))) { d.shock = +m[1]; return true; }
   if ((m = /^as ~ enters, you may reveal an? (\w+) or (\w+) card from your hand\. if you don't, ~ enters tapped$/.exec(s)) && typeWord(m[1]) && typeWord(m[2])) { d.etbTappedUnless = { k: 'handHas', f: { anyType: [typeWord(m[1])!, typeWord(m[2])!] } }; return true; }
   if (/^as ~ enters, choose a creature type$/.test(s) && !c) { d.chooseType = true; return true; }
@@ -983,7 +987,8 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
     if (pm[3]) { const fe = forEach(pm[3], newCx()); if (!fe) return false; p = p ? { mul: p as number, of: fe } : 0; t = t ? { mul: t as number, of: fe } : 0; }
     out.push({ k: 'pt', who, f, p, t, cond: c });
     if (pm[4]) { const k = kwList(pm[4]); if (k) out.push({ k: 'kw', who, f, kws: k, cond: c }); else if (/^can't block$/.test(pm[4])) return false; else return false; }
-  } else if (/^has$|^have$/.test(pred)) { const k = kwList(rest); if (!k) return false; if (who === 'self' && !c) { k.forEach(x => kws.add(x)); return true; } out.push({ k: 'kw', who, f, kws: k, cond: c }); }
+  } else if (/^has$|^have$/.test(pred) && /^"\{t\}: add .+"$/.test(rest)) { const mm = /^"\{t\}: add (.+?)\.?"$/.exec(rest)!; const ma = manaAdd(mm[1], newCx()); if (!ma || ma.n) return false; out.push({ k: 'grantMana', who, f, mana: [{ add: ma.mana }], cond: c }); }
+  else if (/^has$|^have$/.test(pred)) { const k = kwList(rest); if (!k) return false; if (who === 'self' && !c) { k.forEach(x => kws.add(x)); return true; } out.push({ k: 'kw', who, f, kws: k, cond: c }); }
   else if (pred === "can't block") { if (rest) return false; out.push({ k: 'cantBlock', who, f, cond: c }); }
   else if (pred === "can't attack or block") { if (rest) return false; out.push({ k: 'cantBlock', who, f, cond: c }, { k: 'cantAttack', who, f, cond: c }); }
   else if (pred === "can't attack") { if (rest) return false; out.push({ k: 'cantAttack', who, f, cond: c }); }

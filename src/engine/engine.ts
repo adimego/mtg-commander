@@ -56,7 +56,7 @@ export type Decision = { key: string; pid: number; text: string; src?: string } 
 export interface ResCtx { item: StackItem; i: number; ans: Record<string, unknown>; chosen: Card[]; created: Card[]; done?: boolean; mana?: boolean }
 export const STEPS = ['untap', 'upkeep', 'draw', 'main1', 'beginCombat', 'attackers', 'blockers', 'firstStrike', 'damage', 'main2', 'end', 'cleanup'] as const;
 export type Step = typeof STEPS[number];
-export interface Game {
+export interface Game { /** additional combat phases pending after this main phase (Seize the Day) */ extraCombats?: number; combatAfter?: boolean;
   players: Player[]; active: number; step: Step; turn: number; log: string[]; seed: number; nextUid: number; winner: number | null; started: boolean;
   stack: StackItem[]; priority: number | null; passes: number; awaiting: 'attack' | 'block' | null; blockersDone: number[];
   pending: Pending[]; choice: (Pending & { needModes?: boolean }) | null; res: ResCtx | null; decision: Decision | null; died: number; ordered?: boolean; steals?: { uid: number; back: number }[];
@@ -210,13 +210,15 @@ function enterStep(g: Game, s: Step) {
     case 'damage': dealCombat(g, false, combatants(g).some(strikesFirst)); break;
     case 'main2': clearCombat(g); break;
     case 'end': fireDelayed(g, 'endStep'); emit(g, 'endStep', { player: g.active }); if (g.monarch === g.active) monarchTrig(g, g.active, 'the monarch draws a card', [{ op: 'draw', n: 1, pl: 'you' }]); break;
-    case 'cleanup': cleanup(g); return beginTurn(g, nextTurn(g));
+    case 'cleanup': cleanup(g); delete g.extraCombats; delete g.combatAfter; return beginTurn(g, nextTurn(g));
   }
   if (g.winner === null) givePriority(g);
 }
 function nextTurn(g: Game) { const p = g.players[g.active]; if (!p.lost && p.extraTurns) { p.extraTurns--; log(g, `${p.name} takes an extra turn.`); return g.active; } return nextAlive(g, g.active); }
 function advanceStep(g: Game) {
   if (g.players[g.active].lost) { cleanup(g); return beginTurn(g, nextTurn(g)); }
+  if ((g.step === 'main1' || g.step === 'main2') && g.extraCombats) { g.extraCombats--; if (g.step === 'main1') g.combatAfter = true; log(g, 'Additional combat phase.'); return enterStep(g, 'beginCombat'); }
+  if (g.step === 'main2' && g.combatAfter) { delete g.combatAfter; return enterStep(g, 'beginCombat'); }
   enterStep(g, STEPS[STEPS.indexOf(g.step) + 1]);
 }
 /** Player passes priority. When all living players pass in a row: resolve top of stack, or move to the next step. */
@@ -365,6 +367,7 @@ export function layer(g: Game) {
     const d = def(src);
     if (d.static) for (const c of g.players[src.owner].battlefield) if (isType(c, 'Creature') && !(d.static.others && c === src)) { c.sp! += d.static.p; c.st! += d.static.t; }
     for (const s of d.statics ?? []) {
+      if (s.k === 'grantMana') { for (const c of all) if (staticApplies(g, s, src, c)) c.eff = { ...def(c), mana: [...(def(c).mana ?? []), ...(s.mana ?? [])] }; continue; }
       if (s.k === 'manaExtra') { for (const c of g.players[ctl(src)].battlefield) if (matches(g, c, s.f, ctl(src)) && def(c).mana?.[0]) (c.manaX ??= []).push(...((s.add ?? []) as ManaSym[])); continue; }
       if (s.k !== 'pt' && s.k !== 'kw' && s.k !== 'cantBlock' && s.k !== 'unblockable' && s.k !== 'mustAttack' && s.k !== 'cantAttack' && s.k !== 'doesntUntap') continue;
       for (const c of all) {
@@ -1061,6 +1064,16 @@ const COLOR_WORD: Record<string, string> = { W: 'white', U: 'blue', B: 'black', 
 /** Deal damage from a source to a creature/planeswalker or a player (handles protection, deathtouch, lifelink, planeswalker loyalty, commander damage). */
 export function dealDamage(g: Game, srcId: string, srcCard: Card | undefined, to: { card?: Card; player?: number }, n: number, combat = false) {
   if (n <= 0) return 0; const sd = CARDS[srcId]; const srcCtl = srcCard ? ctl(srcCard) : undefined;
+  { // damage replacement / prevention statics (Thor, Panther Habit, Heart-Shaped Herb)
+    const tgtCtl = to.card ? ctl(to.card) : to.player;
+    for (const s0 of liveSources(g)) for (const st of def(s0).statics ?? []) {
+      if (st.k === 'dmgPlus1' && srcCard && srcCard !== s0 && srcCtl === ctl(s0) && tgtCtl !== undefined && tgtCtl !== ctl(s0) && findCard(g, s0.uid)) n += 1;
+    }
+    for (const s0 of liveSources(g)) for (const st of def(s0).statics ?? []) {
+      if (st.k === 'preventOppToYou' && to.player !== undefined && to.player === ctl(s0) && srcCtl !== undefined && srcCtl !== ctl(s0) && findCard(g, s0.uid)) { n = Math.max(0, n - (st.n ?? 1)); if (!n) { log(g, `${nm(s0)} prevents the damage.`); return 0; } }
+      if (st.k === 'preventToAttachedCtr' && to.card && s0.attachedTo === to.card.uid && findCard(g, s0.uid)) { log(g, `${nm(s0)} prevents ${n} damage to ${nm(to.card)} and puts ${n} +1/+1 counter${n > 1 ? 's' : ''} on it.`); addCounters(g, to.card, '+1/+1', n); return 0; }
+    }
+  }
   if (to.card) {
     const c = to.card; if (!findCard(g, c.uid)) return 0;
     if (c.anim?.prevent) { log(g, `Damage to ${nm(c)} is prevented.`); return 0; }
@@ -1530,6 +1543,7 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
     case 'unearth': { const s0 = g.players[me].graveyard.find(x => x.uid === ctx.item.sourceUid); if (!s0) break; moveCard(g, s0, 'battlefield'); s0.unearthed = true; s0.pkw = [...(s0.pkw ?? []), 'haste']; log(g, `${P.name} unearths ${nm(s0)}.`);
       (g.delayed ??= []).push({ at: 'endStep', turnAfter: g.step === 'end' || g.step === 'cleanup' ? g.turn : g.turn - 1, controller: me, sourceId: s0.id, sourceUid: s0.uid, label: `exile ${nm(s0)} (unearth)`, effects: [{ op: 'exileUid', n: s0.uid }] }); break; }
     case 'exileUid': { const l = locate(g, amt(g, ctx, e.n)); if (l?.zone === 'battlefield') exileCard(g, l.c); break; }
+    case 'extraCombat': if (g.active === me && (g.step === 'main1' || g.step === 'main2')) { g.extraCombats = (g.extraCombats ?? 0) + 1; log(g, `${P.name} will get an additional combat phase after this main phase.`); } break;
     case 'monstrosity': { const s0 = findCard(g, ctx.item.sourceUid!); if (!s0 || s0.monstrous) break; addCounters(g, s0, '+1/+1', n()); s0.monstrous = true; log(g, `${nm(s0)} becomes monstrous.`); emit(g, 'monstrous', { player: me }, s0); break; }
     case 'melee': { const s0 = findCard(g, ctx.item.sourceUid!); if (!s0) break; const k = new Set(attackers(g).filter(c => g.players[me].battlefield.includes(c) && c.atkPw === undefined).map(c => c.attacking)).size; if (k) exec(g, ctx, { op: 'pumpSelf', n: k, m: k }, `${key}m`); break; }
     case 'connive': for (const c of who()) { // draw, then discard; a nonland discard puts a +1/+1 counter on it
