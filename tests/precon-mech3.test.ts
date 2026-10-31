@@ -334,3 +334,41 @@ describe('precon scripts: batch 4 (attack restrictions, graveyard triggers, one-
     expect(ctr(cm, '+1/+1')).toBe(2);
   });
 });
+
+describe('precon scripts: batch 5 (batched triggers, flash permission, Spear)', () => {
+  const H = (g: Game) => { for (const p of g.players) p.human = true; };
+  it('Doctor Doom: discarding two lands at once triggers once; nonland discards don\'t', () => {
+    const g = setup(); put(g, 0, pc('Doctor Doom, King')); const l = g.players[1].life; for (let i = 0; i < 2; i++) g.players[0].hand.push(mk(g, 0, FOREST()));
+    cast(g, 0, card('PM Dump', 'Sorcery', '{B}', 'Discard two cards.')); expect(g.players[1].life).toBe(l - 2);
+    g.players[0].hand.push(mk(g, 0, ROCK())); cast(g, 0, card('PM Dump1', 'Sorcery', '{B}', 'Discard a card.')); expect(g.players[1].life).toBe(l - 2);
+  });
+  it('Puppet Master: one Treasure for several goaded creatures hitting an opponent', () => {
+    const g = setup(); put(g, 0, pc('Puppet Master')); const a = put(g, 2, BEAR()); const b = put(g, 2, BEAR()); a.goad = { by: 0, until: 99 } as never; b.goad = { by: 0, until: 99 } as never; H(g);
+    emit(g, 'combatDamagePlayer', { player: 1, amount: 2 }, a); emit(g, 'combatDamagePlayer', { player: 1, amount: 2 }, b); flushTriggers(g); run(g);
+    expect(g.players[0].battlefield.filter(c => def(c).name === 'Treasure').length).toBe(1);
+  });
+  it('Quicksilver: sorcery-speed spells castable at instant speed while it is tapped', () => {
+    const g = setup(); const q = put(g, 0, pc('Quicksilver')); const s = mk(g, 0, card('PM Sorc', 'Sorcery', '{G}', 'You gain 1 life.')); g.players[0].hand.push(s); mana(g, 0);
+    g.stack.push({} as never); expect(canCast(g, 0, s)).toBe(false); q.tapped = true; expect(canCast(g, 0, s)).toBe(true); g.stack.pop();
+  });
+  it('The Spear of Bashenga: equipped creature attacking the monarch destroys a tapped nonland permanent', () => {
+    const g = setup(); const sp = put(g, 0, pc('The Spear of Bashenga')); const a = put(g, 0, BEAR()); sp.attachedTo = a.uid; becomeMonarch(g, 1); const t = put(g, 1, ROCK()); t.tapped = true; toAttack(g); H(g);
+    declareAttackers(g, 0, [{ uid: a.uid, defender: 1 }]); run(g, { tgt: () => ({ card: t.uid }) }); expect(findCard(g, t.uid)).toBeFalsy();
+  });
+});
+
+describe('precon scripts: batch 6 (clones)', () => {
+  it('Spark Double copies a legendary creature as nonlegendary with an extra counter; reverts when it leaves', () => {
+    const g = setup(); const leg = put(g, 0, pc('Shang-Chi')); const sd = mk(g, 0, pc('Spark Double')); g.players[0].hand.push(sd); mana(g, 0);
+    expect(castSpell(g, 0, sd.uid)).toBe(true); run(g, { pick: u => u.filter(x => x === leg.uid) }); const c = findCard(g, sd.uid)!;
+    expect(def(c).name).toBe(def(leg).name); expect(def(c).legendary).toBe(false); expect(ctr(c, '+1/+1')).toBe(1); expect(findCard(g, leg.uid)).toBeTruthy();
+    destroy(g, c); expect(def(c).name).toBe('Spark Double');
+  });
+  it('Chameleon keeps its name; Mirage Mirror copy ends at cleanup', () => {
+    const g = setup(); const b = put(g, 0, BEAR()); const ch = mk(g, 0, pc('Chameleon')); g.players[0].hand.push(ch); mana(g, 0);
+    expect(castSpell(g, 0, ch.uid)).toBe(true); run(g, { pick: u => u.filter(x => x === b.uid) }); expect(def(ch).name).toMatch(/Chameleon/); expect(power(g, ch)).toBe(2);
+    const mm = put(g, 0, pc('Mirage Mirror')); mana(g, 0); for (const p of g.players) p.human = true;
+    expect(activate(g, 0, mm.uid, 0, { card: b.uid })).toBe(true); run(g); expect(isType(mm, 'Creature')).toBe(true);
+    let i = 0; while (g.active === 0 && i++ < 60) { if (g.decision) answerDecision(g, false); else pass(g, g.priority!); } expect(def(mm).name).toBe('Mirage Mirror');
+  });
+});
