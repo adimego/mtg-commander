@@ -1,4 +1,4 @@
-import { backCastable, flipFace, frontFace, canForetell, foretell, teamworkPick, modesMax, sneakRets, crewPick,
+import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretell, teamworkPick, modesMax, sneakRets, crewPick,
   Game, Card, Player, Target, TargetSpec, Effect, def, isType, hasKw, cmc, power, toughness, opponents, canCast, castSpell, playLand, canPlayLand,
   declareAttackers, declareBlockers, canAttack, canBlock, attackers, isCommander, legalTargets, findCard, creatures, canActivate, activate, isMain,
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
@@ -85,6 +85,7 @@ export function decide(g: Game, d: Decision): unknown {
       return { top: keep.map(c => c.uid), away: d.cards.filter(c => !keep.includes(c)).map(c => c.uid) };
     }
     case 'order': return d.items.map((_, i) => i);
+    case 'ctype': return aiType(g, d.pid, d.options, d.mode);
     case 'color': { const cnt: Record<string, number> = {}; for (const c of [...p.hand, ...p.battlefield]) for (const k of def(c).colors) cnt[k] = (cnt[k] ?? 0) + 1; return [...d.options].sort((a, b) => (cnt[b] ?? 0) - (cnt[a] ?? 0))[0]; }
     case 'player': { const opps = d.players.filter(x => x !== d.pid); return (opps.length ? opps : d.players).sort((a, b) => boardPower(g, g.players[b]) - boardPower(g, g.players[a]))[0]; }
   }
@@ -347,7 +348,7 @@ export function aiAttack(g: Game, pid: number) {
 export function aiBlock(g: Game, pid: number) {
   const p = g.players[pid]; const inc = attackers(g).filter(a => a.attacking === pid).sort((a, b) => power(g, b) - power(g, a));
   let incoming = inc.filter(a => a.atkPw === undefined).reduce((s, a) => s + power(g, a), 0); const used = new Set<number>(); const plan: { blocker: number; attacker: number }[] = [];
-  const cmdLethal = (a: Card) => isCommander(g, a) && (p.cmdDamage[a.owner] || 0) + power(g, a) >= 21;
+  const cmdLethal = (a: Card) => isCommander(g, a) && (p.cmdDamage[cmdKey(g, a)] || 0) + power(g, a) >= 21;
   for (const a of inc) {
     const ap = power(g, a), at = toughness(g, a);
     const bl = creatures(p).filter(b => !used.has(b.uid) && canBlock(g, b, a)).sort((x, y) => value(g, x) - value(g, y));

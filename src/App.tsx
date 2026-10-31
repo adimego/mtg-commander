@@ -1,4 +1,5 @@
 import { ImportDialog } from './ImportDialog';
+import { loadPrecons } from './import/precons';
 import { compileScry } from './import/classify';
 import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
@@ -27,6 +28,7 @@ const abCost = (a: AbLike) => [a.loyalty !== undefined ? (a.loyX ? '−X' : `${a
 type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; alt?: 'evoke' | 'web' | 'free' | ''; warp?: boolean; sneak?: boolean; teamwork?: boolean; kicked?: boolean; x?: number; modes?: number[]; ts: (Target | undefined)[] };
 type PendingAct = Flow;
 const SAVED0 = decks.activateAll();
+const PRECONS = loadPrecons();
 type Hover = { id: string; uid?: number } | null;
 type Modal = null | 'settings' | 'help' | 'tips' | 'import' | { pid: number; zone: 'graveyard' | 'exile' };
 
@@ -165,9 +167,9 @@ function PlayerHeader({ ui, pid, big }: { ui: UI; pid: number; big?: boolean }) 
 function CmdDamage({ g, pid }: { g: Game; pid: number }) {
   const p = g.players[pid];
   return <div className="cdmg" title="Commander damage taken from each commander. 21 from one commander = you lose.">
-    <span className="lbl">CMDR DMG</span>{g.players.filter(o => o.id !== pid).map(o => { const v = p.cmdDamage[o.id] || 0; return (
-      <span key={o.id} className={`cd ${v >= 14 ? 'danger' : ''} ${v === 0 ? 'zero' : ''}`} style={{ borderColor: PCOLORS[o.id] }} title={`${v}/21 combat damage from ${CARDS[o.commanderId].name} (${o.name})`}>
-        <i style={{ backgroundImage: `url(${CARDS[o.commanderId].art})` }} /><b>{v}</b>/21</span>); })}</div>;
+    <span className="lbl">CMDR DMG</span>{g.players.filter(o => o.id !== pid).flatMap(o => o.commanderIds.map((cid, i) => { const k = i === 0 ? `${o.id}` : i === 1 ? `${o.id}p` : `${o.id}p${i}`; const v = p.cmdDamage[k] || 0; return (
+      <span key={k} className={`cd ${v >= 14 ? 'danger' : ''} ${v === 0 ? 'zero' : ''}`} style={{ borderColor: PCOLORS[o.id] }} title={`${v}/21 combat damage from ${CARDS[cid].name} (${o.name})`}>
+        <i style={{ backgroundImage: `url(${CARDS[cid].art})` }} /><b>{v}</b>/21</span>); }))}</div>;
 }
 function Emblems({ g, pid }: { g: Game; pid: number }) {
   const es = emblemsOf(g.players[pid]); if (!es.length) return null;
@@ -287,7 +289,7 @@ export default function App() {
   const [, bump] = useReducer((x: number) => x + 1, 0);
   const [deck, setDeck] = useState(() => localStorage.getItem('ca_deck') && DECKS.some(d => d.id === localStorage.getItem('ca_deck')) ? localStorage.getItem('ca_deck')! : DECKS[0].id);
   const [saved, setSaved] = useState<decks.SavedDeck[]>(SAVED0);
-  const [aiDecks, setAiDecks] = useState<'precon' | 'mine'>(() => (localStorage.getItem('ca_ai_decks') as 'precon' | 'mine') || 'precon');
+  const [aiDecks, setAiDecks] = useState<'precon' | 'mine' | 'official'>(() => (localStorage.getItem('ca_ai_decks') as 'precon' | 'mine' | 'official') || 'precon');
   const [speed, setSpeed] = useState(600);
   const [stopAll, setStopAll] = useState(false);
   const [anim, setAnim] = useState(true);
@@ -318,7 +320,8 @@ export default function App() {
     localStorage.setItem('ca_deck', deck);
     const pre = DECKS.slice(0, 4).map(d => d.id).filter(x => x !== deck);
     const mine = saved.map(d => d.id).filter(x => x !== deck).sort(() => Math.random() - 0.5);
-    const others = (aiDecks === 'mine' ? [...mine, ...pre] : pre).slice(0, 3);
+    const off = PRECONS.map(d => d.id).filter(x => x !== deck).sort(() => Math.random() - 0.5);
+    const others = (aiDecks === 'mine' ? [...mine, ...pre] : aiDecks === 'official' ? off : pre).slice(0, 3);
     gref.current = newGame({ decks: [deck, ...others] }); setAtkPlan({}); setBlkPlan({}); setPending(null); setPassUntil(null); bump();
     if (!localStorage.getItem('ca_tips_seen')) setModal('tips');
   }
@@ -559,10 +562,16 @@ export default function App() {
       <button className="fsbtn" onClick={toggleFs} title="Full screen (F)">{fs ? '⤡' : '⛶'} Full screen</button>
       <h1>Commander Arena</h1>
       <p className="sub">Four-player free-for-all Commander: you against three AI opponents. 40 life · 21 commander damage · commander tax · stack &amp; priority</p>
-      <h3 className="dsec">Precon decks</h3>
+      <h3 className="dsec">Starter decks</h3>
       <div className="deckpick">{DECKS.slice(0, 4).map(d => { const c = CARDS[d.commander]; return (
         <button key={d.id} className={`deckopt ${deck === d.id ? 'on' : ''}`} onClick={() => setDeck(d.id)} onDoubleClick={newMatch}>
           <div className="dimg"><CardFace d={c} /></div><b>{d.name}</b><span>{c.name}</span><small>{c.text.split('\n').slice(-1)[0]}</small></button>); })}</div>
+      {[...new Set(PRECONS.map(d => d.setName))].map(sn => <div key={sn}><h3 className="dsec">Official precons <span className="muted">· {sn}</span></h3>
+      <div className="deckpick precons">{PRECONS.filter(d => d.setName === sn).map(d => { const cs = [d.commander, ...(d.extra ?? [])].map(x => CARDS[x]); return (
+        <button key={d.id} data-deck={d.id} className={`deckopt saved ${deck === d.id ? 'on' : ''}`} onClick={() => setDeck(d.id)} onDoubleClick={newMatch}>
+          <div className="dart" style={{ backgroundImage: d.art ? `url(${d.art})` : undefined }}><span className="dtag set">{d.set}</span></div>
+          <b>{d.name}</b><span title={cs.map(c => c.name).join(', ')}>{cs.length > 1 ? `${cs.length} commanders: ${cs.map(c => c.name.split(/[ ,]/)[0]).join(', ')}` : cs[0].name}</span>
+          <small>{d.setName} · {d.supported === d.total ? 'fully supported' : <span className="limtag" title={d.unsupported.join(', ')}>{d.supported}/{d.total} supported</span>}</small></button>); })}</div></div>)}
       <h3 className="dsec">My decks <span className="muted">({saved.length})</span></h3>
       <div className="deckpick mine">
         {saved.map(d => { const c = CARDS[d.commander]; const lim = d.stats.limited; return (
@@ -578,8 +587,8 @@ export default function App() {
           </div>); })}
         <button className="deckopt addnew" onClick={() => setModal('import')}><span className="plus">＋</span><b>Import deck</b><small>Paste a list or load a .txt / .dek file</small></button>
       </div>
-      <div className="setopts"><label>AI opponents use <select value={aiDecks} onChange={e => { setAiDecks(e.target.value as 'precon' | 'mine'); localStorage.setItem('ca_ai_decks', e.target.value); }}>
-        <option value="precon">the precon decks</option><option value="mine" disabled={saved.length < 1}>my imported decks (random), then precons</option></select></label></div>
+      <div className="setopts"><label>AI opponents use <select value={aiDecks} onChange={e => { setAiDecks(e.target.value as 'precon' | 'mine' | 'official'); localStorage.setItem('ca_ai_decks', e.target.value); }}>
+        <option value="precon">the starter decks</option><option value="official">official precons (random)</option><option value="mine" disabled={saved.length < 1}>my imported decks (random), then starter decks</option></select></label></div>
       <button className="big" onClick={newMatch}>Start game ▶</button>
       {modal === 'import' && <ImportDialog close={() => setModal(null)} art={img => img ? <img className="cimg" src={img} alt="" /> : <div className="frame" />} saved={d => { setSaved(decks.saveDeck(d)); setDeck(d.id); setModal(null); }} />}
       <p className="credit">Card images &amp; data courtesy of Scryfall. Magic: The Gathering is © Wizards of the Coast. Unofficial fan project.</p>

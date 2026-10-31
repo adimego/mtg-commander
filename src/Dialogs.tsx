@@ -58,6 +58,8 @@ export function DecisionDialog({ g, d, answer, Face, setHover, castNow }: { g: G
     }
     case 'color':
       return <Box title={src ?? 'Choose a color'} sub={d.text}><div className="cbtns">{d.options.map(c => <button key={c} className={`colbtn pip-${c}`} data-ans={c} onClick={() => answer(c)}>{COLOR_NAME[c] ?? c}</button>)}</div></Box>;
+    case 'ctype':
+      return <Box title={src ?? 'Choose a creature type'} sub={d.text}><div className="cbtns"><select className="ctype" data-ctype defaultValue={d.options[0]} onChange={e => setSel([d.options.indexOf(e.target.value)])}>{d.options.map(o => <option key={o} value={o}>{o}</option>)}</select><button className="big" data-ans="confirm" onClick={() => answer(d.options[sel[0] ?? 0] ?? d.options[0])}>Choose</button></div></Box>;
     case 'player':
       return <Box title={src ?? 'Choose a player'} sub={d.text}><div className="cbtns">{d.players.map(p => <button key={p} className="sec" data-ans={p} onClick={() => answer(p)}>{g.players[p].name}</button>)}</div></Box>;
   }

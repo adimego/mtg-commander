@@ -15,7 +15,7 @@ export interface Filter {
   tapped?: boolean; untapped?: boolean; other?: boolean; token?: boolean; nontoken?: boolean;
   powLE?: number; powGE?: number; mvLE?: number; mvGE?: number; attacking?: boolean; blocking?: boolean; atkOrBlk?: boolean;
   legendary?: boolean; nonlegendary?: boolean; basic?: boolean; nonbasic?: boolean; kw?: string; noKw?: string; name?: string; notName?: string;
-  /** one or more colors */ colored?: boolean; /** has a counter of this kind */ ctr?: string; /** mana value <= / == the ability's X */ mvLEX?: boolean; mvEqX?: boolean;
+  /** one or more colors */ colored?: boolean; /** has a counter of this kind */ ctr?: string; /** mana value <= / == the ability's X */ mvLEX?: boolean; mvEqX?: boolean; /** of / not of the source's chosen creature type */ chosenType?: boolean; notChosenType?: boolean; touGE?: number; touLE?: number; /** a commander ('own': one the evaluating player owns) */ cmdr?: 'any' | 'own';
 }
 /** One target slot. who: perm = permanent on battlefield; any = creature/planeswalker/player; player/opp = players; spell / ability = on the stack; card = card in a graveyard. */
 export interface TSlot { who: 'perm' | 'any' | 'player' | 'opp' | 'spell' | 'ability' | 'card'; f?: Filter; zoneOwner?: 'you' | 'opp' | 'any'; opt?: boolean; harm?: boolean; label?: string; same?: number; /** slots made by one 'target' word (e.g. 'two target creatures') share a group: they need different objects */ grp?: number; /** 'another target …' after an earlier target: must differ from every earlier target */ distinct?: boolean }
@@ -25,17 +25,17 @@ export type Ref = string | { all: Filter; zone?: 'graveyard' };
 /** Player reference: you, opps, all, evp (event player), tctl (controller of target 0), t0 (player target slot 0), ctl:tN, def (defending), owner:tN. */
 export type PRef = string;
 export interface Cond {
-  k: 'ctlCommander' | 'yourTurn' | 'notYourTurn' | 'control' | 'controlNo' | 'lifeGE' | 'lifeLE' | 'kicked' | 'handLE' | 'handGE' | 'gyGE' | 'oppControlsMore' | 'attacking' | 'tapped' | 'untapped' | 'evCtlYou' | 'evCtlOpp' | 'evIs' | 'xGE' | 'lifeGainedThisTurn' | 'cardsInGyGE' | 'noCardsHand' | 'manaSpent' | 'oppLifeLE' | 'gotCounters' | 'creatureDiedThisTurn' | 'descended' | 'oppsGE' | 'not' | 'enteredThisTurn' | 'prepared' | 'ctrGE' | 'maxSpeed' | 'void' | 'saddled' | 'oppLandsGE' | 'incr' | 'spentGE' | 'leftYours' | 'enduring' | 'chosenNonland' | 'teamwork' | 'evAmt' | 'ctrIn' | 'ctrEq' | 'sneakPaid' | 'webSlung' | 'libEmpty' | 'attachedCreature' | 'refIs';
+  k: 'ctlCommander' | 'yourTurn' | 'notYourTurn' | 'control' | 'controlNo' | 'lifeGE' | 'lifeLE' | 'kicked' | 'handLE' | 'handGE' | 'gyGE' | 'oppControlsMore' | 'attacking' | 'tapped' | 'untapped' | 'evCtlYou' | 'evCtlOpp' | 'evIs' | 'xGE' | 'lifeGainedThisTurn' | 'cardsInGyGE' | 'noCardsHand' | 'manaSpent' | 'oppLifeLE' | 'gotCounters' | 'creatureDiedThisTurn' | 'descended' | 'oppsGE' | 'not' | 'enteredThisTurn' | 'prepared' | 'ctrGE' | 'maxSpeed' | 'void' | 'saddled' | 'oppLandsGE' | 'incr' | 'spentGE' | 'leftYours' | 'enduring' | 'chosenNonland' | 'teamwork' | 'evAmt' | 'ctrIn' | 'ctrEq' | 'sneakPaid' | 'webSlung' | 'libEmpty' | 'attachedCreature' | 'refIs' | 'castNoncThisTurn' | 'oppCastThisTurn' | 'monarch' | 'noMonarch' | 'handHas' | 'otherLandsLE';
   f?: Filter; n?: number; max?: number; ref?: Ref; c?: Cond; kind?: string;
 }
-export interface TokenSpec { name: string; p?: number; t?: number; colors: Color[]; types: string[]; sub?: string[]; kws?: string[]; legendary?: boolean; /** compiled quoted abilities (\"{t}: add {g}.\") */ ext?: Pick<CardDef, 'text' | 'mana' | 'abilities' | 'triggers' | 'statics' | 'keywords'>; preset?: 'Lander' | 'Heartwood' | 'Treasure' | 'Food' | 'Clue' | 'Blood' | 'Map' | 'Gold' | 'Powerstone' }
+export interface TokenSpec { name: string; p?: number; t?: number; colors: Color[]; types: string[]; sub?: string[]; kws?: string[]; legendary?: boolean; /** compiled quoted abilities (\"{t}: add {g}.\") */ ext?: Pick<CardDef, 'text' | 'mana' | 'abilities' | 'triggers' | 'statics' | 'keywords'>; preset?: 'Lander' | 'Heartwood' | 'Treasure' | 'Food' | 'Clue' | 'Blood' | 'Map' | 'Gold' | 'Powerstone' | 'Vibranium' }
 export interface Effect {
   op: string; n?: Amt; m?: Amt; toHand?: boolean;
   who?: Ref; pl?: PRef; f?: Filter; kw?: string[]; kind?: string; tok?: TokenSpec; dest?: 'hand' | 'battlefield' | 'top' | 'bottom' | 'graveyard' | 'exile';
   tapped?: boolean; attacking?: boolean; sub?: Effect[]; cond?: Cond; text?: string; mana?: string[]; rest?: 'bottom' | 'graveyard' | 'top' | 'hand' | 'exile'; take?: Amt; eot?: boolean; random?: boolean; upTo?: boolean;
   zone?: 'graveyard' | 'library' | 'hand' | 'battlefield' | 'exile'; reveal?: boolean; sh?: boolean; other?: Ref; until?: 'eot' | 'yourNext'; ctl?: PRef; ret?: 'eot' | 'now' | 'ownerEnd'; ifPaid?: Cost; /** continuous effect fields (op 'becomes') */ ce?: CEFx; /** reflexive trigger (op 'reflex') */ rt?: { effects: Effect[]; tslots?: TSlot[]; label: string }; free?: boolean; /** emblem definition (op 'emblem') */ emb?: CardDef; /** 'if' otherwise-branch ("... instead") */ else?: Effect[];
 }
-export interface ManaAbility { add: ManaSym[]; sac?: boolean; n?: Amt; cost?: Cost; tap?: boolean; /** damage dealt to you when tapped for colored mana (painlands) */ pain?: number }
+export interface ManaAbility { /** spend restriction: artifact | hero | villain | ctypeSpell | ctypeAny | legendary */ only?: string; add: ManaSym[]; sac?: boolean; n?: Amt; cost?: Cost; tap?: boolean; /** damage dealt to you when tapped for colored mana (painlands) */ pain?: number }
 export interface ActAbility { /** waterbend: up to N generic paid by tapping artifacts/creatures */ wb?: number;
   label: string; tap?: boolean; untap?: boolean; mana?: Cost; sac?: boolean; target?: TargetSpec; effects: Effect[];
   tslots?: TSlot[]; sacF?: { f: Filter; n: number; other?: boolean }; discard?: number; discardRandom?: boolean; life?: number; remC?: { kind: string; n: number }; addC?: { kind: string; n: number };
@@ -45,9 +45,9 @@ export interface Modes { min: number; max: number; /** 'choose both instead' whe
 export interface TriggerDef {
   on: string; filter?: string; cond?: string; target?: TargetSpec; label: string; effects: Effect[];
   // compiled triggers (on === 'x')
-  ev?: string; subj?: 'self' | 'other' | 'any' | 'attached'; f?: Filter; pl?: 'you' | 'opp' | 'any' | 'notyou'; tslots?: TSlot[]; ifc?: Cond; modes?: Modes; kindF?: string; zoneFrom?: string; once?: boolean; combat?: boolean;
+  ev?: string; subj?: 'self' | 'other' | 'any' | 'attached'; f?: Filter; pl?: 'you' | 'opp' | 'any' | 'notyou'; tslots?: TSlot[]; ifc?: Cond; modes?: Modes; kindF?: string; zoneFrom?: string; once?: boolean; combat?: boolean; /** 'your second card each turn' (draw), 'first noncreature spell each turn' */ nth?: { k: 'draw' | 'n' | 'nonc' | 'isv'; n: number };
 }
-export interface Static { k: 'pt' | 'kw' | 'cantBlock' | 'cantAttack' | 'costLess' | 'costMore' | 'unblockable' | 'mustAttack' | 'noMaxHand' | 'cantBeBlockedBy' | 'doesntUntap' | 'playerHexproof' | 'drawLimit' | 'oppsSorcery' | 'noSearch' | 'winOnEmptyDraw' | 'tokenDouble' | 'pwInstant' | 'manaExtra' | 'cantBeAttacked' | 'atkLimit1'; add?: string[]; who: 'self' | 'attached' | 'others' | 'all'; f?: Filter; p?: number | Amt; t?: number | Amt; kws?: string[]; n?: number; spellF?: Filter; cond?: Cond }
+export interface Static { k: 'pt' | 'kw' | 'cantBlock' | 'cantAttack' | 'costLess' | 'costMore' | 'unblockable' | 'mustAttack' | 'noMaxHand' | 'cantBeBlockedBy' | 'doesntUntap' | 'playerHexproof' | 'drawLimit' | 'oppsSorcery' | 'noSearch' | 'winOnEmptyDraw' | 'tokenDouble' | 'pwInstant' | 'manaExtra' | 'cantBeAttacked' | 'atkLimit1' | 'etbExtra'; add?: string[]; who: 'self' | 'attached' | 'others' | 'all'; f?: Filter; p?: number | Amt; t?: number | Amt; kws?: string[]; n?: number; spellF?: Filter; cond?: Cond }
 export interface CardDef {
   /** 'If you control a commander, you may cast this spell without paying its mana cost.' */
   freeCmdr?: boolean;
@@ -60,6 +60,7 @@ export interface CardDef {
   /** Scryfall color identity (imported cards); overrides the computed one. */ identity?: Color[];
   kicker?: Cost; flashback?: Cost; ward?: number; loyalty?: number; aura?: TSlot; convoke?: boolean; etbCounters?: { kind: string; n: Amt }; token?: boolean;
   /** "Partner" / "Choose a Background" etc.: can be one of two commanders. */ partner?: boolean; canBeCommander?: boolean;
+  /** 'As this enters, choose a creature type.' */ chooseType?: boolean; /** Rebound (rule 702.88) */ rebound?: boolean; /** '~ is the chosen type in addition to its other types' */ addChosen?: boolean;
   /** Shockland: may pay this much life to enter untapped. */ shock?: number; /** Enters tapped unless the condition holds. */ etbTappedUnless?: Cond;
   /** "costs {1} less to cast for each ..." */ selfCostLess?: { n: number; per: Amt };
   /** Additional casting costs. */ extraCost?: { sacF?: { f: Filter; n: number }; discard?: number; life?: number };
@@ -68,7 +69,7 @@ export interface CardDef {
   /** layer-system result: timestamp of the latest 'loses all abilities' effect */ loseTs?: number;
   /** Names of the rules the compiler understood (for the in-game "Supported" note). */ compiled?: boolean;
 }
-export interface DeckDef { id: string; name: string; commander: string; cards: string[]; partner?: string }
+export interface DeckDef { id: string; name: string; commander: string; cards: string[]; partner?: string; /** further commanders (e.g. a precon with four face commanders) */ extra?: string[] }
 
 /** Fields of a continuous effect, by layer: 4 type/subtype, 5 color, 6 abilities, 7b base P/T. */
 export interface CEFx {
