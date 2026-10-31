@@ -19,7 +19,7 @@ export function resolve(parsed: Parsed, lk: Lookup): Resolved {
 }
 
 const front = (c: ScryCard) => c.card_faces?.[0] ?? c;
-export const canBeCommander = (c: ScryCard) => (/\bLegendary\b/.test(front(c).type_line ?? c.type_line) && /\bCreature\b/.test(front(c).type_line ?? c.type_line)) || /can be your commander/i.test(c.oracle_text ?? front(c).oracle_text ?? '');
+export const canBeCommander = (c: ScryCard) => (/\bLegendary\b/.test(front(c).type_line ?? c.type_line) && /\bCreature\b/.test(front(c).type_line ?? c.type_line)) || /can be your commander/i.test(c.oracle_text ?? front(c).oracle_text ?? '') || (/\bLegendary\b/.test(c.type_line) && /isn't on the battlefield, it's a [^.]*creature in addition to its other types/i.test(c.oracle_text ?? ''));
 const hasPartner = (c: ScryCard) => (c.keywords ?? []).some(k => /^(partner|friends forever|doctor's companion)$/i.test(k)) || /partner with|choose a background/i.test(c.oracle_text ?? '') || /\bBackground\b/.test(c.type_line);
 const anyNumber = (c: ScryCard) => /a deck can have any number of cards named/i.test(c.oracle_text ?? '') || /\bBasic\b/.test(c.type_line);
 

@@ -152,7 +152,7 @@ function PlayerHeader({ ui, pid, big }: { ui: UI; pid: number; big?: boolean }) 
           {pid === HUMAN && p.pool.length > 0 && <span className="pool" data-pool={p.pool.join(',')} title="Floating mana: spent first, empties at the end of each step"><span className="lbl">POOL</span>{p.pool.map((m, i) => <i key={i} className={`pip pip-${m.includes('|') || m === 'ANY' || m === 'IDENTITY' ? 'multi' : m}`}>{m.includes('|') ? m.replace('|', '/') : m === 'ANY' ? '★' : m}</i>)}</span>}
         </div>
       </div>
-      <LifeTotal v={p.life} big={big} />
+      <LifeTotal v={p.life} big={big} />{p.poison ? <span className="poison" data-poison={p.poison} title="poison counters (10 loses)">☠ {p.poison}</span> : null}
       <CommandZone ui={ui} pid={pid} />
     </div>
   );
@@ -327,6 +327,8 @@ export default function App() {
   const myTurn = !!g && g.active === HUMAN && !me!.lost;
   const humanChoice = g?.choice && g.players[g.choice.controller].human ? g.choice : null;
   const humanDecision = g?.decision && g.players[g.decision.pid].human ? g.decision : null;
+  /** a 'you may cast that card now' decision steps aside while the human runs the normal cast flow for that card */
+  const blockDec = humanDecision && !(humanDecision.kind === 'cast' && pending?.kind === 'cast' && pending.uid === humanDecision.uid) ? humanDecision : null;
   // the active flow: a human trigger needing targets/modes takes over from any half-built cast
   const flow: Flow | null = g && humanChoice ? (pending?.kind === 'trigger' && pending.uid === humanChoice.sourceUid ? pending : { kind: 'trigger', uid: humanChoice.sourceUid, ts: [] }) : pending;
   const flowCard = g && flow && flow.kind !== 'trigger' ? [...me!.hand, ...me!.command, ...me!.battlefield, ...me!.graveyard, ...me!.exile].find(c => c.uid === flow.uid) : undefined;
@@ -408,7 +410,7 @@ export default function App() {
     if (a.mana?.x || a.loyX) { setPending(f); return; }
     advance(f);
   }
-  const canTapMana = (cs: Card[]) => !!g && g.priority === HUMAN && !g.decision && !g.choice && !g.res && cs.some(c => c.owner === HUMAN && !c.tapped && !!def(c).mana?.[0] && def(c).mana![0].tap !== false && !def(c).mana![0].cost);
+  const canTapMana = (cs: Card[]) => !!g && (g.priority === HUMAN || g.castNow?.pid === HUMAN) && (!g.decision || g.decision.kind === 'cast') && !g.choice && !g.res && cs.some(c => c.owner === HUMAN && !c.tapped && !!def(c).mana?.[0] && def(c).mana![0].tap !== false && !def(c).mana![0].cost);
   const tapMana = (cs: Card[]) => { if (!canTapMana(cs)) return; const c = cs.find(x => !x.tapped)!; act(g => { tapForMana(g, HUMAN, c.uid); }); };
   function toggleAttacker(c: Card, to = curAtkTarget) {
     const w = atkWalker !== null && findCard(g!, atkWalker)?.owner === to ? atkWalker : undefined;
@@ -648,11 +650,11 @@ export default function App() {
       <Arrows g={g} plan={atkPlan} blk={blkPlan} pw={atkPwPlan} />
       {bdrag?.moved && <DragLine uid={bdrag.uid} x={bdrag.x} y={bdrag.y} color={bdrag.over === null ? '#9ec3ff' : blockReason(g, findCard(g, bdrag.uid)!, findCard(g, bdrag.over)!) ? '#ef5350' : '#42a5f5'} />}
       {toast && <div className="toast">{toast}</div>}
-      {humanDecision && <DecisionDialog key={humanDecision.key + humanDecision.kind} g={g} d={humanDecision} answer={a => act(g => { answerDecision(g, a); })} Face={CardFace} setHover={id => setHover(id ? { id } : null)} />}
-      {!humanDecision && flow && flowStage === 'kicker' && flowCard && <KickerDialog name={flowName} cost={costText(def(flowCard).kicker!)} cancel={() => setPending(null)} pick={k => begin2({ ...flow, kicked: k }, flowCard)} />}
-      {!humanDecision && flow && flowStage === 'x' && <XDialog name={flowName} max={flow.kind === 'ability' && flowCard && flowAb?.loyX ? ctr(flowCard, 'loyalty') : flow.kind === 'ability' && flowCard ? maxX(g, HUMAN, flowCard, { abil: flowAb!.mana, exclude: flowAb!.tap ? flowCard.uid : undefined }) : flowCard ? maxX(g, HUMAN, flowCard, { kicked: flow.kicked }) : 0} cancel={() => setPending(null)} pick={x => advance({ ...flow, x })} />}
-      {!humanDecision && flow && flowStage === 'modes' && flowModes && <ModesDialog key={flow.uid} name={flowName} m={flowModes} avail={flowModes.list.map(md => (md.tslots ?? []).every(sl => sl.opt || [...g.players.map(q => ({ player: q.id })), ...g.players.flatMap(q => [...q.battlefield, ...q.graveyard].map(c => ({ card: c.uid }))), ...g.stack.map(it => ({ stack: it.id }))].some(t => validSlot(g, HUMAN, sl, t, tctx))))} cancel={flow.kind === 'trigger' ? undefined : () => setPending(null)} pick={ms => advance({ ...flow, modes: ms })} />}
-      {!humanDecision && curSlot?.who === 'card' && (() => { const cands = g.players.flatMap(q => [...q.graveyard]).filter(c => validSlot(g, HUMAN, curSlot, { card: c.uid }, tctx)); return (
+      {blockDec && <DecisionDialog key={blockDec.key + blockDec.kind} g={g} d={blockDec} castNow={u => { const c = g.players[HUMAN].exile.find(x => x.uid === u); if (c) startCast(c); }} answer={a => act(g => { answerDecision(g, a); })} Face={CardFace} setHover={id => setHover(id ? { id } : null)} />}
+      {!blockDec && flow && flowStage === 'kicker' && flowCard && <KickerDialog name={flowName} cost={costText(def(flowCard).kicker!)} cancel={() => setPending(null)} pick={k => begin2({ ...flow, kicked: k }, flowCard)} />}
+      {!blockDec && flow && flowStage === 'x' && <XDialog name={flowName} max={flow.kind === 'ability' && flowCard && flowAb?.loyX ? ctr(flowCard, 'loyalty') : flow.kind === 'ability' && flowCard ? maxX(g, HUMAN, flowCard, { abil: flowAb!.mana, exclude: flowAb!.tap ? flowCard.uid : undefined }) : flowCard ? maxX(g, HUMAN, flowCard, { kicked: flow.kicked }) : 0} cancel={() => setPending(null)} pick={x => advance({ ...flow, x })} />}
+      {!blockDec && flow && flowStage === 'modes' && flowModes && <ModesDialog key={flow.uid} name={flowName} m={flowModes} avail={flowModes.list.map(md => (md.tslots ?? []).every(sl => sl.opt || [...g.players.map(q => ({ player: q.id })), ...g.players.flatMap(q => [...q.battlefield, ...q.graveyard].map(c => ({ card: c.uid }))), ...g.stack.map(it => ({ stack: it.id }))].some(t => validSlot(g, HUMAN, sl, t, tctx))))} cancel={flow.kind === 'trigger' ? undefined : () => setPending(null)} pick={ms => advance({ ...flow, modes: ms })} />}
+      {!blockDec && curSlot?.who === 'card' && (() => { const cands = g.players.flatMap(q => [...q.graveyard]).filter(c => validSlot(g, HUMAN, curSlot, { card: c.uid }, tctx)); return (
         <div className="modal choice"><div className="mbox wide" data-dialog="gytarget"><h2>{flowName}: choose {curSlot.label ?? 'a card'}</h2><p className="csub">Target a card in a graveyard.</p>
           <div className="zgrid pickgrid">{cands.map(c => <div key={c.uid} className="zcard pick" data-pick={c.uid} onClick={() => targetClick({ card: c.uid })} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}><CardFace d={def(c)} /><span className="pickn">{g.players[c.owner].name}</span></div>)}</div>
           <div className="cbtns">{curSlot.opt && <button className="sec" onClick={skipSlot}>Skip</button>}{flow!.kind !== 'trigger' && <button className="sec" onClick={() => setPending(null)}>Cancel</button>}</div></div></div>); })()}

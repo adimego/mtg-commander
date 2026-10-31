@@ -41,6 +41,7 @@ const pwTop = pws.filter(r => r.rank !== undefined).sort((a, b) => a.rank! - b.r
 /** Hand-maintained milestones for the planeswalker push (numbers from this script at the time). */
 const PW_HISTORY: [string, string, string, string][] = [
   ['Oct 30 2026, before planeswalker batch 2', '40/296', '10577 (32.9%)', '317/500'],
+  ['Oct 30 2026, before planeswalker batch 3', '77/296', '10918 (34.0%)', '319/500'],
 ];
 const pct = (a: number, b: number) => `${(100 * a / b).toFixed(1)}%`;
 console.log(`Commander-legal cards: ${cards.length}`);

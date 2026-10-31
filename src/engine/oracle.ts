@@ -2,7 +2,7 @@
  *  Every rules line either compiles into an exact engine representation or is reported as unparsed;
  *  callers use that to badge cards honestly ("Supported" vs "Limited"). */
 import SUBTYPES from './subtypes.json';
-import type { ActAbility, Amt, CardDef, Color, Cond, Cost, Effect, Filter, ManaAbility, ManaSym, Modes, PRef, Ref, Static, TokenSpec, TriggerDef, TSlot } from './types';
+import type { ActAbility, Amt, CardDef, CEFx, Color, Cond, Cost, Effect, Filter, ManaAbility, ManaSym, Modes, PRef, Ref, Static, TokenSpec, TriggerDef, TSlot } from './types';
 
 const SUB = new Map<string, string>((SUBTYPES as string[]).map(s => [s.toLowerCase(), s]));
 const TYPES: Record<string, string> = { creature: 'Creature', artifact: 'Artifact', enchantment: 'Enchantment', land: 'Land', planeswalker: 'Planeswalker', instant: 'Instant', sorcery: 'Sorcery', battle: 'Battle', permanent: 'Permanent', legendary: 'Legendary', historic: 'Historic', outlaw: 'Outlaw' };
@@ -202,6 +202,7 @@ function cond(s: string, cx: Cx): Cond | null {
   if ((m = /^an opponent has (\d+) or less life$/.exec(s))) return { k: 'oppLifeLE', n: +m[1] };
   if ((m = /^(?:it|that creature|that card|it was) (?:is|was|'s) (?:a|an) (.+)$|^it's (?:a|an) (.+)$/.exec(s))) { const fp = parseFilter(m[1] ?? m[2]); return fp ? { k: 'evIs', f: fp.f } : null; }
   if (/^(it|that creature) was a creature you control$|^you controlled it$/.test(s)) return { k: 'evCtlYou' };
+  if ((m = /^(?:it|that permanent|that artifact)(?:'s not| isn't) an? ([a-z]+)$/.exec(s))) { const fp = parseFilter(m[1]); return fp ? { k: 'not', c: { k: 'refIs', ref: cx.it ?? 'self', f: fp.f } } : null; }
   return null;
 }
 
@@ -266,7 +267,48 @@ function tokenAbil(body: string, tokName: string): TokenSpec['ext'] | null {
   return { text: pretty(text, tokName).replace(/^./, x => x.toUpperCase()) + '.', mana: d.mana, abilities: d.abilities, triggers: d.triggers, statics: d.statics, keywords: d.keywords };
 }
 const UNTIL_NEXT = (fx: Effect[] | null) => { if (!fx || !fx.length || !fx.every(e => e.op === 'pump' || e.op === 'grant')) return null; for (const e of fx) e.until = 'yourNext'; return fx; };
+/** Parse the description after "becomes": "a 0/0 elemental creature with vigilance and haste that's still a land". */
+function becDesc(s0: string, cx: Cx): { ce: CEFx; n?: Amt; m?: Amt } | null {
+  let s = s0.trim().replace(/^(?:a|an) /, ''); let still = false;
+  s = s.replace(/ (?:that's|that is) still an? (?:land|artifact|planeswalker|enchantment|creature)$| in addition to its other types$/, () => { still = true; return ''; });
+  const ce: CEFx = {}; let n: Amt | undefined, m: Amt | undefined;
+  const wm = /^(.+?) with (.+)$/.exec(s);
+  if (wm) { s = wm[1]; const w = wm[2]; let x: RegExpExecArray | null;
+    if ((x = /^base power and toughness (\d+)\/(\d+)$/.exec(w))) { n = +x[1]; m = +x[2]; }
+    else if ((x = /^power and toughness each equal to (.+)$/.exec(w))) { const a = amount(x[1], cx); if (a === null) return null; n = a; m = a; }
+    else if ((x = /^(?:(.+?),? and )?"([^"]+)"$/.exec(w))) { if (x[1]) { const k = kwList(x[1]); if (!k) return null; ce.addKw = k; } const ext = tokenAbil(x[2], CUR_NAME); if (!ext) return null; ce.grant = ext; }
+    else { const k = kwList(w); if (!k) return null; ce.addKw = k; } }
+  const w = s.split(' '); const types: string[] = []; const sub: string[] = []; const cols: Color[] = []; let colorless = false;
+  let i = 0; const pt = /^(\d+)\/(\d+)$/.exec(w[0] ?? ''); if (pt) { n = +pt[1]; m = +pt[2]; i++; }
+  for (; i < w.length; i++) { const x = w[i];
+    if (COLOR_OF[x]) cols.push(COLOR_OF[x]); else if (x === 'colorless') colorless = true; else if (x === 'and') continue;
+    else if (['artifact', 'creature', 'enchantment', 'land'].includes(x)) types.push(TYPES[x]);
+    else if (SUB.has(x)) sub.push(SUB.get(x)!);
+    else if (/^[a-z]+$/.test(x) && w.slice(i + 1).some(y => ['artifact', 'creature', 'enchantment', 'land'].includes(y))) sub.push(x[0].toUpperCase() + x.slice(1));
+    else return null; }
+  if (!types.length) return null;
+  ce.addTypes = types; if (cols.length) ce.setColors = cols; else if (colorless) ce.setColors = [];
+  if (sub.length) { if (still || !types.includes('Creature')) ce.addSub = sub; else ce.setCSub = sub; }
+  if (types.includes('Creature') && n === undefined && !still) return null; // a creature with no stated P/T we can't model
+  return { ce, n, m };
+}
+const BEC_UNTIL = (a?: string, b?: string): Effect['until'] => { const u = a ?? b ?? ''; return /next turn/.test(u) ? 'yourNext' : /end of turn/.test(u) ? 'eot' : undefined; };
 const PATS: Pat[] = [
+  [/^(?:(until end of turn|until your next turn), )?(.+?) loses all abilities and becomes an? (.+?)( until end of turn| until your next turn)?$/, (mm, cx) => { const o = obj(mm[2], cx, true); const b = becDesc(mm[3], cx); return o && !o.card && b ? [{ op: 'becomes', who: o.ref, ce: { ...b.ce, loseAll: true }, n: b.n, m: b.m, until: BEC_UNTIL(mm[1], mm[4]) }] : null; }],
+  [/^(?:(until end of turn|until your next turn), )?(.+?) loses all abilities(?: and has base power and toughness (\d+)\/(\d+))?( until end of turn| until your next turn)?$/, (mm, cx) => { const o = obj(mm[2], cx, true); return o && !o.card ? [{ op: 'becomes', who: o.ref, ce: { loseAll: true }, n: mm[3] ? +mm[3] : undefined, m: mm[4] ? +mm[4] : undefined, until: BEC_UNTIL(mm[1], mm[5]) }] : null; }],
+  [/^(?:(until end of turn|until your next turn), )?(.+?) (?:has|have) base power and toughness (\d+)\/(\d+)( until end of turn| until your next turn)?$/, (mm, cx) => { const o = obj(mm[2], cx, false); return o && !o.card ? [{ op: 'becomes', who: o.ref, ce: {}, n: +mm[3], m: +mm[4], until: BEC_UNTIL(mm[1], mm[5]) }] : null; }],
+  [/^(.+?) becomes an? (treasure|food|clue|gold|blood) artifact with "([^"]+)" and loses all other card types and abilities$/, (mm, cx) => { const o = obj(mm[1], cx, true); const ext = tokenAbil(mm[3], CUR_NAME); return o && !o.card && ext ? [{ op: 'becomes', who: o.ref, ce: { setTypes: ['Artifact'], addSub: [mm[2][0].toUpperCase() + mm[2].slice(1)], loseAll: true, grant: ext } }] : null; }],
+  [/^(?:(until end of turn|until your next turn), )?(.+?) becomes an? (.+?)( until end of turn| until your next turn)?$/, (mm, cx) => { if (mm[2] === '~' && /still a planeswalker/.test(mm[3])) return null; const o = obj(mm[2], cx, false); const b = becDesc(mm[3], cx); return o && !o.card && b ? [{ op: 'becomes', who: o.ref, ce: b.ce, n: b.n, m: b.m, until: BEC_UNTIL(mm[1], mm[4]) }] : null; }],
+  [/^if (target player|target opponent) has fewer than (\w+) poison counters, they get a number of poison counters equal to the difference$/, (mm, cx) => { const p = playerRef(mm[1], cx, true); const k = num(mm[2]); return p && typeof k === 'number' ? [{ op: 'poisonTo', pl: p, n: k }] : null; }],
+  [new RegExp(`^(${P_RE}) gets? (${N}) poison counters?$`), (mm, cx) => { const p = playerRef(mm[1], cx, true); const k = num(mm[2]); return p && k !== null ? [{ op: 'poison', pl: p, n: k }] : null; }],
+  [/^exchange control of (target .+?) and (target .+)$/, (mm, cx) => { const a = obj(mm[1], cx, false); const b = a && obj(mm[2], cx, true); return a && b && !a.card && !b.card ? [{ op: 'exchange', who: a.ref, other: b.ref }] : null; }],
+  [/^§keepone ([a-z]+)$/, mm => { const fp = parseFilter(mm[1]); return fp ? [{ op: 'keepOneEach', f: fp.f, text: mm[1] }] : null; }],
+  [/^discard up to (\w+) cards, then draw that many cards$/, mm => { const k = num(mm[1]); return typeof k === 'number' ? [{ op: 'discard', n: k, pl: 'you', upTo: true }, { op: 'draw', n: 'chosen', pl: 'you' }] : null; }],
+  [/^return (?:that card|it) to the battlefield(?: under (?:its owner's|your) control)? at the beginning of the next end step$/, (_m, cx) => [{ op: 'delayRet', who: cx.that ?? cx.it ?? 'ev', zone: 'graveyard' }]],
+  [/^§uginx (?:a |an )?(.+?) tokens?$/, mm => { const t = tokenSpec(mm[1]); return t ? [{ op: 'exileLinkTok', tok: t }] : null; }],
+  [/^§exilecast (free)?\|(.+)$/, (mm, cx) => { const e = clause(mm[2], cx); return e ? [{ op: 'exileTopCast', free: !!mm[1], else: e }] : null; }],
+  [/^§searchexilefree (.+)$/, mm => { const fp = parseFilter(mm[1] + ' card'); return fp ? [{ op: 'search', n: 99, f: fp.f, dest: 'exile', text: mm[1] + ' card' }, { op: 'mayCastFree', who: 'chosen' }] : null; }],
+  [/^add (\w+) mana of any one color$/, mm => { const k = num(mm[1]); return typeof k === 'number' ? [{ op: 'addManaOne', n: k }] : null; }],
   [/^(you|target opponent|target player|each opponent) gets? emblem#(\d+)$/, (m, cx) => { const d = emblemDef(EMB[+m[2]]); const p = m[1] === 'you' ? 'you' : playerRef(m[1], cx, m[1] !== 'target player'); return d && p ? [{ op: 'emblem', pl: p, emb: d }] : null; }],
   [/^gain control of (.+?)( until end of turn)?$/, (m, cx) => { const o = obj(m[1], cx, true); return o && !o.card ? [{ op: 'steal', who: o.ref, until: m[2] ? 'eot' : undefined }] : null; }],
   [/^(?:you )?take (an|two|three) extra turns? after this one$/, m => [{ op: 'extraTurn', n: num(m[1]) as number }]],
@@ -403,6 +445,7 @@ function clause(s: string, cx: Cx): Effect[] | null {
   if ((m = /^if (.+?), (.+)$/.exec(s))) { const c = cond(m[1], cx); const sub = c && clause(m[2], cx); if (c && sub) return [{ op: 'if', cond: c, sub }]; }
   if ((m = /^for each ([^,]+), (.+)$/.exec(s)) && !/ for each /.test(m[2])) { const save = cx.slots.length; const r = clause(`${m[2]} for each ${m[1]}`, cx); if (r) return r; cx.slots.length = save; }
   if ((m = /^(.+?) §gainlost$/.exec(s))) { const a = clause(m[1], cx); return a ? [...a, { op: 'gain', n: { lostWay: true }, pl: 'you' }] : null; }
+  if ((m = /^(.+?) §ifdid (.+)$/.exec(s))) { const a = clause(m[1], cx); const b = a && clause(m[2], cx); return a && b ? [{ op: 'ifDid', sub: a, else: b }] : null; }
   if ((m = /^you may pay \{(\d+)\} §ifdo (.+)$/.exec(s))) { const sub = clause(m[2], cx); return sub ? [{ op: 'may', text: `pay {${m[1]}} to ${m[2]}`, ifPaid: { generic: +m[1] }, sub }] : null; }
   if ((m = /^you may (.+?) §ifdo (.+)$/.exec(s))) { const a = clause(m[1], cx); const b = a && clause(m[2], cx); return a && b ? [{ op: 'may', text: m[1], sub: [...a, ...b] }] : null; }
   if ((m = /^(.+), where x is (.+)$/.exec(s))) { const a = amount(m[2], cx); const sub = a !== null && clause(m[1], cx); if (sub) { const fix = (e: Effect) => { for (const k of ['n', 'm'] as const) if (e[k] === 'X') e[k] = a!; e.sub?.forEach(fix); }; sub.forEach(fix); return sub; } }
@@ -428,6 +471,14 @@ function clause(s: string, cx: Cx): Effect[] | null {
 export function effects(text: string, cx: Cx): Effect[] | null {
   let t = text.trim().replace(/\.$/, '').replace(/\bnoncreature, nonland\b/g, 'noncreature nonland').replace(/(search your library for (?:a|an) [a-z ]+?) card (with mana value (?:x|\d+) or less),/, '$1 $2 card,');
   const out: Effect[] = [];
+  { const gm = /^(create .+?), then mill a card\. if an? ([a-z]+) card was milled this way, put a loyalty counter on ~ and repeat this process$/.exec(t);
+    if (gm) { const a = clause(gm[1], cx); const fp = parseFilter(gm[2] + ' card'); return a && fp ? [{ op: 'repeatWhile', sub: [...a, { op: 'mill', n: 1, pl: 'you' }], f: fp.f, rt: { label: '', effects: [{ op: 'addC', kind: 'loyalty', n: 1, who: 'self' }] } }] : null; } }
+  t = t.replace(/exile the top card of your library\. you may cast (?:that card|it)( without paying its mana cost)?\. if you don't, ([^.]+)/, (_, f: string, e: string) => `§exilecast ${f ? 'free' : ''}|${e}`)
+    .replace(/exile the top card of your library face down and look at it\. create ([^.]+?)\. when that token leaves the battlefield, put the exiled card into your hand/, '§uginx $1')
+    .replace(/search your library for any number of ([a-z ]+?) cards, exile them, then shuffle\. until end of turn, you may cast those cards without paying their mana costs/, '§searchexilefree $1')
+    .replace(/for each player, choose an? ([a-z]+) that player controls\. each player sacrifices all \1s they control not chosen this way/, '§keepone $1')
+    .replace(/(sacrifice (?:a|an|another) [a-z ]+)\. if you do, /g, '$1 §ifdid ')
+    .replace(/( until your next turn| until end of turn)?\. (?:it's|it is) still an? (land|artifact)(?=\.|$)/g, " that's still a $2$1");
   // multi-sentence templates
   const look = /^(.*?)look at the top (\w+) cards of your library\. (?:you may )?(?:reveal|put|choose) (a|an|one|two|up to (?:one|two|three)|any number of) (.+?) (?:cards? )?from among (?:them|those cards)(?: and put (?:it|them|that card|those cards) (into your hand|onto the battlefield( tapped)?))?(?: into your hand)?\. put the rest (on the bottom of your library(?: in (?:a|any) random order| in any order)?|into your graveyard)(.*)$/.exec(t)
     ?? /^(.*?)look at the top (\w+) cards of your library\. put (one|two) of them into your hand and the (?:rest|other) (on the bottom of your library(?: in (?:a|any) random order| in any order)?|into your graveyard)(.*)$/.exec(t);
@@ -443,7 +494,7 @@ export function effects(text: string, cx: Cx): Effect[] | null {
   }
   const imp = /^(.*?)exile the top (card|\w+ cards) of your library\. (?:until (?:the )?end of (?:your next )?turn, )?you may play (?:it|that card|them|those cards)(?: this turn| until the end of your next turn| until end of turn)?(.*)$/.exec(t);
   if (imp) { const pre = imp[1] ? effects(imp[1], cx) : []; const k = imp[2] === 'card' ? 1 : num(imp[2].split(' ')[0]); const post = imp[3].replace(/^\.\s*/, ''); const tail = post ? effects(post, cx) : []; if (!pre || !tail || k === null) return null; return [...pre, { op: 'exileTop', n: k, until: /next turn/.test(imp[0]) ? 'yourNext' : 'eot' }, ...tail]; }
-  t = t.replace(/(you|target opponent|target player|each opponent) gets? an emblem with "([^"]+)"/g, (_, w: string, b: string) => { EMB.push(b.replace(/\.$/, '')); return `${w} gets emblem#${EMB.length - 1}`; })
+  t = t.replace(/(you|target opponent|target player|each opponent) gets? an emblem with "([^"]+)"/g, (_, w: string, b: string) => { EMB.push(b.replace(/\.$/, '')); return `${w} gets emblem#${EMB.length - 1}${/\.$/.test(b) ? '.' : ''}`; })
     .replace(/that's still a planeswalker\. prevent all damage that would be dealt to (?:him|her|it|them) this turn/, "that's still a planeswalker §prevent");
   t = t.replace(/(that player|they) may pay \{(\d+)\}\. if (?:the player|they|that player) (?:doesn't|don't|does not|do not), ([^.]+)/g, '$3 unless $1 pays {$2}')
     .replace(/(you may [^.]+)\. if you do, /g, '$1 §ifdo ')
@@ -454,12 +505,18 @@ export function effects(text: string, cx: Cx): Effect[] | null {
     .replace(/reveal the top (\w+) cards of your library\. put all ([a-z ]+?) cards (?:revealed this way|from among them) (into your hand|onto the battlefield(?: tapped)?) and the rest (on the bottom of your library(?: in any order| in a random order)?|into your graveyard|into your hand)/, '§revtop $1|$2|$3|$4')
     .replace(/reveal cards from the top of your library until you reveal an? ([a-z ]+?) card\. put (?:that|the revealed) card (into your hand|onto the battlefield) and the rest on the bottom of your library in a random order/, '§revuntil $1|$2');
   // sentences
-  const sents = t.split(/\.\s+/);
+  const sents = t.split(/\.\s+/); let lastStart = 0;
   for (let i = 0; i < sents.length; i++) {
     const s = sents[i];
+    const rx = /^when you do, (.+)$/s.exec(s);
+    if (rx && out.length) { // reflexive trigger: everything after "when you do" is its own ability with its own targets
+      const rcx = newCx({ it: 'ev', that: 'ev', thatPl: 'ctl:ev' }); const body = [rx[1], ...sents.slice(i + 1)].join('. ');
+      const rfx = effects(body, rcx); if (!rfx) return null; const prev = out.splice(lastStart);
+      out.push({ op: 'reflex', sub: prev, rt: { label: 'when you do, ' + body, effects: rfx, tslots: rcx.slots.length ? rcx.slots : undefined } }); break; }
+    lastStart = out.length;
     // flicker: "exile X. return it/that card to the battlefield under its owner's control [at the beginning of the next end step]"
-    const ret = /^return (?:it|that card|that creature|them|those cards|the exiled card|the exiled cards) to the battlefield under (?:its owner's|their owners'|your) control( at the beginning of the next end step)?$/.exec(s.replace(/\.$/, ''));
-    if (ret && out.length && out[out.length - 1].op === 'exile') { const ex = out.pop()!; out.push({ op: 'flicker', who: ex.who, ret: ret[1] ? 'eot' : 'now' }); continue; }
+    const ret = /^return (?:it|that card|that creature|them|those cards|the exiled card|the exiled cards) to the battlefield under (?:its owner's|their owners'|your) control( at the beginning of the next end step| at the beginning of (?:that player's|its owner's|their owner's) next end step)?$/.exec(s.replace(/\.$/, ''));
+    if (ret && out.length && out[out.length - 1].op === 'exile') { const ex = out.pop()!; out.push({ op: 'flicker', who: ex.who, ret: !ret[1] ? 'now' : /next end step$/.test(ret[1]) && !/the next/.test(ret[1]) ? 'ownerEnd' : 'eot' }); continue; }
     if (/^(?:it|they) can't be regenerated$/.test(s)) continue;
     const ins = /^if (.+?), (.+) instead$/.exec(s.replace(/\.$/, ''));
     if (ins && out.length) { const c = cond(ins[1], cx); const sub = c && clause(ins[2], cx); if (!c || !sub) return null; const prev = out.pop()!; out.push({ op: 'if', cond: c, sub, else: [prev] }); continue; }
@@ -536,7 +593,10 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   }
   if ((m = /^(a|an|one or more) (.+?) attacks? you(?: or a planeswalker you control)?$/.exec(h))) { const fp = parseFilter(m[2]); return fp ? { defs: [{ ev: 'attacks', subj: 'any', f: fp.f, pl: 'you' }], cx: { it: 'ev', that: 'ev', thatPl: 'ctl:ev' } } : null; }
   if ((m = /^(you|an opponent|a player|target opponent) casts? (?:a|an|your first) ?(.*?) ?spell(?: this turn)?$/.exec(h))) { if (/first/.test(h)) return null; const fp = m[2] ? parseFilter(m[2] + ' spell') : { f: {} }; if (!fp) return null; return { defs: [{ ev: 'cast', subj: 'any', f: fp.f, pl: m[1] === 'you' ? 'you' : m[1] === 'a player' ? 'any' : 'notyou' }], cx: { it: 'ev', that: 'ev', thatPl: 'evp' } }; }
+  if (/^you cast ~$/.test(h)) return { defs: [{ ev: 'castSelf', subj: 'self' }], cx: { it: 'self' } };
+  if ((m = /^an? ([a-z ]+?) (?:is|are) put into your graveyard from the battlefield$/.exec(h))) { const fp = parseFilter(m[1]); return fp && !fp.card ? { defs: [{ ev: 'dies', subj: 'any', f: { ...fp.f, ctrl: 'you' } }], cx: { it: 'ev', that: 'ev' } } : null; }
   if (/^you cast your commander$/.test(h)) return { defs: [{ ev: 'cast', subj: 'any', pl: 'you', filter: 'commander' }], cx: { it: 'ev' } };
+  if (/^the beginning of combat on your turn$/.test(h)) return { defs: [{ ev: 'beginCombat', pl: 'you' }], cx: { it: 'self', thatPl: 'evp' } };
   if ((m = /^the beginning of (your|each|each opponent's|each player's|the) (upkeep|end step|draw step|combat on your turn|combat)$/.exec(h))) {
     const ev = { upkeep: 'upkeep', 'end step': 'endStep', 'draw step': 'drawStep', 'combat on your turn': 'beginCombat', combat: 'beginCombat' }[m[2]]!;
     const p = m[1] === 'your' || m[2] === 'combat on your turn' ? 'you' : m[1] === "each opponent's" ? 'notyou' : 'any';
@@ -589,6 +649,13 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       const cx = newCx(); const fx = effects(lm[2], cx); if (!fx) { fail(raw); continue; }
       abilities.push({ label: `${lm[1].startsWith('+') || lm[1] === '0' ? lm[1] : lm[1]}: ${shortLabel(lm[2])}`, loyalty: lm[1] === 'x' ? 0 : lm[1] === '-x' ? -0 : +lm[1], loyX: lm[1] === '-x' || undefined, effects: fx, tslots: cx.slots.length ? cx.slots : undefined, sorcery: true });
       continue;
+    }
+    { let x: RegExpExecArray | null;
+      if ((x = /^whenever you tap an? ([a-z ]+?) for mana, add an additional \{([wubrgc])\}$/.exec(l))) { const fp = parseFilter(x[1]); if (fp) { statics.push({ k: 'manaExtra', who: 'all', f: { ...fp.f, ctrl: 'you' }, add: [x[2].toUpperCase()] }); continue; } }
+      if ((x = /^as long as ~ isn't on the battlefield, it's an? (\d+)\/(\d+) ([a-z]+) creature in addition to its other types$/.exec(l))) { const sb = SUB.get(x[3]) ?? x[3][0].toUpperCase() + x[3].slice(1); d.offBf = { addTypes: ['Creature'], addSub: [sb], p: +x[1], t: +x[2] }; continue; }
+      if (/^as long as ~ is attached to a creature, ~ can't be attacked and has "whenever equipped creature deals combat damage during your turn, put that many loyalty counters on ~\.?"$/.test(l)) {
+        statics.push({ k: 'cantBeAttacked', who: 'self', cond: { k: 'attachedCreature' } });
+        triggers.push({ on: 'x', label: 'Whenever equipped creature deals combat damage during your turn, put that many loyalty counters on ~.', ev: 'combatDamage', subj: 'attached', ifc: { k: 'yourTurn' }, effects: [{ op: 'addC', kind: 'loyalty', n: 'ev', who: 'self' }] } as TriggerDef); continue; }
     }
     // triggered
     const tm = /^(when|whenever|at) (.+?), (.+)$/s.exec(l);
@@ -727,6 +794,7 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   if (/^(this spell|~) can't be countered$/.test(s)) { d.uncounterable = true; return true; }
   const PST: [RegExp, Static['k'], Static['who']][] = [
     [/^each opponent can't draw more than one card each turn$/, 'drawLimit', 'self'],
+    [/^no more than one creature can attack ~ each combat$/, 'atkLimit1', 'self'],
     [/^each opponent can cast spells only any time they could cast a sorcery$/, 'oppsSorcery', 'self'],
     [/^spells and abilities your opponents control can't cause their controller to search their library$/, 'noSearch', 'self'],
     [/^if you would draw a card while your library has no cards in it, you win the game instead$/, 'winOnEmptyDraw', 'self'],

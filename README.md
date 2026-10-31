@@ -100,7 +100,7 @@ Cards whose text doesn't fully compile keep a **Limited** badge and play only th
 
 ## Known gaps
 
-- Planeswalkers: 77/296 walkers compile fully (see docs/coverage.md for the top-20 list and what's missing). Still missing: reflexive "when you do" triggers, cast-from-exile-now (Chandra, Torch of Defiance), "becomes a <type>" with lost abilities (Oko, Vraska), phasing, delayed end-step triggers, die rolls. Emblems aren't restored from a saved game. Battles aren't implemented.
+- Planeswalkers: 90/296 walkers compile fully, including all 20 of the most popular (see docs/coverage.md). Supported now: reflexive "when you do" triggers, "becomes a <type>" effects with ability loss (layer system with timestamps), cast-from-exile-now (Chandra, Ugin), delayed "next end step" returns, poison counters. Still missing: phasing, die rolls, copy-next-spell (Ral), face-down permanents, granting quoted mana abilities to lands (Wrenn and Realmbreaker), retrace emblem (Wrenn and Six). Emblems aren't restored from a saved game. Battles aren't implemented.
 - Replacement effects are missing (Doubling Season, Hardened Scales), as are emblems, sagas, vehicles, delayed "next upkeep" triggers and cumulative upkeep.
 - Most planeswalker ultimates and choose-a-creature-type cards are not supported.
 - Library arranging (Ponder, Sensei's Top) is not supported.

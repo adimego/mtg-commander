@@ -19,11 +19,16 @@ function CardPick({ cards, sel, toggle, Face, setHover, badge }: { cards: Card[]
 }
 
 /** Prompts raised while a spell or ability resolves: may, pick, scry/surveil, trigger order, color, player. */
-export function DecisionDialog({ g, d, answer, Face, setHover }: { g: Game; d: Decision; answer: (a: unknown) => void; Face: Face; setHover: (id: string | null) => void }) {
+export function DecisionDialog({ g, d, answer, Face, setHover, castNow }: { g: Game; d: Decision; answer: (a: unknown) => void; Face: Face; setHover: (id: string | null) => void; castNow?: (uid: number) => void }) {
   const [sel, setSel] = useState<number[]>([]);
   const toggle = (u: number, max = 99) => setSel(s => (s.includes(u) ? s.filter(x => x !== u) : s.length >= max ? [...s.slice(1), u] : [...s, u]));
   const src = d.src ? CARDS[d.src]?.name : undefined;
   switch (d.kind) {
+    case 'cast': {
+      const c = g.players[d.pid].exile.find(x => x.uid === d.uid);
+      return <Box title={src ?? 'Cast'} sub={d.text}>{c && <CardPick cards={[c]} sel={[]} toggle={() => {}} Face={Face} setHover={setHover} />}<div className="cbtns">
+        <button className="big" data-ans="cast" disabled={!c || !castNow} onClick={() => castNow?.(d.uid)}>Cast it{d.free ? ' (free)' : ''}</button><button className="sec" data-ans="no" onClick={() => answer(false)}>Don't cast</button></div></Box>;
+    }
     case 'may':
       return <Box title={src ?? 'Choose'} sub={d.text}><div className="cbtns">
         <button className="big" data-ans="yes" onClick={() => answer(true)}>Yes</button><button className="sec" data-ans="no" onClick={() => answer(false)}>No</button></div></Box>;

@@ -1,20 +1,20 @@
 # Ability coverage
 
-Generated 2026-10-30 by `npx vite-node scripts/coverage.ts --write` from Scryfall's Oracle Cards bulk data (Commander-legal cards only).
+Generated 2026-10-31 by `npx vite-node scripts/coverage.ts --write` from Scryfall's Oracle Cards bulk data (Commander-legal cards only).
 
 A card counts as **fully supported** only if *every* line of its rules text compiled into the engine's ability system, its mana cost parsed exactly, and it is a normal single-faced card (multi-face cards, sagas and vehicles are always `Limited`). Everything else is badged **Limited** in game; the lines that did compile still work.
 
 | Set | Fully supported |
 |---|---|
-| All Commander-legal cards (32116) | **10918 (34.0%)** |
+| All Commander-legal cards (32116) | **11166 (34.8%)** |
 | Top 500 by EDHREC rank | **319/500 (63.8%)** |
-| Creature (16391) | 5888 (35.9%) |
-| Instant (3673) | 1355 (36.9%) |
-| Enchantment (3603) | 794 (22.0%) |
-| Artifact (3567) | 1135 (31.8%) |
-| Sorcery (3393) | 1060 (31.2%) |
-| Land (1109) | 609 (54.9%) |
-| Planeswalker (296) | 77 (26.0%) |
+| Creature (16391) | 5995 (36.6%) |
+| Instant (3673) | 1377 (37.5%) |
+| Enchantment (3603) | 812 (22.5%) |
+| Artifact (3567) | 1190 (33.4%) |
+| Sorcery (3393) | 1066 (31.4%) |
+| Land (1109) | 636 (57.3%) |
+| Planeswalker (296) | 90 (30.4%) |
 | Other (48) | 0 (0.0%) |
 | Battle (36) | 0 (0.0%) |
 
@@ -23,7 +23,8 @@ A card counts as **fully supported** only if *every* line of its rules text comp
 | When | Planeswalkers fully supported | All cards | Top 500 |
 |---|---|---|---|
 | Oct 30 2026, before planeswalker batch 2 | 40/296 | 10577 (32.9%) | 317/500 |
-| Now (2026-10-30) | **77/296** | 10918 (34.0%) | 319/500 |
+| Oct 30 2026, before planeswalker batch 3 | 77/296 | 10918 (34.0%) | 319/500 |
+| Now (2026-10-31) | **90/296** | 11166 (34.8%) | 319/500 |
 
 The 20 most popular planeswalkers (EDHREC rank):
 
@@ -34,21 +35,21 @@ The 20 most popular planeswalkers (EDHREC rank):
 | 772 | Elspeth, Sun's Champion | Full |  |
 | 986 | Narset, Parter of Veils | Full |  |
 | 1081 | Jace, Wielder of Mysteries | Full |  |
-| 1098 | Ugin, the Ineffable | Limited | +1: exile the top card of your library face down and look at it. create a 2/2 colorless spirit creature token. when that token leaves the battlefield, put the e |
+| 1098 | Ugin, the Ineffable | Full |  |
 | 1130 | Teferi, Time Raveler | Full |  |
-| 1147 | Tezzeret, Cruel Captain | Limited | -7: you get an emblem with "at the beginning of combat on your turn, put three +1/+1 counters on target artifact you control. if it's not a creature, it becomes |
-| 1251 | Vraska, Betrayal's Sting | Limited | -2: target creature becomes a treasure artifact with "{t}, sacrifice ~: add one mana of any color" and loses all other card types and abilities. / -9: if target |
-| 1434 | Chandra, Torch of Defiance | Limited | +1: exile the top card of your library. you may cast that card. if you don't, ~ deals 2 damage to each opponent. |
+| 1147 | Tezzeret, Cruel Captain | Full |  |
+| 1251 | Vraska, Betrayal's Sting | Full |  |
+| 1434 | Chandra, Torch of Defiance | Full |  |
 | 1575 | Ugin, the Spirit Dragon | Full |  |
-| 1667 | Ugin, Eye of the Storms | Limited | when you cast ~, exile up to one target permanent that's one or more colors. / -11: search your library for any number of colorless nonland cards, exile them, t |
-| 1682 | Nissa, Who Shakes the World | Limited | whenever you tap a forest for mana, add an additional {g}. / +1: put three +1/+1 counters on up to one target noncreature land you control. untap it. it becomes |
+| 1667 | Ugin, Eye of the Storms | Full |  |
+| 1682 | Nissa, Who Shakes the World | Full |  |
 | 1779 | Tezzeret the Seeker | Full |  |
-| 1803 | The Eternal Wanderer | Limited | no more than one creature can attack ~ each combat. / +1: exile up to one target artifact or creature. return that card to the battlefield under its owner's con |
-| 2047 | Daretti, Scrap Savant | Limited | +2: discard up to two cards, then draw that many cards. / -2: sacrifice an artifact. if you do, return target artifact card from your graveyard to the battlefie |
-| 2052 | Grist, the Hunger Tide | Limited | as long as ~ isn't on the battlefield, it's a 1/1 insect creature in addition to its other types. / +1: create a 1/1 black and green insect creature token, then |
+| 1803 | The Eternal Wanderer | Full |  |
+| 2047 | Daretti, Scrap Savant | Full |  |
+| 2052 | Grist, the Hunger Tide | Full |  |
 | 2082 | Liliana, Death's Majesty | Full |  |
 | 2086 | Garruk, Primal Hunter | Full |  |
-| 2087 | Oko, Thief of Crowns | Limited | +1: target artifact or creature loses all abilities and becomes a green elk creature with base power and toughness 3/3. / -5: exchange control of target artifac |
+| 2087 | Oko, Thief of Crowns | Full |  |
 
 ## Most common unsupported rules lines
 

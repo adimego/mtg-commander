@@ -95,7 +95,7 @@ export function chooseModes(g: Game, pid: number, m: Modes, srcUid?: number): nu
     .filter(o => o.s > -99).sort((a, b) => b.s - a.s);
   return ok.slice(0, Math.max(m.min, Math.min(m.max, ok.filter(o => o.s > 0).length))).map(o => o.i).sort((a, b) => a - b);
 }
-setAI({ targets: (g, pid, slots, effects, mandatory, srcUid) => chooseTargets(g, pid, slots, effects, mandatory, srcUid), decide, modes: chooseModes });
+setAI({ targets: (g, pid, slots, effects, mandatory, srcUid) => chooseTargets(g, pid, slots, effects, mandatory, srcUid), decide, modes: chooseModes, castNow: (g, pid, c) => tryCast(g, pid, c) });
 
 /** Rough usefulness of a list of effects for the controller. */
 function scoreFx(g: Game, pid: number, fx: Effect[], x = 0): number {

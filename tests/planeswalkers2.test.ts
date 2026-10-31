@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { compileScry } from '../src/import/classify';
 import type { ScryCard } from '../src/import/scryfall';
 import { canBeCommander as importCanBeCommander } from '../src/import/deck';
-import { draw, canCast, newGame, startGame, Game, Card, CARDS, registerCards, activate, canActivate, pass, alive, answerDecision, declareAttackers, declareBlockers, ctr, findCard, power, castSpell, validateDeck, canBeCommander, emblemsOf, layer, toughness, checkState } from '../src/engine/engine';
+import { def, draw, canCast, newGame, startGame, Game, Card, CARDS, registerCards, activate, canActivate, pass, alive, answerDecision, declareAttackers, declareBlockers, ctr, findCard, power, castSpell, validateDeck, canBeCommander, emblemsOf, layer, toughness, checkState } from '../src/engine/engine';
 import type { CardDef } from '../src/engine/types';
 import { aiAttack } from '../src/engine/ai';
 
@@ -84,7 +84,7 @@ describe('planeswalkers batch 2', () => {
     const g = setup(); const l = put(g, 0, card("Liliana, Death's Majesty", 'Legendary Planeswalker — Liliana', '{3}{B}{B}', "+1: Create a 2/2 black Zombie creature token. Mill two cards.\n−3: Return target creature card from your graveyard to the battlefield. That creature is a black Zombie in addition to its other colors and types.\n−7: Destroy all non-Zombie creatures.", { loyalty: '5' }));
     const b = BEAR(); const bc: Card = { uid: g.nextUid++, id: b.id, owner: 0, tapped: false, sick: false, damage: 0, pp: 0, pt: 0 }; g.players[0].graveyard.push(bc);
     expect(activate(g, 0, l.uid, 1, { targets: [{ card: bc.uid }] })).toBe(true); resolve(g);
-    const back = findCard(g, bc.uid)!; expect(back).toBeTruthy(); expect(back.addSub).toContain('Zombie'); expect(back.addColors).toContain('B');
+    const back = findCard(g, bc.uid)!; expect(back).toBeTruthy(); expect(def(back).sub).toContain("Zombie"); expect(def(back).colors).toContain("B");
   });
   it('Teferi, Hero of Dominaria −3 puts a permanent third from the top', () => {
     const g = setup(); const b = put(g, 1, BEAR());
