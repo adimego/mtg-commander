@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { compileScry } from '../src/import/classify';
 import type { ScryCard } from '../src/import/scryfall';
-import { def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters } from '../src/engine/engine';
+import { canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters } from '../src/engine/engine';
 import type { CardDef } from '../src/engine/types';
 import '../src/engine/ai';
 let n = 0;
@@ -190,5 +190,74 @@ describe('pt14 card types: Sagas, double-faced cards, Adventures, foretell', () 
     pool(g, ['W', 'W', 'W']); expect(canCast(g, 0, c)).toBe(false);
     g.turn++; expect(canCast(g, 0, c)).toBe(true); put(g, 1, BEAR());
     expect(castSpell(g, 0, c.uid)).toBe(true); resolveAI(g); expect(g.players[1].battlefield.length).toBe(0);
+  });
+  it('Evoke: Mulldrifter cast for {2}{U} draws two and is sacrificed on entering', () => {
+    const g = setup(); const d = card('Mulldrifter', 'Creature — Elemental', '{4}{U}', "Flying\nWhen this creature enters, draw two cards.\nEvoke {2}{U} (You may cast this spell for its evoke cost. If you do, it's sacrificed when it enters.)", { power: '2', toughness: '2' });
+    const c = mk(g, 0, d); g.players[0].hand.push(c); pool(g, ['U', 'U', 'U']); g.priority = 0;
+    expect(canCast(g, 0, c)).toBe(false); expect(canCast(g, 0, c, { evoke: true })).toBe(true);
+    const h = g.players[0].hand.length; expect(castSpell(g, 0, c.uid, { evoke: true })).toBe(true); resolveAI(g);
+    expect(g.players[0].hand.length).toBe(h - 1 + 2); expect(g.players[0].graveyard.includes(c)).toBe(true);
+  });
+  it('Evoke: Walker of the Grove evoked leaves and makes a 4/4', () => {
+    const g = setup(); const d = card('Walker of the Grove', 'Creature — Elemental', '{6}{G}{G}', "When this creature leaves the battlefield, create a 4/4 green Elemental creature token.\nEvoke {4}{G} (You may cast this spell for its evoke cost. If you do, it's sacrificed when it enters.)", { power: '7', toughness: '7' });
+    const c = mk(g, 0, d); g.players[0].hand.push(c); pool(g, ['G', 'G', 'G', 'G', 'G']); g.priority = 0;
+    expect(castSpell(g, 0, c.uid, { evoke: true })).toBe(true); resolveAI(g);
+    const bf = g.players[0].battlefield; expect(bf.length).toBe(1); expect(power(g, bf[0])).toBe(4);
+  });
+  it('Mayhem: Sadistic Slash cast from the graveyard the turn it was discarded', () => {
+    const g = setup(); const d = card('Sadistic Slash', 'Instant', '{3}{B}', 'Target creature gets -5/-5 until end of turn.\nMayhem {1}{B} (You may cast this card from your graveyard for {1}{B} if you discarded it this turn.)');
+    const loot = card('PW3 Loot', 'Sorcery', '{U}', 'Draw a card, then discard a card.');
+    const c = mk(g, 0, d); g.players[0].graveyard.push(c); pool(g, ['B', 'B']); g.priority = 0;
+    expect(castZone(g, 0, c)).toBe(null);
+    g.players[0].graveyard = []; g.players[0].hand.push(c); const l = mk(g, 0, loot); g.players[0].hand.push(l); pool(g, ['U', 'B', 'B']);
+    expect(castSpell(g, 0, l.uid)).toBe(true); run(g, { pick: u => u.filter(x => x === c.uid) });
+    expect(g.players[0].graveyard.includes(c)).toBe(true); expect(castZone(g, 0, c)).toBe('mayhem');
+    const foe = put(g, 1, BEAR()); expect(castSpell(g, 0, c.uid, { targets: [{ card: foe.uid }] })).toBe(true); resolveAI(g);
+    expect(g.players[1].battlefield.length).toBe(0); g.turn++; expect(castZone(g, 0, c)).toBe(null);
+  });
+  it('Harmonize: Nature\'s Rhythm from the graveyard, tapping a creature to reduce the cost, then exiled', () => {
+    const g = setup(); const d = card("Nature's Rhythm", 'Sorcery', '{X}{G}{G}', 'Search your library for a creature card with mana value X or less, put it onto the battlefield, then shuffle.\nHarmonize {X}{G}{G}{G}{G} (You may cast this card from your graveyard for its harmonize cost. You may tap a creature you control to reduce that cost by an amount of generic mana equal to its power. Then exile this spell.)');
+    const c = mk(g, 0, d); g.players[0].graveyard.push(c); g.players[0].library = [mk(g, 0, BEAR())];
+    pool(g, ['G', 'G', 'G', 'G']); expect(canCast(g, 0, c, { x: 2 })).toBe(false); const b = put(g, 0, BEAR()); g.priority = 0;
+    expect(canCast(g, 0, c, { x: 2 })).toBe(true);
+    expect(castSpell(g, 0, c.uid, { x: 2, harmTap: b.uid })).toBe(true); expect(b.tapped).toBe(true); run(g, { pick: u => u.slice(0, 1) });
+    expect(g.players[0].battlefield.length).toBe(2); expect(g.players[0].exile.includes(c)).toBe(true);
+  });
+  it('Endure: "it endures 3" puts three +1/+1 counters on it or makes a 3/3 Spirit', () => {
+    const d = card('Dusyut Earthcarver', 'Creature — Elephant Druid', '{5}{G}', 'Reach\nWhen this creature enters, it endures 3. (Put three +1/+1 counters on it or create a 3/3 white Spirit creature token.)', { power: '4', toughness: '4', keywords: ['Reach'] });
+    for (const may of [true, false]) {
+      const g = setup(); const c = mk(g, 0, d); g.players[0].hand.push(c); pool(g, ['G', 'G', 'G', 'G', 'G', 'G']); g.priority = 0;
+      expect(castSpell(g, 0, c.uid)).toBe(true); run(g, { may });
+      const bf = g.players[0].battlefield;
+      if (may) { expect(bf.length).toBe(1); expect(ctr(bf[0], '+1/+1')).toBe(3); } else { expect(bf.length).toBe(2); expect(power(g, bf[1])).toBe(3); }
+    }
+  });
+  it('Earthbend: a land becomes a 0/0 haste creature with counters, and returns tapped when it dies', () => {
+    const g = setup(); const d = card('Earthen Ally', 'Creature — Human Soldier Ally', '{G}', '{2}{W}{U}{B}{R}{G}: Earthbend 5. (Target land you control becomes a 0/0 creature with haste that\'s still a land. Put five +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)', { power: '0', toughness: '2' });
+    const a = put(g, 0, d); const f = put(g, 0, FOREST()); pool(g, ['W', 'U', 'B', 'R', 'G', 'G', 'G']); g.priority = 0;
+    expect(activate(g, 0, a.uid, 0, { targets: [{ card: f.uid }] })).toBe(true); resolveAI(g);
+    expect(isType(f, 'Creature')).toBe(true); expect(power(g, f)).toBe(5); expect(hasKw(f, 'haste')).toBe(true);
+    destroy(g, f); checkState(g); flushTriggers(g); resolveAI(g);
+    const back = g.players[0].battlefield.find(x => x.uid === f.uid || def(x).name === 'Forest')!; expect(back).toBeTruthy(); expect(back.tapped).toBe(true); expect(isType(back, 'Creature')).toBe(false);
+  });
+  it('Waterbend: tap creatures and artifacts to pay the generic part', () => {
+    const g = setup(); const d = card('Ruthless Waterbender', 'Creature — Human Soldier Ally', '{1}{B}', 'Waterbend {2}: This creature gets +1/+1 until end of turn. Activate only during your turn. (While paying a waterbend cost, you can tap your artifacts and creatures to help. Each one pays for {1}.)', { power: '1', toughness: '3' });
+    const w = put(g, 0, d); const r = put(g, 0, ROCK()); const b = put(g, 0, BEAR()); b.sick = true; g.priority = 0;
+    expect(activate(g, 0, w.uid, 0, {})).toBe(true); resolveAI(g); expect(power(g, w)).toBe(2); expect([w, r, b].filter(x => x.tapped).length).toBe(2);
+    expect(activate(g, 0, w.uid, 0, {})).toBe(false);
+  });
+  it('Blight: "you may blight 1. When you do, target creature gains haste"', () => {
+    const g = setup(); const d = card('Warren Torchmaster', 'Creature — Goblin Warrior', '{1}{R}', 'At the beginning of combat on your turn, you may blight 1. When you do, target creature gains haste until end of turn. (To blight 1, put a -1/-1 counter on a creature you control.)', { power: '2', toughness: '2' });
+    const t = put(g, 0, d); const b = put(g, 0, BEAR()); b.sick = true; g.priority = 0;
+    for (const p of g.players) p.human = true; let i = 0; while (!g.decision && !g.choice && !g.stack.length && i++ < 20) pass(g, g.priority!);
+    run(g, { may: true, pick: u => u.filter(x => x === t.uid), tgt: () => ({ card: b.uid }) });
+    expect(ctr(t, '-1/-1')).toBe(1); expect(hasKw(b, 'haste')).toBe(true);
+  });
+  it('Web-slinging: cast for {W} returning a tapped creature to hand', () => {
+    const g = setup(); const d = card('Spider-Man, Web-Slinger', 'Legendary Creature — Spider Human Hero', '{2}{W}', "Web-slinging {W} (You may cast this spell for {W} if you also return a tapped creature you control to its owner's hand.)", { power: '3', toughness: '3' });
+    const c = mk(g, 0, d); g.players[0].hand.push(c); const b = put(g, 0, BEAR()); pool(g, ['W']); g.priority = 0;
+    expect(canCast(g, 0, c, { webSling: true })).toBe(false); b.tapped = true;
+    expect(canCast(g, 0, c, { webSling: true })).toBe(true); expect(castSpell(g, 0, c.uid, { webSling: true, webRet: b.uid })).toBe(true); resolveAI(g);
+    expect(g.players[0].hand.includes(b)).toBe(true); expect(g.players[0].battlefield.some(x => x.uid === c.uid)).toBe(true);
   });
 });

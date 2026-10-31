@@ -68,6 +68,10 @@ export function WarpDialog({ name, cost, normal, pick, cancel }: { name: string;
   return <Box title={name} sub={`Cast it for its warp cost ${cost}? It's exiled at the beginning of the next end step, and you may cast it from exile on a later turn.`}><div className="cbtns">
     <button className="big" data-ans="warp" onClick={() => pick(true)}>Warp ({cost})</button><button className="sec" data-ans="nowarp" onClick={() => pick(false)}>Cast normally ({normal})</button><button className="sec" onClick={cancel}>Cancel</button></div></Box>;
 }
+export function AltCostDialog({ name, opts, pick, cancel }: { name: string; opts: { k: string; label: string }[]; pick: (k: string) => void; cancel: () => void }) {
+  return <Box title={name} sub="Choose how to cast it."><div className="cbtns">
+    {opts.map((o, i) => <button key={o.k} className={i === 0 ? 'big' : 'sec'} data-ans={o.k || 'normal'} onClick={() => pick(o.k)}>{o.label}</button>)}<button className="sec" onClick={cancel}>Cancel</button></div></Box>;
+}
 export function TeamworkDialog({ name, n, pick, cancel }: { name: string; n: number; pick: (t: boolean) => void; cancel: () => void }) {
   return <Box title={name} sub={`Teamwork ${n}: tap untapped creatures you control with total power ${n} or more as you cast it?`}><div className="cbtns">
     <button className="big" data-ans="team" onClick={() => pick(true)}>Use teamwork</button><button className="sec" data-ans="noteam" onClick={() => pick(false)}>Cast without teamwork</button><button className="sec" onClick={cancel}>Cancel</button></div></Box>;

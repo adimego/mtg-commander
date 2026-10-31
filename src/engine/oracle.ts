@@ -199,6 +199,7 @@ function cond(s: string, cx: Cx): Cond | null {
   if (/^~ is saddled$/.test(s)) return { k: 'saddled' };
   if (s === '§incr') return { k: 'incr' };
   if (/^(?:~|this spell)'s sneak cost was paid$/.test(s)) return { k: 'sneakPaid' };
+  if (/^(?:~|this spell|it) was cast using web-slinging$/.test(s)) return { k: 'webSlung' };
   { const mm = /^(\w+) or more mana was spent to cast (?:that spell|it|~)$/.exec(s); const nn = num(mm?.[1]); if (mm && typeof nn === 'number') return { k: 'spentGE', n: nn }; }
   if (/^a permanent left the battlefield under your control this turn$/.test(s)) return { k: 'leftYours' };
   if (/^you have an enduring story$/.test(s)) return { k: 'enduring' };
@@ -423,6 +424,9 @@ const PATS: Pat[] = [
   [/^goad (.+)$/, (m, cx) => { const o = obj(m[1], cx, true); return o ? [{ op: 'goad', who: o.ref }] : null; }],
   [/^regenerate (.+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'regen', who: o.ref }] : null; }],
   [/^(scry|surveil) (\w+)$/, m => { const n = num(m[2]); return n === null ? null : [{ op: m[1], n }]; }],
+  [/^(.+?) endures? (\d+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'endure', n: +m[2], who: o.ref }] : null; }],
+  [/^earthbend (\d+)$/, (m, cx) => [{ op: 'earthbend', n: +m[1], who: addSlot(cx, { who: 'perm', f: { ctrl: 'you', types: ['Land'] }, harm: false, opt: false }) }]],
+  [new RegExp(`^(?:${P_RE} )?blights? (\\d+)$`), (m, cx) => { const p = pl(m[1], cx); return p ? [{ op: 'blight', n: +m[2], pl: p }] : null; }],
   [/^transform ~$/, () => [{ op: 'transform', who: 'self' }]],
   [/^exile ~, then return (?:it|~) to the battlefield transformed under your control$/, () => [{ op: 'exileRetT', who: 'self' }]],
   [/^(.+?) explores?$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'explore', who: o.ref }] : null; }],
@@ -584,6 +588,7 @@ function parseCosts(s: string, name: string): ParsedCost | null {
     else if ((m = /^exile (a|an|one|two|three|\d+) (.*?) ?cards? from your graveyard$/.exec(p))) { const fp = m[2] ? parseFilter(m[2] + ' card') : { f: {} }; if (!fp) return null; ab.exileGy = { f: fp.f, n: num(m[1]) as number }; }
     else if ((m = /^tap (a|an|one|two|three|\d+) untapped (.+?) you control$/.exec(p))) { const fp = parseFilter(m[2]); if (!fp) return null; ab.tapF = { f: fp.f, n: num(m[1]) as number }; }
     else if (p === 'exile ~') ab.exileSelf = true;
+    else if ((m = /^waterbend \{(\d+)\}$/.exec(p))) { ab.mana = { generic: +m[1] }; ab.wb = +m[1]; }
     else return null;
   }
   void name; return { ab };
@@ -835,6 +840,7 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
     abilities.push({ label: `Equip ${m[2].toUpperCase()}`, mana: c, sorcery: true, equip: true, tslots: [{ who: 'perm', f, harm: false }], effects: [{ op: 'attach', who: 'self', other: 't0' }] }); return true;
   }
   if ((m = /^warp (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.warp = c; return true; }
+  { const ak = /^(evoke|mayhem|harmonize|web-slinging) (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p); if (ak && !d.types.includes('Land')) { const c = parseCost(ak[2].toUpperCase()); if (!c) return false; if (ak[1] === 'evoke') { if (!d.types.includes('Creature')) return false; d.evoke = c; } else if (ak[1] === 'mayhem') d.mayhem = c; else if (ak[1] === 'harmonize') d.harmonize = c; else d.webSling = c; return true; } }
   if ((m = /^foretell (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && !d.types.includes('Land')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.foretell = c; return true; }
   if ((m = /^sneak (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && !d.types.includes('Land')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.sneak = c; return true; }
   if ((m = /^teamwork (\d+)$/.exec(p))) { d.teamwork = +m[1]; return true; }
