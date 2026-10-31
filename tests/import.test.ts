@@ -104,7 +104,7 @@ describe('support classification', () => {
     const opt = cls('Opt'); expect(opt.support).toBe('auto'); expect(opt.def.spell?.effects.map(e => e.op)).toEqual(['scry', 'draw']);
     const rats = cls('Relentless Rats'); expect(rats.support).toBe('limited'); expect(rats.reason).toMatch(/Relentless Rats gets/i);
     const goyf = cls('Tarmogoyf'); expect(goyf.support).toBe('limited'); expect(goyf.reason).toMatch(/variable power/);
-    const delver = cls('Delver of Secrets // Insectile Aberration'); expect(delver.support).toBe('limited'); expect(delver.def.img).toBe('https://img/delver.jpg'); expect(delver.reason).toMatch(/front face/);
+    const delver = cls('Delver of Secrets // Insectile Aberration'); expect(delver.support).toBe('limited'); expect(delver.def.img).toBe('https://img/delver.jpg'); expect(delver.reason).toMatch(/Not modelled: "At the/);
     const shock = cls('Watery Grave'); expect(shock.support).toBe('auto'); expect(shock.def.mana).toEqual([{ add: ['U|B'] }]); expect(shock.def.shock).toBe(2);
     expect(cls('Fellwar Stone').support).toBe('limited');
   });

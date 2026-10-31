@@ -2,8 +2,8 @@ import { ImportDialog } from './ImportDialog';
 import { compileScry } from './import/classify';
 import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
-import { DragEvent, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
-import { emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards } from './engine/engine';
+import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
+import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards } from './engine/engine';
 import { DecisionDialog, KickerDialog, WarpDialog, TeamworkDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
@@ -310,6 +310,8 @@ export default function App() {
   const opts: PassOpts = { stopAll, passUntilTurn: passUntil };
 
   const act = useCallback((f: (g: Game) => void) => { if (gref.current) { f(gref.current); layer(gref.current); bump(); } }, []);
+  // a back face / Adventure chosen in hand turns face up again if the cast is cancelled
+  useEffect(() => { const gg = gref.current; if (!gg || pending) return; const hs = gg.players[HUMAN].hand.filter(c => c.face); if (hs.length) act(() => hs.forEach(frontFace)); }, [pending, act]);
   // test/debug hook (only with ?debug in the URL): lets scripted screenshots stage a board
   useEffect(() => { if (/[?&]debug\b/.test(location.search)) (window as unknown as Record<string, unknown>).__ca = { game: () => gref.current, act, CARDS, compile: (o: Record<string, unknown>) => { const d = compileScry({ colors: [], color_identity: [], keywords: [], mana_cost: '', ...o } as unknown as ScryCard).def; registerCards([d, ...(d.prepDef ? [d.prepDef] : [])]); return d.id; } }; }, [act]);
   function newMatch() {
@@ -507,7 +509,7 @@ export default function App() {
   let prompt = ''; let tone = 'you'; let primary: Btn | null = null; const secondary: Btn[] = [];
   if (g && me) {
     const incoming = attackers(g).filter(a => a.attacking === HUMAN);
-    const playable = me.hand.filter(c => canPlayLand(g, HUMAN, c) || canCast(g, HUMAN, c)).length + me.command.filter(c => canCast(g, HUMAN, c)).length + me.battlefield.reduce((s, c) => s + (def(c).abilities ?? []).filter((_, i) => canActivate(g, HUMAN, c, i)).length, 0);
+    const playable = me.hand.filter(c => canPlayLand(g, HUMAN, c) || canCast(g, HUMAN, c) || canCast(g, HUMAN, c, { warp: true }) || canCast(g, HUMAN, c, { back: true }) || canPlayLand(g, HUMAN, c, true)).length + me.command.filter(c => canCast(g, HUMAN, c)).length + me.battlefield.reduce((s, c) => s + (def(c).abilities ?? []).filter((_, i) => canActivate(g, HUMAN, c, i)).length, 0);
     const topDesc = top ? `${top.label} (${g.players[top.controller].name}${top.target ? ` → ${describeTarget(g, top.target)}` : ''})` : '';
     if (!g.started) { prompt = `Opening hand: keep it, or mulligan for a fresh 7 (${me.mulligans === 0 ? 'the first mulligan is free' : `next one bottoms ${me.mulligans}`}).`; primary = { label: 'Keep hand', run: () => act(g => startGame(g)), key: 'Enter' }; if (me.mulligans < 6) secondary.push({ label: 'Mulligan', run: () => act(g => mulligan(g, HUMAN)) }); }
     else if (g.winner !== null) { prompt = g.winner === HUMAN ? '🏆 Victory! Every opponent is out.' : `${g.players[g.winner].name} wins the game.`; tone = 'end'; primary = { label: 'Play again', run: newMatch }; }
@@ -630,11 +632,16 @@ export default function App() {
           <Battlefield ui={ui} pid={HUMAN} />
         </section>
         <div className="hand" style={{ ['--n' as string]: n }}>
-          {hand.map((c, i) => { const ok = canPlayLand(g, HUMAN, c) || canCast(g, HUMAN, c) || canCast(g, HUMAN, c, { warp: true }) || canCast(g, HUMAN, c, { sneak: true }); const off = i - (n - 1) / 2; return (
+          {hand.map((c, i) => { const ok = canPlayLand(g, HUMAN, c) || canCast(g, HUMAN, c) || canCast(g, HUMAN, c, { warp: true }) || canCast(g, HUMAN, c, { sneak: true }) || canCast(g, HUMAN, c, { back: true }) || canPlayLand(g, HUMAN, c, true) || canForetell(g, HUMAN, c); const off = i - (n - 1) / 2; return (
             <div key={c.uid} className={`hcard ${ok ? 'playable' : ''} ${pending?.uid === c.uid ? 'selected' : ''}`} style={{ ['--r' as string]: `${off * Math.min(4, 24 / Math.max(n, 1))}deg`, ['--y' as string]: `${Math.abs(off) * Math.abs(off) * 0.25}vh`, zIndex: i + 1 }}
               draggable={ok && spellSlots(def(c)).length > 0} onDragStart={e => dragStart(c, e)} onDragEnd={() => { /* keep pending if not dropped on target */ }}
               onClick={() => clickHand(c)} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}>
               <div className="hinner"><CardFace d={def(c)} /></div>
+              {(() => { const b = def(c).back; const bs: ReactElement[] = [];
+                if (b && backCastable(g, HUMAN, c) && canCast(g, HUMAN, c, { back: true })) bs.push(<button key="b" data-back={c.uid} title={b.name} onMouseEnter={e => { e.stopPropagation(); setHover({ id: b.id }); }} onClick={e => { e.stopPropagation(); flipFace(c); startCast(c); }}>▶ {b.adventure ? 'Adventure' : 'Back'}: {b.name.length > 18 ? b.name.slice(0, 16) + '…' : b.name}</button>);
+                if (b && canPlayLand(g, HUMAN, c, true)) bs.push(<button key="l" data-backland={c.uid} title={b.name} onMouseEnter={e => { e.stopPropagation(); setHover({ id: b.id }); }} onClick={e => { e.stopPropagation(); act(g => playLand(g, HUMAN, c.uid, true)); }}>⛰ Play {b.name.length > 18 ? b.name.slice(0, 16) + '…' : b.name}</button>);
+                if (canForetell(g, HUMAN, c)) bs.push(<button key="f" data-foretell={c.uid} title="Pay {2}: exile it face down; cast it on a later turn for its foretell cost" onClick={e => { e.stopPropagation(); act(g => foretell(g, HUMAN, c.uid)); }}>Foretell {'{2}'}</button>);
+                return bs.length ? <div className="handab">{bs}</div> : null; })()}
               {(def(c).abilities ?? []).some(a => a.zone === 'hand') && <div className="handab">{(def(c).abilities ?? []).map((a, i) => a.zone === 'hand' ? <button key={i} data-handab={i} disabled={!canActivate(g, HUMAN, c, i)} title={a.label} onClick={e => { e.stopPropagation(); activateAb(c, i); }}>{abCost(a)}: {a.label.length > 22 ? a.label.slice(0, 20) + '…' : a.label}</button> : null)}</div>}
             </div>); })}
         </div>

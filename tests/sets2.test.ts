@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { compileScry } from '../src/import/classify';
 import type { ScryCard } from '../src/import/scryfall';
-import { def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife } from '../src/engine/engine';
+import { def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters } from '../src/engine/engine';
 import type { CardDef } from '../src/engine/types';
 import '../src/engine/ai';
 let n = 0;
@@ -121,5 +121,74 @@ describe('pt14 mechanics', () => {
     top(g, 0, BEAR()); top(g, 0, BEAR()); const s2 = mk(g, 0, sp); g.players[0].hand.push(s2); pool(g, ['U']);
     expect(castSpell(g, 0, s2.uid, { sneak: true, sneakRet: k.uid })).toBe(true); resolveAI(g);
     expect(g.players[0].hand.length).toBe(4); expect(g.players[0].hand.some(x => x.uid === k.uid)).toBe(true);
+  });
+});
+
+function scry(o: Partial<ScryCard> & { name: string }): CardDef {
+  const cl = compileScry({ type_line: '', colors: [], color_identity: [], keywords: [], ...o } as ScryCard);
+  const d = { ...cl.def, id: `s2f-${++n}-${cl.def.id}` }; registerCards([d]);
+  expect(cl.support, JSON.stringify(cl.unparsed ?? cl.reason)).toBe('auto');
+  return d;
+}
+const RAID = () => scry({ name: 'Okiba Reckoner Raid // Nezumi Road Captain', type_line: 'Enchantment — Saga // Enchantment Creature — Rat Rogue', layout: 'transform', card_faces: [{ name: 'Okiba Reckoner Raid', mana_cost: '{B}', type_line: 'Enchantment — Saga', oracle_text: '(As this Saga enters and after your draw step, add a lore counter.)\nI, II — Each opponent loses 1 life and you gain 1 life.\nIII — Exile this Saga, then return it to the battlefield transformed under your control.', colors: ['B'] }, { name: 'Nezumi Road Captain', mana_cost: '', type_line: 'Enchantment Creature — Rat Rogue', oracle_text: 'Menace\nVehicles you control have menace. (They can\'t be blocked except by two or more creatures.)', power: '2', toughness: '2', colors: ['B'] }] });
+describe('pt14 card types: Sagas, double-faced cards, Adventures, foretell', () => {
+  it('Saga: chapter I on entering, a lore counter after each draw step, III exiles and returns it transformed', () => {
+    const g = setup(); const d = RAID(); const life = g.players[1].life;
+    const c = castFromHand(g, d, ['B']); expect(ctr(c, 'lore')).toBe(1); expect(g.players[1].life).toBe(life - 1);
+    const t0 = g.turn;
+    expect(until(g, () => g.turn > t0 && g.active === 0 && g.step === 'main1' && !g.stack.length && !g.pending.length)).toBe(true);
+    expect(ctr(c, 'lore')).toBe(2);
+    const t1 = g.turn;
+    expect(until(g, () => g.turn > t1 && g.active === 0 && g.step === 'main1' && !g.stack.length && !g.pending.length)).toBe(true);
+    const back = g.players[0].battlefield.find(x => x.uid === c.uid)!;
+    expect(def(back).name).toBe('Nezumi Road Captain'); expect(isType(back, 'Creature')).toBe(true); expect(hasKw(back, 'menace')).toBe(true); expect(ctr(back, 'lore')).toBe(0);
+    destroy(g, back); checkState(g); const gy = g.players[0].graveyard.find(x => x.uid === c.uid)!; expect(def(gy).name).toMatch(/^Okiba Reckoner Raid/);
+  });
+  it('Saga is sacrificed after its final chapter resolves (proliferate-style counter adds trigger chapters too)', () => {
+    const g = setup(); const d = card('S2 Saga', 'Enchantment — Saga', '{1}{W}', '(As this Saga enters and after your draw step, add a lore counter. Sacrifice after II.)\nI — You gain 2 life.\nII — Draw a card.');
+    top(g, 0, BEAR()); const life = g.players[0].life; const c = castFromHand(g, d, ['W', 'W']); expect(g.players[0].life).toBe(life + 2);
+    addCounters(g, c, 'lore', 1); checkState(g); expect(g.players[0].battlefield.some(x => x.uid === c.uid)).toBe(true);
+    flushTriggers(g); resolveAI(g); checkState(g); expect(g.players[0].hand.length).toBe(1); expect(g.players[0].battlefield.some(x => x.uid === c.uid)).toBe(false); expect(g.players[0].graveyard.some(x => x.uid === c.uid)).toBe(true);
+  });
+  it('Adventure: cast the Adventure, it is exiled on resolution, then cast the creature from exile', () => {
+    const g = setup(); const d = scry({ name: 'Murderous Rider // Swift End', type_line: 'Creature — Zombie Knight // Instant — Adventure', layout: 'adventure', power: '2', toughness: '3', colors: ['B'], card_faces: [{ name: 'Murderous Rider', mana_cost: '{1}{B}{B}', type_line: 'Creature — Zombie Knight', oracle_text: 'Lifelink\nWhen this creature dies, put it on the bottom of its owner\'s library.', power: '2', toughness: '3' }, { name: 'Swift End', mana_cost: '{1}{B}{B}', type_line: 'Instant — Adventure', oracle_text: 'Destroy target creature or planeswalker. You lose 2 life. (Then exile this card. You may cast the creature later from exile.)' }] });
+    const foe = put(g, 1, BEAR()); const c = mk(g, 0, d); g.players[0].hand.push(c); pool(g, ['B', 'B', 'B']); const life = g.players[0].life;
+    expect(canCast(g, 0, c, { back: true })).toBe(true);
+    expect(castSpell(g, 0, c.uid, { back: true, targets: [{ card: foe.uid }] })).toBe(true); resolveAI(g);
+    expect(g.players[1].battlefield.some(x => x.uid === foe.uid)).toBe(false); expect(g.players[0].life).toBe(life - 2);
+    const ex = g.players[0].exile.find(x => x.uid === c.uid)!; expect(ex.onAdv).toBe(true); expect(def(ex).name).toMatch(/^Murderous Rider/);
+    pool(g, ['B', 'B', 'B']); expect(canCast(g, 0, ex, { back: true })).toBe(false); expect(castSpell(g, 0, ex.uid)).toBe(true); resolveAI(g);
+    const r = g.players[0].battlefield.find(x => x.uid === c.uid)!; expect(hasKw(r, 'lifelink')).toBe(true);
+  });
+  it('Adventure countered goes to the graveyard, not exile', () => {
+    const g = setup(); const d = scry({ name: 'Murderous Rider // Swift End', type_line: 'Creature — Zombie Knight // Instant — Adventure', layout: 'adventure', power: '2', toughness: '3', card_faces: [{ name: 'Murderous Rider', mana_cost: '{1}{B}{B}', type_line: 'Creature — Zombie Knight', oracle_text: 'Lifelink', power: '2', toughness: '3' }, { name: 'Swift End', mana_cost: '{1}{B}{B}', type_line: 'Instant — Adventure', oracle_text: 'Destroy target creature or planeswalker. You lose 2 life.' }] });
+    const foe = put(g, 1, BEAR()); const c = mk(g, 0, d); g.players[0].hand.push(c); pool(g, ['B', 'B', 'B']);
+    expect(castSpell(g, 0, c.uid, { back: true, targets: [{ card: foe.uid }] })).toBe(true); destroy(g, foe); checkState(g); resolveAI(g);
+    expect(g.players[0].graveyard.some(x => x.uid === c.uid)).toBe(true); expect(def(g.players[0].graveyard.find(x => x.uid === c.uid)!).name).toMatch(/^Murderous Rider/);
+  });
+  it('Modal DFC: cast the front, or play the back face as a land', () => {
+    const g = setup(); const d = scry({ name: 'Fell the Profane // Fell Mire', type_line: 'Instant // Land', layout: 'modal_dfc', color_identity: ['B'], card_faces: [{ name: 'Fell the Profane', mana_cost: '{2}{B}{B}', type_line: 'Instant', oracle_text: 'Destroy target creature or planeswalker.', colors: ['B'] }, { name: 'Fell Mire', mana_cost: '', type_line: 'Land', oracle_text: 'As this land enters, you may pay 3 life. If you don\'t, it enters tapped.\n{T}: Add {B}.', colors: [] }] });
+    const c = mk(g, 0, d); g.players[0].hand.push(c); g.priority = 0;
+    expect(canPlayLand(g, 0, c)).toBe(false); expect(canPlayLand(g, 0, c, true)).toBe(true);
+    expect(playLand(g, 0, c.uid, true)).toBe(true); resolveAI(g);
+    const l = g.players[0].battlefield.find(x => x.uid === c.uid)!; expect(def(l).name).toBe('Fell Mire'); expect(isType(l, 'Land')).toBe(true); expect(def(l).mana?.[0].add).toEqual(['B']);
+    destroy(g, l); checkState(g); expect(def(g.players[0].graveyard.find(x => x.uid === c.uid)!).name).toMatch(/^Fell the Profane/);
+    const foe = put(g, 1, BEAR()); const c2 = mk(g, 0, d); g.players[0].hand.push(c2); pool(g, ['B', 'B', 'B', 'B']);
+    expect(castSpell(g, 0, c2.uid, { targets: [{ card: foe.uid }] })).toBe(true); resolveAI(g); expect(g.players[1].battlefield.length).toBe(0);
+  });
+  it('Transform: "{cost}: Transform this creature" turns it to its back face, keeping counters', () => {
+    const g = setup(); const d = scry({ name: 'Seraph of New Capenna // Seraph of New Phyrexia', type_line: 'Creature — Angel Soldier // Creature — Phyrexian Angel', layout: 'transform', card_faces: [{ name: 'Seraph of New Capenna', mana_cost: '{2}{W}', type_line: 'Creature — Angel Soldier', oracle_text: 'Flying\n{4}{B/P}: Transform this creature. Activate only as a sorcery. ({B/P} can be paid with either {B} or 2 life.)', power: '2', toughness: '2', colors: ['W'] }, { name: 'Seraph of New Phyrexia', mana_cost: '', type_line: 'Creature — Phyrexian Angel', oracle_text: 'Flying\nWhenever this creature attacks, you may sacrifice another creature or artifact. If you do, this creature gets +2/+1 until end of turn.', power: '3', toughness: '3', colors: ['B', 'W'] }] });
+    const s = put(g, 0, d); s.counters = { '+1/+1': 1 }; layer(g); expect(power(g, s)).toBe(3);
+    pool(g, ['W', 'W', 'W', 'W', 'B']); expect(activate(g, 0, s.uid, 0, {})).toBe(true); resolveAI(g);
+    expect(def(s).name).toBe('Seraph of New Phyrexia'); expect(power(g, s)).toBe(4); expect(toughness(g, s)).toBe(4); expect(hasKw(s, 'flying')).toBe(true);
+    expect(def(s).abilities ?? []).toHaveLength(0);
+  });
+  it('Foretell: pay {2} to exile it, cast it on a later turn for the foretell cost', () => {
+    const g = setup(); const d = card('Doomskar', 'Sorcery', '{3}{W}{W}', 'Destroy all creatures.\nForetell {1}{W}{W} (During your turn, you may pay {2} and exile this card from your hand face down. Cast it on a later turn for its foretell cost.)');
+    const c = mk(g, 0, d); g.players[0].hand.push(c); pool(g, ['W', 'W']);
+    expect(canForetell(g, 0, c)).toBe(true); expect(foretell(g, 0, c.uid)).toBe(true); expect(g.players[0].exile.includes(c)).toBe(true);
+    pool(g, ['W', 'W', 'W']); expect(canCast(g, 0, c)).toBe(false);
+    g.turn++; expect(canCast(g, 0, c)).toBe(true); put(g, 1, BEAR());
+    expect(castSpell(g, 0, c.uid)).toBe(true); resolveAI(g); expect(g.players[1].battlefield.length).toBe(0);
   });
 });

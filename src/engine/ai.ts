@@ -1,4 +1,4 @@
-import { teamworkPick, modesMax, sneakRets, crewPick,
+import { backCastable, flipFace, frontFace, canForetell, foretell, teamworkPick, modesMax, sneakRets, crewPick,
   Game, Card, Player, Target, TargetSpec, Effect, def, isType, hasKw, cmc, power, toughness, opponents, canCast, castSpell, playLand, canPlayLand,
   declareAttackers, declareBlockers, canAttack, canBlock, attackers, isCommander, legalTargets, findCard, creatures, canActivate, activate, isMain,
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
@@ -236,10 +236,18 @@ function mainPhase(g: Game, pid: number): boolean {
     const score = (c: Card) => (def(c).mana?.[0].add ?? []).reduce((s, m) => s + (m === 'IDENTITY' || m === 'ANY' ? 10 : m.split('|').reduce((x, k) => Math.max(x, need(k)), 0)), 0) - (def(c).etbTapped ? 1 : 0);
     return playLand(g, pid, lands.sort((a, b) => score(b) - score(a))[0].uid);
   }
+  { const mdfcLand = p.hand.find(c => canPlayLand(g, pid, c, true) && (!canCast(g, pid, c) || p.battlefield.filter(x => isType(x, 'Land')).length < 6)); if (mdfcLand && playLand(g, pid, mdfcLand.uid, true)) return true; }
+  // adventures first (the creature stays available from exile); modal DFC back faces when the front can't be cast
+  for (const c of p.hand) {
+    if (!backCastable(g, pid, c) || !canCast(g, pid, c, { back: true })) continue;
+    if (!def(c).back?.adventure && canCast(g, pid, c)) continue;
+    flipFace(c); if (tryCast(g, pid, c)) return true; frontFace(c);
+  }
   const opts = [...p.hand, ...p.command, ...p.graveyard, ...p.exile].filter(c => castZone(g, pid, c) && canCast(g, pid, c, { x: def(c).cost.x ? 1 : 0 }) && !isCounter(def(c)) && !isPump(def(c)))
     .sort((a, b) => (def(b).mana ? 100 : 0) + cmc(def(b)) - ((def(a).mana ? 100 : 0) + cmc(def(a))));
   for (const c of opts) if (tryCast(g, pid, c)) return true;
   if (g.step === 'main2' || !creatures(p).some(c => canAttack(g, c, true))) { if (useAbilities(g, pid, 'main')) return true; }
+  if (g.step === 'main2') { const f = p.hand.find(c => canForetell(g, pid, c)); if (f && foretell(g, pid, f.uid)) return true; }
   else for (const c of p.battlefield) { const abs = def(c).abilities ?? []; for (let i = 0; i < abs.length; i++) if ((abs[i].loyalty !== undefined || abs[i].equip || abs[i].crew !== undefined) && tryActivate(g, pid, c, i, abs[i], 'main')) return true; }
   return false;
 }

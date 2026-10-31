@@ -423,6 +423,8 @@ const PATS: Pat[] = [
   [/^goad (.+)$/, (m, cx) => { const o = obj(m[1], cx, true); return o ? [{ op: 'goad', who: o.ref }] : null; }],
   [/^regenerate (.+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'regen', who: o.ref }] : null; }],
   [/^(scry|surveil) (\w+)$/, m => { const n = num(m[2]); return n === null ? null : [{ op: m[1], n }]; }],
+  [/^transform ~$/, () => [{ op: 'transform', who: 'self' }]],
+  [/^exile ~, then return (?:it|~) to the battlefield transformed under your control$/, () => [{ op: 'exileRetT', who: 'self' }]],
   [/^(.+?) explores?$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'explore', who: o.ref }] : null; }],
   [/^sacrifice ~$/, () => [{ op: 'sacThis' }]],
   [new RegExp(`^(?:${P_RE} )?sacrifices? (${N}|another) (.+)$`), (m, cx) => { const p = pl(m[1], cx); const n = m[2] === 'another' ? 1 : num(m[2]); const fp = parseFilter(m[3]); if (!p || n === null || !fp) return null; if (m[2] === 'another') fp.f.other = true; return [{ op: 'sac', n, pl: p, f: fp.f, text: m[3] }]; }],
@@ -643,6 +645,7 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if (/^you discard a card$/.test(h)) return { defs: [{ ev: 'discard', pl: 'you' }], cx: { it: 'self' } };
   if (/^you attack$|^you attack with one or more creatures$/.test(h)) return { defs: [{ ev: 'youAttack', pl: 'you' }], cx: { it: 'self' } };
   if ((m = /^you sacrifice (a|an|another|one or more) (.+)$/.exec(h))) { const fp = parseFilter(m[2]); if (!fp) return null; if (m[1] === 'another') fp.f.other = true; return { defs: [{ ev: 'sacrificed', subj: 'any', f: fp.f, pl: 'you' }], cx: { it: 'ev', that: 'ev' } }; }
+  { const ch = /^§chapter ([\d+]+)$/.exec(h); if (ch) return { defs: ch[1].split('+').map(n => ({ ev: 'chapter', subj: 'self', ifc: { k: 'evAmt', n: +n } })), cx: {} } as never; }
   { const lv = /^~ becomes level (\d+)$/.exec(h); if (lv) return { defs: [{ ev: 'classLevel', subj: 'self', ifc: { k: 'evAmt', n: +lv[1] } }], cx: {} } as never; }
   if (/^~ becomes saddled for the first time each turn$/.test(h)) return { defs: [{ ev: 'saddled', subj: 'self' }], cx: {} };
   if (/^~ becomes crewed$/.test(h)) return { defs: [{ ev: 'crewed', subj: 'self' }], cx: {} };
@@ -666,8 +669,11 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   let spellFx: Effect[] = []; let spellSlots: TSlot[] = []; let spellModes: Modes | undefined;
   const fail = (l: string) => unparsed.push(l);
   let cls = 0; let lvl: Cond | null = null;
+  const ROM: Record<string, number> = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7 };
   for (const raw of lines) {
     let l = cleanLine(raw).replace(/\.$/, '');
+    { const ch = d.sub?.includes('Saga') ? /^((?:i|ii|iii|iv|v|vi|vii)(?:, (?:i|ii|iii|iv|v|vi|vii))*) — (.+)$/s.exec(raw.replace(/\.$/, '')) : null;
+      if (ch) { const ns = ch[1].split(', ').map(x => ROM[x]); d.saga = Math.max(d.saga ?? 0, ...ns); l = `when §chapter ${ns.join('+')}, ${ch[2]}`; } }
     { let x: RegExpExecArray | null;
       if ((x = /^mobilize (\d+)$/.exec(l))) l = `whenever ~ attacks, §mobilize ${x[1]}`;
       else if ((x = /^firebending (\w+(?:, where x is .+)?)$/.exec(l))) l = `whenever ~ attacks, §firebend ${x[1]}`;
@@ -829,6 +835,7 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
     abilities.push({ label: `Equip ${m[2].toUpperCase()}`, mana: c, sorcery: true, equip: true, tslots: [{ who: 'perm', f, harm: false }], effects: [{ op: 'attach', who: 'self', other: 't0' }] }); return true;
   }
   if ((m = /^warp (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.warp = c; return true; }
+  if ((m = /^foretell (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && !d.types.includes('Land')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.foretell = c; return true; }
   if ((m = /^sneak (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && !d.types.includes('Land')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.sneak = c; return true; }
   if ((m = /^teamwork (\d+)$/.exec(p))) { d.teamwork = +m[1]; return true; }
   if (p === 'storied') { d.storied = true; return true; }

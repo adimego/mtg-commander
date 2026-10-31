@@ -77,9 +77,14 @@ export function compileScry(c: ScryCard): Classified {
   const problems: string[] = [];
   let prepUn: string[] = [];
   if (f && c.layout === 'prepare' && f[1]) { const b = compileScry({ ...(f[1] as ScryCard), name: f[1].name, layout: 'normal', card_faces: undefined, colors: (f[1] as ScryCard).colors ?? c.colors, color_identity: c.color_identity } as ScryCard); b.def.id = d.id + '--prep'; delete b.def.limited; d.prepDef = b.def; if (b.support !== 'auto') prepUn = (b.unparsed?.length ? b.unparsed : [b.reason ?? 'prepare spell']).map(x => `prepare spell: ${x}`); }
+  else if (f && f[1] && ['transform', 'modal_dfc', 'adventure'].includes(c.layout ?? '')) {
+    const bf = f[1] as ScryCard; const b = compileScry({ ...bf, name: bf.name, layout: 'normal', card_faces: undefined, colors: bf.colors ?? c.colors, color_identity: c.color_identity, keywords: [], image_uris: bf.image_uris ?? c.image_uris } as ScryCard);
+    b.def.id = d.id + '--back'; delete b.def.limited; if (c.layout === 'transform') b.def.cost = { ...d.cost }; if (c.layout === 'adventure') b.def.adventure = true; if (c.layout === 'modal_dfc') d.mdfc = true; d.back = b.def;
+    if (b.support !== 'auto') prepUn = (b.unparsed?.length ? b.unparsed : [b.reason ?? 'back face']).map(x => `${c.layout === 'adventure' ? 'adventure' : 'back face'}: ${x}`);
+  }
   else if (f) problems.push(`${c.layout ?? 'multi-face'} card: only the front face is used`);
   if (!exact && front.mana_cost) problems.push(`mana cost ${front.mana_cost} simplified to ${costStr(d.cost)}`);
-  const res = compile({ ...front, name: c.name, oracle_text: front.oracle_text ?? (f ? '' : c.oracle_text) } as ScryLike, d);
+  const res = compile({ ...front, name: f ? front.name ?? c.name : c.name, oracle_text: front.oracle_text ?? (f ? '' : c.oracle_text) } as ScryLike, d);
   if (pStar && !d.statics?.some(s => s.k === 'pt' && s.who === 'self' && typeof s.p !== 'number')) { if (!d.toughness) d.toughness = 1; problems.push(`variable power/toughness (${front.power}/${front.toughness}) played as ${d.power}/${d.toughness}`); }
   const basicT: Record<string, string> = { Plains: 'W', Island: 'U', Swamp: 'B', Mountain: 'R', Forest: 'G' };
   const intrinsic = (d.sub ?? []).map(t => basicT[t]).filter(Boolean);
@@ -87,7 +92,7 @@ export function compileScry(c: ScryCard): Classified {
   if (types.includes('Land') && !d.mana && c.produced_mana?.length && res.unparsed.length) {
     const pm = c.produced_mana.filter(x => 'WUBRGC'.includes(x)); if (pm.length) d.mana = [{ add: [pm.length === 1 ? pm[0] as ManaSym : pm.join('|') as ManaSym] }];
   }
-  if (types.includes('Saga') || d.sub?.includes('Saga') || (d.sub?.includes('Vehicle') && !d.abilities?.some(a => a.crew !== undefined))) problems.push(`${d.sub?.includes('Saga') ? 'Saga chapters' : 'crewing'} not modelled`);
+  if ((d.sub?.includes('Saga') && !d.saga) || (d.sub?.includes('Vehicle') && !d.abilities?.some(a => a.crew !== undefined))) problems.push(`${d.sub?.includes('Saga') ? 'Saga chapters' : 'crewing'} not modelled`);
   res.unparsed.push(...prepUn);
   if (!res.unparsed.length && !problems.length) return { def: d, support: 'auto' };
   const works = describeWorks(d);
