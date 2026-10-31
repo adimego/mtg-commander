@@ -972,7 +972,7 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   else if (pred === "can't block") { if (rest) return false; out.push({ k: 'cantBlock', who, f, cond: c }); }
   else if (pred === "can't attack or block") { if (rest) return false; out.push({ k: 'cantBlock', who, f, cond: c }, { k: 'cantAttack', who, f, cond: c }); }
   else if (pred === "can't attack") { if (rest) return false; out.push({ k: 'cantAttack', who, f, cond: c }); }
-  else if (pred === "can't be blocked") { if (rest) return false; out.push({ k: 'unblockable', who, f, cond: c }); }
+  else if (pred === "can't be blocked") { let k: string[] | null = null; if (rest) { const hm = /^and (?:has|have) (.+)$/.exec(rest); k = hm ? kwList(hm[1]) : null; if (!k) return false; } out.push({ k: 'unblockable', who, f, cond: c }); if (k) out.push({ k: 'kw', who, f, kws: k, cond: c }); }
   else if (/attacks? each combat if able/.test(pred)) { if (rest) return false; out.push({ k: 'mustAttack', who, f, cond: c }); }
   else return false;
   statics.push(...out); return true;

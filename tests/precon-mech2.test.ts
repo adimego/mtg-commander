@@ -92,3 +92,10 @@ describe('precon mechanics 2', () => {
     expect(JSON.stringify(def(mk(g, 0, ad)).spell)).toContain('"kind":"ctl"'); expect(JSON.stringify(def(mk(g, 0, ad)).spell)).toContain('"kind":"you"');
   });
 });
+describe('precon mechanics 2b', () => {
+  it('equipped creature can\'t be blocked and has shroud', () => {
+    const d = card('PM Cloak', 'Artifact — Equipment', '{3}', "Equipped creature can't be blocked and has shroud.\nEquip {2}");
+    const st = def({ uid: 0, id: d.id, owner: 0, tapped: false, sick: false, damage: 0, pp: 0, pt: 0 } as Card).statics ?? [];
+    expect(st.some(s => s.k === 'unblockable')).toBe(true); expect(st.some(s => s.k === 'kw' && s.kws?.includes('shroud'))).toBe(true);
+  });
+});
