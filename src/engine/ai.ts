@@ -1,4 +1,4 @@
-import {
+import { teamworkPick, modesMax, sneakRets, crewPick,
   Game, Card, Player, Target, TargetSpec, Effect, def, isType, hasKw, cmc, power, toughness, opponents, canCast, castSpell, playLand, canPlayLand,
   declareAttackers, declareBlockers, canAttack, canBlock, attackers, isCommander, legalTargets, findCard, creatures, canActivate, activate, isMain,
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
@@ -126,11 +126,17 @@ function scoreFx(g: Game, pid: number, fx: Effect[], x = 0): number {
 function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   const d = def(c); const p = g.players[pid];
   const kicked = !!d.kicker && canCast(g, pid, c, { kicked: true }) && !!planPayment(p, costOf(g, c, { kicked: true }));
+  // warp: only when we can't cast it normally and it does something on entering (or can attack right away)
+  const warp = !!d.warp && p.hand.includes(c) && !canCast(g, pid, c) && canCast(g, pid, c, { warp: true }) && (hasKw(c, 'haste') || (d.triggers ?? []).some(t => t.ev === 'etb'));
+  if (d.warp && p.hand.includes(c) && !canCast(g, pid, c) && !warp) return false;
+  // teamwork: tap creatures that won't attack this turn anyway
+  const tw = d.teamwork !== undefined ? teamworkPick(g, pid, c) : null;
+  const teamwork = !!tw && (g.active !== pid || g.step === 'main2' || tw.every(x => !canAttack(g, x, true)));
   const x = d.cost.x ? maxX(g, pid, c, { kicked }) : 0;
   if (d.cost.x && x < 1) return false;
   let modes: number[] | undefined; let fx = d.spell?.effects ?? [];
   const slots = spellSlots(d); let active = slots.map((_, i) => i);
-  if (d.spell?.modes) { modes = chooseModes(g, pid, d.spell.modes, c.uid); if (modes.length < d.spell.modes.min) return false; active = modes.flatMap(i => modeRange(d.spell!.modes!, i)); fx = modes.flatMap(i => d.spell!.modes!.list[i].effects); }
+  if (d.spell?.modes) { modes = chooseModes(g, pid, { ...d.spell.modes, max: modesMax(g, pid, d.spell.modes, { teamwork }) }, c.uid); if (modes.length < d.spell.modes.min) return false; active = modes.flatMap(i => modeRange(d.spell!.modes!, i)); fx = modes.flatMap(i => d.spell!.modes!.list[i].effects); }
   if (!isPermanentCard(d) && scoreFx(g, pid, fx, x) <= 0 && !mandatory) return false;
   let targets: (Target | undefined)[] = [];
   if (active.length) {
@@ -139,7 +145,7 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
     if (!aura && fx.some(e => HARMFUL.includes(e.op)) && ts.every(t => !t || ownerOfT(g, t) === pid) && !mandatory) return false;
     targets = slots.map(() => undefined); active.forEach((i, k) => (targets[i] = ts[k]));
   }
-  return castSpell(g, pid, c.uid, { targets, modes, x, kicked });
+  return castSpell(g, pid, c.uid, { targets, modes, x, kicked, warp, teamwork: teamwork ? tw!.map(q => q.uid) : undefined });
 }
 const isCounter = (d: CardDef) => !!(d.spell?.effects.some(e => e.op === 'counter' || (e.op === 'unless' && e.sub?.some(s => s.op === 'counter'))));
 const isPump = (d: CardDef) => !!d.spell?.effects.some(e => e.op === 'pump') && !d.spell.effects.some(e => HARMFUL.includes(e.op));
@@ -173,6 +179,18 @@ function tryActivate(g: Game, pid: number, c: Card, i: number, a: ActAbility, ph
   }
   if (a.tap && isType(c, 'Creature') && phase === 'main' && g.step === 'main1' && canAttack(g, c, true) && power(g, c) >= 2) return false;
   if (a.equip) { if (c.attachedTo !== undefined && locate(g, c.attachedTo)?.c.owner === pid) return false; const host = (a.tslots ?? []).length ? chooseTargets(g, pid, a.tslots!, [], false, c.uid)?.[0] : undefined; if (!host) return false; USED.set(uk, 9); return activate(g, pid, c.uid, i, { targets: [host] }); }
+  if (a.crew !== undefined) {
+    // crew / saddle: only before attacking, with creatures that wouldn't attack anyway (or are much weaker than the vehicle)
+    if (phase !== 'main' || g.step !== 'main1' || c.sick || hasKw(c, 'defender') || (a.effects.some(e => e.op === 'crewed') && isType(c, 'Creature')) || (a.effects.some(e => e.op === 'saddled') && c.saddled === g.turn)) return false;
+    const picks = crewPick(g, pid, c, a.crew); if (!picks) return false;
+    const idle = picks.every(x => !canAttack(g, x, true) || power(g, x) < 1); const weak = picks.reduce((t, x) => t + power(g, x), 0) < (def(c).power ?? 0);
+    if (!idle && !weak) return false;
+    const done = activate(g, pid, c.uid, i, { crew: picks.map(x => x.uid) }); if (done) USED.set(uk, 9); return done;
+  }
+  if (a.station) {
+    if (g.step !== 'main2' || (def(c).stationAt !== undefined && ctr(c, 'charge') >= def(c).stationAt!)) return false;
+    const done = activate(g, pid, c.uid, i, {}); if (done) USED.set(uk, 9); return done;
+  }
   let modes: number[] | undefined; let fx = a.effects; const slots = abilitySlots(a); let active = slots.map((_, k) => k);
   if (a.modes) { modes = chooseModes(g, pid, a.modes, c.uid); active = modes.flatMap(k => modeRange(a.modes!, k)); fx = modes.flatMap(k => a.modes!.list[k].effects); }
   const loy = ctr(c, 'loyalty'); const x = a.loyX ? Math.max(1, loy - 1) : a.mana?.x ? maxX(g, pid, c, { abil: a.mana, exclude: a.tap ? c.uid : undefined }) : 0;
@@ -222,7 +240,7 @@ function mainPhase(g: Game, pid: number): boolean {
     .sort((a, b) => (def(b).mana ? 100 : 0) + cmc(def(b)) - ((def(a).mana ? 100 : 0) + cmc(def(a))));
   for (const c of opts) if (tryCast(g, pid, c)) return true;
   if (g.step === 'main2' || !creatures(p).some(c => canAttack(g, c, true))) { if (useAbilities(g, pid, 'main')) return true; }
-  else for (const c of p.battlefield) { const abs = def(c).abilities ?? []; for (let i = 0; i < abs.length; i++) if ((abs[i].loyalty !== undefined || abs[i].equip) && tryActivate(g, pid, c, i, abs[i], 'main')) return true; }
+  else for (const c of p.battlefield) { const abs = def(c).abilities ?? []; for (let i = 0; i < abs.length; i++) if ((abs[i].loyalty !== undefined || abs[i].equip || abs[i].crew !== undefined) && tryActivate(g, pid, c, i, abs[i], 'main')) return true; }
   return false;
 }
 /** Combat tricks after blocks: pump a creature so it survives or wins its fight. */
@@ -248,6 +266,15 @@ function savePump(g: Game, pid: number): boolean {
   return !!pump && value(g, c) >= 4 && castSpell(g, pid, pump.uid, { targets: [{ card: c.uid }] });
 }
 
+/** Sneak: swap a weak unblocked attacker for a better creature that enters tapped and attacking. */
+function sneak(g: Game, pid: number): boolean {
+  const rets = sneakRets(g, pid); if (!rets.length) return false;
+  const ret = [...rets].sort((a, b) => value(g, a) - value(g, b))[0];
+  for (const c of g.players[pid].hand) { const d = def(c); if (!d.sneak || !canCast(g, pid, c, { sneak: true }) || (d.power ?? 0) <= power(g, ret)) continue;
+    const slots = spellSlots(d); if (slots.length) continue;
+    if (castSpell(g, pid, c.uid, { sneak: true, sneakRet: ret.uid })) return true; }
+  return false;
+}
 /** The AI has priority: do at most one thing, or pass. */
 export function aiPriority(g: Game, pid: number) {
   const p = g.players[pid]; const top = g.stack[g.stack.length - 1];
@@ -260,6 +287,7 @@ export function aiPriority(g: Game, pid: number) {
     pass(g, pid); return;
   }
   if (g.active === pid && isMain(g) && mainPhase(g, pid)) return;
+  if (g.step === 'blockers' && g.active === pid && sneak(g, pid)) return;
   if (g.step === 'blockers' && (combatTrick(g, pid) || (p.battlefield.some(c => c.attacking !== undefined || c.blocking !== undefined) && useAbilities(g, pid, 'combat')))) return;
   // End of an opponent's turn (right before ours): use instants and abilities.
   if (g.step === 'end' && g.active !== pid && nextAlive(g, g.active) === pid) {

@@ -143,6 +143,7 @@ function amount(s: string, cx: Cx): Amt | null {
   const n = num(s); if (n !== null) return n;
   if (s === 'that much' || s === 'that many') return 'ev';
   if (/^(?:equal to )?your speed$/.test(s)) return 'speed';
+  if (/^(?:equal to )?the amount of mana spent to cast (?:that spell|it)$/.test(s)) return 'spent';
   const eq = /^(?:equal to )?(.+)$/.exec(s)![1];
   let m: RegExpExecArray | null;
   if ((m = /^(its|~'s|that creature's|the sacrificed creature's|target creature's|the exiled creature's|that card's|that permanent's|that spell's|the exiled card's) (power|toughness|mana value)$/.exec(eq))) {
@@ -196,6 +197,13 @@ function cond(s: string, cx: Cx): Cond | null {
   if (/^~ is tapped$/.test(s)) return { k: 'tapped' };
   if (/^~ is prepared$/.test(s)) return { k: 'prepared' };
   if (/^~ is saddled$/.test(s)) return { k: 'saddled' };
+  if (s === '§incr') return { k: 'incr' };
+  if (/^(?:~|this spell)'s sneak cost was paid$/.test(s)) return { k: 'sneakPaid' };
+  { const mm = /^(\w+) or more mana was spent to cast (?:that spell|it|~)$/.exec(s); const nn = num(mm?.[1]); if (mm && typeof nn === 'number') return { k: 'spentGE', n: nn }; }
+  if (/^a permanent left the battlefield under your control this turn$/.test(s)) return { k: 'leftYours' };
+  if (/^you have an enduring story$/.test(s)) return { k: 'enduring' };
+  if (/^(?:this spell|~|it) was cast using teamwork$/.test(s)) return { k: 'teamwork' };
+  if (/^you discarded a nonland card$/.test(s)) return { k: 'chosenNonland' };
   { const mm = /^your opponents control (\w+) or more lands$/.exec(s); const nn = num(mm?.[1]); if (typeof nn === 'number') return { k: 'oppLandsGE', n: nn }; }
   if (/^you have max speed$/.test(s)) return { k: 'maxSpeed' };
   if (/^a nonland permanent left the battlefield this turn or a spell was warped this turn$/.test(s)) return { k: 'void' };
@@ -391,6 +399,7 @@ const PATS: Pat[] = [
   [/^(.+?) becomes (un)?prepared$/, (m, cx) => { const o = obj(m[1], cx, false); return o && !o.card ? [{ op: 'prep', who: o.ref, n: m[2] ? 0 : 1 }] : null; }],
   [/^§mobilize (\d+)$/, m => [{ op: 'token', n: +m[1], pl: 'you', tok: { name: 'Warrior', p: 1, t: 1, colors: ['R'], types: ['Creature'], sub: ['Warrior'] }, tapped: true, attacking: true }, { op: 'delaySac', who: 'created' }]],
   [/^§firebend (\w+)$/, (m, cx) => { const n = num(m[1]) ?? amount(m[1], cx); return n === null ? null : [{ op: 'fireMana', n }]; }],
+  [/^recruit$/, (_m, cx) => { const tok = clause('create a 1/1 white human soldier creature token', cx); return tok ? [{ op: 'draw', n: 1, pl: 'you' }, { op: 'chosenReset' }, { op: 'discard', n: 1, pl: 'you' }, { op: 'if', cond: { k: 'chosenNonland' }, sub: tok }] : null; }],
   [/^§jobselect$/, () => [{ op: 'token', n: 1, pl: 'you', tok: { name: 'Hero', p: 1, t: 1, colors: [], types: ['Creature'], sub: ['Hero'] } }, { op: 'attach', who: 'self', other: 'created' }]],
   [/^empower jace (.+)$/, (m, cx) => { const n0 = num(m[1]); const n = n0 !== null ? n0 : amount(m[1], cx); return n !== null ? [{ op: 'empower', n, tok: jaceTok() }] : null; }],
   [/^investigate$/, () => [{ op: 'token', n: 1, pl: 'you', tok: { name: 'Clue', colors: [], types: ['Artifact'], preset: 'Clue' } }]],
@@ -587,7 +596,7 @@ export function normalize(text: string, name: string): string {
   const short = name.split(',')[0].split(' of ')[0];
   t = t.split(name).join('~');
   if (short.length > 3 && short !== name) t = t.replace(new RegExp(`\\b${short.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), '~');
-  t = t.toLowerCase().replace(/[−–]/g, '-').replace(/\b(this (creature|artifact|enchantment|land|permanent|spell|card|equipment|aura|vehicle|planeswalker|token|spacecraft|planet))\b/g, '~');
+  t = t.toLowerCase().replace(/[−–]/g, '-').replace(/\b(this (creature|artifact|enchantment|land|permanent|spell|card|equipment|aura|vehicle|planeswalker|token|spacecraft|planet|class|saga|mount))\b/g, '~');
   t = t.replace(/ of (?:their|his or her|your) choice/g, '').replace(/enters the battlefield/g, 'enters').replace(/enters under your control/g, 'enters under your control').replace(/ +/g, ' ').replace(/ \./g, '.');
   return t;
 }
@@ -615,7 +624,7 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
     return { defs: [{ ev, subj: other ? 'other' : 'any', f: fp.f }], cx: { it: 'ev', that: 'ev', thatPl: ev === 'combatDamagePlayer' ? 'evp' : 'ctl:ev' } };
   }
   if ((m = /^(a|an|one or more) (.+?) attacks? you(?: or a planeswalker you control)?$/.exec(h))) { const fp = parseFilter(m[2]); return fp ? { defs: [{ ev: 'attacks', subj: 'any', f: fp.f, pl: 'you' }], cx: { it: 'ev', that: 'ev', thatPl: 'ctl:ev' } } : null; }
-  if ((m = /^(you|an opponent|a player|target opponent) casts? (?:a|an|your first) ?(.*?) ?spell(?: this turn)?$/.exec(h))) { if (/first/.test(h)) return null; const fp = m[2] ? parseFilter(m[2] + ' spell') : { f: {} }; if (!fp) return null; return { defs: [{ ev: 'cast', subj: 'any', f: fp.f, pl: m[1] === 'you' ? 'you' : m[1] === 'a player' ? 'any' : 'notyou' }], cx: { it: 'ev', that: 'ev', thatPl: 'evp' } }; }
+  if ((m = /^(you|an opponent|a player|target opponent) casts? (?:an|a|your first)\b ?(.*?) ?spell(?: this turn)?$/.exec(h))) { if (/first/.test(h)) return null; const fp = m[2] ? parseFilter(m[2] + ' spell') : { f: {} }; if (!fp) return null; return { defs: [{ ev: 'cast', subj: 'any', f: fp.f, pl: m[1] === 'you' ? 'you' : m[1] === 'a player' ? 'any' : 'notyou' }], cx: { it: 'ev', that: 'ev', thatPl: 'evp' } }; }
   if (/^you cast ~$/.test(h)) return { defs: [{ ev: 'castSelf', subj: 'self' }], cx: { it: 'self' } };
   if ((m = /^an? ([a-z ]+?) (?:is|are) put into your graveyard from the battlefield$/.exec(h))) { const fp = parseFilter(m[1]); return fp && !fp.card ? { defs: [{ ev: 'dies', subj: 'any', f: { ...fp.f, ctrl: 'you' } }], cx: { it: 'ev', that: 'ev' } } : null; }
   if (/^you cast your commander$/.test(h)) return { defs: [{ ev: 'cast', subj: 'any', pl: 'you', filter: 'commander' }], cx: { it: 'ev' } };
@@ -634,6 +643,7 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if (/^you discard a card$/.test(h)) return { defs: [{ ev: 'discard', pl: 'you' }], cx: { it: 'self' } };
   if (/^you attack$|^you attack with one or more creatures$/.test(h)) return { defs: [{ ev: 'youAttack', pl: 'you' }], cx: { it: 'self' } };
   if ((m = /^you sacrifice (a|an|another|one or more) (.+)$/.exec(h))) { const fp = parseFilter(m[2]); if (!fp) return null; if (m[1] === 'another') fp.f.other = true; return { defs: [{ ev: 'sacrificed', subj: 'any', f: fp.f, pl: 'you' }], cx: { it: 'ev', that: 'ev' } }; }
+  { const lv = /^~ becomes level (\d+)$/.exec(h); if (lv) return { defs: [{ ev: 'classLevel', subj: 'self', ifc: { k: 'evAmt', n: +lv[1] } }], cx: {} } as never; }
   if (/^~ becomes saddled for the first time each turn$/.test(h)) return { defs: [{ ev: 'saddled', subj: 'self' }], cx: {} };
   if (/^~ becomes crewed$/.test(h)) return { defs: [{ ev: 'crewed', subj: 'self' }], cx: {} };
   if (/^you create (?:a|one or more) tokens?$/.test(h)) return { defs: [{ ev: 'tokenCreated', subj: 'any', pl: 'you' }], cx: { it: 'ev', that: 'ev' } };
@@ -655,6 +665,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   const abilities: ActAbility[] = []; const triggers: TriggerDef[] = []; const statics: Static[] = [];
   let spellFx: Effect[] = []; let spellSlots: TSlot[] = []; let spellModes: Modes | undefined;
   const fail = (l: string) => unparsed.push(l);
+  let cls = 0; let lvl: Cond | null = null;
   for (const raw of lines) {
     let l = cleanLine(raw).replace(/\.$/, '');
     { let x: RegExpExecArray | null;
@@ -662,13 +673,20 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       else if ((x = /^firebending (\w+(?:, where x is .+)?)$/.exec(l))) l = `whenever ~ attacks, §firebend ${x[1]}`;
       else if (/^job select$/.test(l)) l = 'when ~ enters, §jobselect';
       l = l.replace(/^void — /, '').replace(/^whenever ~ attacks while saddled, /, 'whenever ~ attacks, if ~ is saddled, ');
+      if (/^increment$/.test(l)) l = 'whenever you cast a spell, if §incr, put a +1/+1 counter on ~';
+      { const cl = /^(\{[^:]+\}): level (\d+)$/.exec(l); if (cl && d.sub?.includes('Class')) { const c = parseCost(cl[1].toUpperCase()); if (!c) { fail(raw); continue; } cls = +cl[2]; abilities.push({ label: `Level ${cls}`, mana: c, sorcery: true, cond: { k: 'ctrEq', kind: 'class', n: cls - 1 }, effects: [{ op: 'classLevel', n: cls }] }); continue; } }
+      { const lr = /^level (\d+)(?:-(\d+)|\+)$/.exec(l); if (lr) { lvl = { k: 'ctrIn', kind: 'level', n: +lr[1], max: lr[2] ? +lr[2] : 999 } as Cond; continue; } }
+      if (lvl) { const pt = /^(\d+)\/(\d+)$/.exec(l); if (pt) { statics.push({ k: 'pt', who: 'self', p: +pt[1] - (d.power ?? 0), t: +pt[2] - (d.toughness ?? 0), cond: lvl }); continue; } }
+      if (cls > 1 && !/^when ~ becomes level/.test(l)) l = `§cond ${l}`;
+      if (lvl) l = `§lvl ${l}`;
       if (/^start your engines!?$/.test(l)) { d.engines = true; continue; }
       if (/^station$/.test(l)) { abilities.push({ label: 'Station', sorcery: true, station: true, effects: [{ op: 'addC', kind: 'charge', n: 'X', who: 'self' }] }); continue; }
-      const cb = /^(\d+)\+ \| (.+)$/s.exec(l) ?? /^max speed — (.+)$/s.exec(l);
+      const cb = /^(\d+)\+ \| (.+)$/s.exec(l) ?? /^max speed — (.+)$/s.exec(l) ?? /^§cond (.+)$/s.exec(l) ?? /^§lvl (.+)$/s.exec(l);
       if (cb) {
         const thr = cb.length === 3 ? +cb[1] : 0; const body = cb.length === 3 ? cb[2] : cb[1];
-        const cond: Cond = thr ? { k: 'ctrGE', kind: 'charge', n: thr } : { k: 'maxSpeed' };
+        const cond: Cond = thr ? { k: 'ctrGE', kind: 'charge', n: thr } : l.startsWith('§cond') ? { k: 'ctrGE', kind: 'class', n: cls } : l.startsWith('§lvl') ? lvl! : { k: 'maxSpeed' };
         if (thr) d.stationAt = Math.max(d.stationAt ?? 0, thr);
+        if (/^§/.test(body)) { fail(raw); continue; }
         const owner = CUR_NAME; const t: CardDef = { id: 'cb', name: d.name, types: d.types, sub: d.sub, cost: { generic: 0 }, colors: [], text: '' };
         const r = compile({ name: sc.name, oracle_text: body, type_line: sc.type_line }, t); CUR_NAME = owner;
         const bad = !r.ok || t.mana || t.spell || t.ward || t.kicker || t.etbTapped || t.statics?.some(s => s.cond) || t.triggers?.some(x => x.ifc) || t.abilities?.some(a => a.cond);
@@ -684,10 +702,13 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
     const kparts = l.split(/[,;] /);
     if (kparts.every(p => isKeyword(p.trim(), d, kws, abilities, sc))) continue;
     // modal
+    let both: Cond | undefined;
+    { const bi = /^choose one\. if (.+?), (?:you may )?choose both instead\.?\n(.*)$/s.exec(l); if (bi) { const c = cond(bi[1].replace(/ as you cast ~$/, ''), newCx()); if (!c) { fail(raw); continue; } both = c; l = `choose one —\n${bi[2]}`; } }
     const mm = /^choose (one|two|three|one or both|one or more|any number|up to (?:one|two|three)) —\n?(.*)$/s.exec(l);
     if (mm) {
       const cx = newCx({ spell: isSpell });
       const ms = parseModes(mm[1], mm[2], cx); if (!ms) { fail(raw); continue; }
+      if (both) { if (ms.list.length !== 2) { fail(raw); continue; } ms.bothIf = both; }
       if (isSpell) { spellModes = ms; continue; }
       fail(raw); continue;
     }
@@ -808,6 +829,10 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
     abilities.push({ label: `Equip ${m[2].toUpperCase()}`, mana: c, sorcery: true, equip: true, tslots: [{ who: 'perm', f, harm: false }], effects: [{ op: 'attach', who: 'self', other: 't0' }] }); return true;
   }
   if ((m = /^warp (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.warp = c; return true; }
+  if ((m = /^sneak (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && !d.types.includes('Land')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.sneak = c; return true; }
+  if ((m = /^teamwork (\d+)$/.exec(p))) { d.teamwork = +m[1]; return true; }
+  if (p === 'storied') { d.storied = true; return true; }
+  if ((m = /^level up (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; abilities.push({ label: 'Level up', mana: c, sorcery: true, effects: [{ op: 'addC', kind: 'level', n: 1, who: 'self' }] }); return true; }
   if ((m = /^saddle (\d+)$/.exec(p))) { abilities.push({ label: `Saddle ${m[1]}`, crew: +m[1], sorcery: true, effects: [{ op: 'saddled' }] }); return true; }
   if ((m = /^crew (\d+)$/.exec(p))) { abilities.push({ label: `Crew ${m[1]}`, crew: +m[1], effects: [{ op: 'becomes', who: 'self', ce: { addTypes: ['Creature'] }, until: 'eot' }, { op: 'crewed' }] }); return true; }
   if ((m = /^kicker (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.kicker = c; return true; }

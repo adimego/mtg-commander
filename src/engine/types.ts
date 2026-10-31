@@ -25,8 +25,8 @@ export type Ref = string | { all: Filter; zone?: 'graveyard' };
 /** Player reference: you, opps, all, evp (event player), tctl (controller of target 0), t0 (player target slot 0), ctl:tN, def (defending), owner:tN. */
 export type PRef = string;
 export interface Cond {
-  k: 'yourTurn' | 'notYourTurn' | 'control' | 'controlNo' | 'lifeGE' | 'lifeLE' | 'kicked' | 'handLE' | 'handGE' | 'gyGE' | 'oppControlsMore' | 'attacking' | 'tapped' | 'untapped' | 'evCtlYou' | 'evCtlOpp' | 'evIs' | 'xGE' | 'lifeGainedThisTurn' | 'cardsInGyGE' | 'noCardsHand' | 'manaSpent' | 'oppLifeLE' | 'gotCounters' | 'creatureDiedThisTurn' | 'descended' | 'oppsGE' | 'not' | 'enteredThisTurn' | 'prepared' | 'ctrGE' | 'maxSpeed' | 'void' | 'saddled' | 'oppLandsGE' | 'libEmpty' | 'attachedCreature' | 'refIs';
-  f?: Filter; n?: number; ref?: Ref; c?: Cond; kind?: string;
+  k: 'yourTurn' | 'notYourTurn' | 'control' | 'controlNo' | 'lifeGE' | 'lifeLE' | 'kicked' | 'handLE' | 'handGE' | 'gyGE' | 'oppControlsMore' | 'attacking' | 'tapped' | 'untapped' | 'evCtlYou' | 'evCtlOpp' | 'evIs' | 'xGE' | 'lifeGainedThisTurn' | 'cardsInGyGE' | 'noCardsHand' | 'manaSpent' | 'oppLifeLE' | 'gotCounters' | 'creatureDiedThisTurn' | 'descended' | 'oppsGE' | 'not' | 'enteredThisTurn' | 'prepared' | 'ctrGE' | 'maxSpeed' | 'void' | 'saddled' | 'oppLandsGE' | 'incr' | 'spentGE' | 'leftYours' | 'enduring' | 'chosenNonland' | 'teamwork' | 'evAmt' | 'ctrIn' | 'ctrEq' | 'sneakPaid' | 'libEmpty' | 'attachedCreature' | 'refIs';
+  f?: Filter; n?: number; max?: number; ref?: Ref; c?: Cond; kind?: string;
 }
 export interface TokenSpec { name: string; p?: number; t?: number; colors: Color[]; types: string[]; sub?: string[]; kws?: string[]; legendary?: boolean; /** compiled quoted abilities (\"{t}: add {g}.\") */ ext?: Pick<CardDef, 'text' | 'mana' | 'abilities' | 'triggers' | 'statics' | 'keywords'>; preset?: 'Lander' | 'Heartwood' | 'Treasure' | 'Food' | 'Clue' | 'Blood' | 'Map' | 'Gold' | 'Powerstone' }
 export interface Effect {
@@ -41,7 +41,7 @@ export interface ActAbility {
   tslots?: TSlot[]; sacF?: { f: Filter; n: number; other?: boolean }; discard?: number; discardRandom?: boolean; life?: number; remC?: { kind: string; n: number }; addC?: { kind: string; n: number };
   exileGy?: { f?: Filter; n: number; self?: boolean }; tapF?: { f: Filter; n: number }; /** Crew N: tap untapped creatures with total power N or more */ crew?: number; /** Station: tap another creature, put charge counters equal to its power */ station?: boolean; loyalty?: number; /** -X loyalty: X chosen on activation */ loyX?: boolean; sorcery?: boolean; zone?: 'hand' | 'graveyard'; equip?: boolean; once?: boolean; exileSelf?: boolean; returnSelf?: boolean; reveal?: boolean; modes?: Modes; xFromMana?: boolean; cond?: Cond; manaAb?: boolean;
 }
-export interface Modes { min: number; max: number; list: { label: string; tslots?: TSlot[]; effects: Effect[] }[] }
+export interface Modes { min: number; max: number; /** 'choose both instead' when this holds as you cast */ bothIf?: Cond; list: { label: string; tslots?: TSlot[]; effects: Effect[] }[] }
 export interface TriggerDef {
   on: string; filter?: string; cond?: string; target?: TargetSpec; label: string; effects: Effect[];
   // compiled triggers (on === 'x')
@@ -61,7 +61,7 @@ export interface CardDef {
   /** Shockland: may pay this much life to enter untapped. */ shock?: number; /** Enters tapped unless the condition holds. */ etbTappedUnless?: Cond;
   /** "costs {1} less to cast for each ..." */ selfCostLess?: { n: number; per: Amt };
   /** Additional casting costs. */ extraCost?: { sacF?: { f: Filter; n: number }; discard?: number; life?: number };
-  /** Prepare cards: enters prepared; the prepare spell (back face) whose copy may be cast while prepared. */ etbPrepared?: boolean; prepDef?: CardDef; /** Spacecraft: artifact creature at this many charge counters */ stationAt?: number; /** Warp cost */ warp?: Cost; /** Start your engines! */ engines?: boolean;
+  /** Prepare cards: enters prepared; the prepare spell (back face) whose copy may be cast while prepared. */ etbPrepared?: boolean; prepDef?: CardDef; /** Spacecraft: artifact creature at this many charge counters */ stationAt?: number; /** Sneak cost */ sneak?: Cost; /** Teamwork N (optional additional cost) */ teamwork?: number; /** Storied */ storied?: boolean; /** Warp cost */ warp?: Cost; /** Start your engines! */ engines?: boolean;
   /** Characteristics it has outside the battlefield (Grist). */ offBf?: CEFx;
   /** layer-system result: timestamp of the latest 'loses all abilities' effect */ loseTs?: number;
   /** Names of the rules the compiler understood (for the in-game "Supported" note). */ compiled?: boolean;
