@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { compileScry } from '../src/import/classify';
 import type { ScryCard } from '../src/import/scryfall';
-import { canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters } from '../src/engine/engine';
+import { declareBlockers, canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters } from '../src/engine/engine';
 import type { CardDef } from '../src/engine/types';
 import '../src/engine/ai';
 let n = 0;
@@ -259,5 +259,34 @@ describe('pt14 card types: Sagas, double-faced cards, Adventures, foretell', () 
     expect(canCast(g, 0, c, { webSling: true })).toBe(false); b.tapped = true;
     expect(canCast(g, 0, c, { webSling: true })).toBe(true); expect(castSpell(g, 0, c.uid, { webSling: true, webRet: b.uid })).toBe(true); resolveAI(g);
     expect(g.players[0].hand.includes(b)).toBe(true); expect(g.players[0].battlefield.some(x => x.uid === c.uid)).toBe(true);
+  });
+  it('"If you control a commander, you may cast ~ without paying its mana cost" (Fierce Guardianship)', () => {
+    const g = setup(); const d = card('Fierce Guardianship', 'Instant', '{2}{U}', 'If you control a commander, you may cast this spell without paying its mana cost.\nCounter target noncreature spell.');
+    const c = mk(g, 0, d); g.players[0].hand.push(c); g.priority = 0;
+    expect(canCast(g, 0, c, { free: true })).toBe(false);
+    const cd = BEAR(); g.players[0].commanderIds.push(cd.id); const cm = put(g, 0, cd); void cm;
+    const z = mk(g, 1, ZAP()); g.players[1].hand.push(z); g.players[1].pool = ['R']; g.priority = 1; expect(castSpell(g, 1, z.uid, { targets: [{ player: 0 }] })).toBe(true);
+    g.priority = 0; expect(canCast(g, 0, c)).toBe(false); expect(canCast(g, 0, c, { free: true })).toBe(true);
+    expect(castSpell(g, 0, c.uid, { free: true, targets: [{ stack: g.stack[g.stack.length - 1].id }] } as never)).toBe(true); resolveAI(g);
+    expect(g.players[0].life).toBe(40); expect(g.players[1].graveyard.includes(z)).toBe(true);
+  });
+  it('Command Beacon: put your commander into your hand from the command zone', () => {
+    const g = setup(); const d = card('Command Beacon', 'Land', '', '{T}, Sacrifice this land: Put your commander into your hand from the command zone.');
+    const cd = BEAR(); g.players[0].commanderIds = [cd.id]; const cm = mk(g, 0, cd); g.players[0].command = [cm];
+    const b = put(g, 0, d); g.priority = 0; expect(activate(g, 0, b.uid, 0, {})).toBe(true); resolveAI(g);
+    expect(g.players[0].hand.includes(cm)).toBe(true); expect(g.players[0].command.length).toBe(0); expect(g.players[0].graveyard.length).toBe(1);
+  });
+  it('Magecraft: "whenever you cast or copy an instant or sorcery spell, draw a card"', () => {
+    const g = setup(); const d = card('Archmage Emeritus', 'Creature — Human Wizard', '{2}{U}{U}', 'Magecraft — Whenever you cast or copy an instant or sorcery spell, draw a card.', { power: '2', toughness: '2' });
+    put(g, 0, d); const z = mk(g, 0, ZAP()); g.players[0].hand.push(z); pool(g, ['R']);
+    expect(castSpell(g, 0, z.uid, { targets: [{ player: 1 }] })).toBe(true); resolveAI(g); expect(g.players[0].hand.length).toBe(1);
+  });
+  it('"Whenever one or more creatures you control deal combat damage to a player" triggers once', () => {
+    const g = setup(); const d = card('Professional Face-Breaker', 'Creature — Human Warrior', '{2}{R}', 'Menace\nWhenever one or more creatures you control deal combat damage to a player, create a Treasure token.', { power: '2', toughness: '3', keywords: ['Menace'] });
+    const a = put(g, 0, BEAR()); const b = put(g, 0, BEAR()); put(g, 0, d);
+    let i = 0; while (g.awaiting !== 'attack' && i++ < 50) pass(g, g.priority!);
+    declareAttackers(g, 0, [{ uid: a.uid, defender: 1 }, { uid: b.uid, defender: 1 }]);
+    i = 0; while (g.step !== 'main2' && i++ < 100) { if (g.decision) answerDecision(g, false); else if (g.awaiting === 'block') declareBlockers(g, g.priority ?? 1, []); else pass(g, g.priority!); }
+    expect(g.players[1].life).toBe(36); expect(g.players[0].battlefield.filter(c => c.token).length).toBe(1);
   });
 });

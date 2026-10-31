@@ -180,6 +180,7 @@ function withForEach(base: Amt, s: string | undefined, cx: Cx): Amt | null {
 function cond(s: string, cx: Cx): Cond | null {
   s = s.trim(); let m: RegExpExecArray | null;
   if (/^it's your turn$/.test(s)) return { k: 'yourTurn' };
+  if (/^you control a commander$/.test(s)) return { k: 'ctlCommander' };
   if (/^it's not your turn$/.test(s)) return { k: 'notYourTurn' };
   if (/^(this spell|~|it) was kicked$/.test(s)) return { k: 'kicked' };
   if ((m = /^you control (a|an|another|two|three|four|five|seven|\d+)(?: or more)? (.+)$/.exec(s))) { const fp = parseFilter(m[2].replace(/,? or (?:a|an) /g, ' or ')); if (!fp) return null; if (m[1] === 'another') fp.f.other = true; return { k: 'control', f: { ...fp.f, ctrl: undefined }, n: m[1] === 'another' ? 1 : num(m[1]) as number }; }
@@ -425,6 +426,7 @@ const PATS: Pat[] = [
   [/^regenerate (.+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'regen', who: o.ref }] : null; }],
   [/^(scry|surveil) (\w+)$/, m => { const n = num(m[2]); return n === null ? null : [{ op: m[1], n }]; }],
   [/^(.+?) endures? (\d+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'endure', n: +m[2], who: o.ref }] : null; }],
+  [/^put your commander into your hand from the command zone$/, () => [{ op: 'cmdrToHand' }]],
   [/^earthbend (\d+)$/, (m, cx) => [{ op: 'earthbend', n: +m[1], who: addSlot(cx, { who: 'perm', f: { ctrl: 'you', types: ['Land'] }, harm: false, opt: false }) }]],
   [new RegExp(`^(?:${P_RE} )?blights? (\\d+)$`), (m, cx) => { const p = pl(m[1], cx); return p ? [{ op: 'blight', n: +m[2], pl: p }] : null; }],
   [/^transform ~$/, () => [{ op: 'transform', who: 'self' }]],
@@ -648,6 +650,7 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if (/^a player draws a card$/.test(h)) return { defs: [{ ev: 'drawCard', pl: 'any' }], cx: { it: 'self', thatPl: 'evp' } };
   if (/^an opponent draws a card$/.test(h)) return { defs: [{ ev: 'drawCard', pl: 'notyou' }], cx: { it: 'self', thatPl: 'evp' } };
   if (/^you discard a card$/.test(h)) return { defs: [{ ev: 'discard', pl: 'you' }], cx: { it: 'self' } };
+  if (/^one or more creatures you control deal combat damage to a player$/.test(h)) return { defs: [{ ev: 'combatBatch', pl: 'you' }], cx: { it: 'self' } };
   if (/^you attack$|^you attack with one or more creatures$/.test(h)) return { defs: [{ ev: 'youAttack', pl: 'you' }], cx: { it: 'self' } };
   if ((m = /^you sacrifice (a|an|another|one or more) (.+)$/.exec(h))) { const fp = parseFilter(m[2]); if (!fp) return null; if (m[1] === 'another') fp.f.other = true; return { defs: [{ ev: 'sacrificed', subj: 'any', f: fp.f, pl: 'you' }], cx: { it: 'ev', that: 'ev' } }; }
   { const ch = /^§chapter ([\d+]+)$/.exec(h); if (ch) return { defs: ch[1].split('+').map(n => ({ ev: 'chapter', subj: 'self', ifc: { k: 'evAmt', n: +n } })), cx: {} } as never; }
@@ -683,7 +686,8 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       if ((x = /^mobilize (\d+)$/.exec(l))) l = `whenever ~ attacks, §mobilize ${x[1]}`;
       else if ((x = /^firebending (\w+(?:, where x is .+)?)$/.exec(l))) l = `whenever ~ attacks, §firebend ${x[1]}`;
       else if (/^job select$/.test(l)) l = 'when ~ enters, §jobselect';
-      l = l.replace(/^void — /, '').replace(/^whenever ~ attacks while saddled, /, 'whenever ~ attacks, if ~ is saddled, ');
+      // The engine has no effects that copy spells, so "cast or copy" triggers only on casts (exact while that holds).
+      l = l.replace(/^whenever you cast or copy /, 'whenever you cast ').replace(/^void — /, '').replace(/^whenever ~ attacks while saddled, /, 'whenever ~ attacks, if ~ is saddled, ');
       if (/^increment$/.test(l)) l = 'whenever you cast a spell, if §incr, put a +1/+1 counter on ~';
       { const cl = /^(\{[^:]+\}): level (\d+)$/.exec(l); if (cl && d.sub?.includes('Class')) { const c = parseCost(cl[1].toUpperCase()); if (!c) { fail(raw); continue; } cls = +cl[2]; abilities.push({ label: `Level ${cls}`, mana: c, sorcery: true, cond: { k: 'ctrEq', kind: 'class', n: cls - 1 }, effects: [{ op: 'classLevel', n: cls }] }); continue; } }
       { const lr = /^level (\d+)(?:-(\d+)|\+)$/.exec(l); if (lr) { lvl = { k: 'ctrIn', kind: 'level', n: +lr[1], max: lr[2] ? +lr[2] : 999 } as Cond; continue; } }
@@ -709,6 +713,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
         continue;
       }
     }
+    if (/^if you control a commander, you may cast ~ without paying its mana cost\.?$/.test(l) && !d.types.includes('Land')) { d.freeCmdr = true; continue; }
     // keyword line
     const kparts = l.split(/[,;] /);
     if (kparts.every(p => isKeyword(p.trim(), d, kws, abilities, sc))) continue;

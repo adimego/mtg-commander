@@ -25,7 +25,7 @@ export type Ref = string | { all: Filter; zone?: 'graveyard' };
 /** Player reference: you, opps, all, evp (event player), tctl (controller of target 0), t0 (player target slot 0), ctl:tN, def (defending), owner:tN. */
 export type PRef = string;
 export interface Cond {
-  k: 'yourTurn' | 'notYourTurn' | 'control' | 'controlNo' | 'lifeGE' | 'lifeLE' | 'kicked' | 'handLE' | 'handGE' | 'gyGE' | 'oppControlsMore' | 'attacking' | 'tapped' | 'untapped' | 'evCtlYou' | 'evCtlOpp' | 'evIs' | 'xGE' | 'lifeGainedThisTurn' | 'cardsInGyGE' | 'noCardsHand' | 'manaSpent' | 'oppLifeLE' | 'gotCounters' | 'creatureDiedThisTurn' | 'descended' | 'oppsGE' | 'not' | 'enteredThisTurn' | 'prepared' | 'ctrGE' | 'maxSpeed' | 'void' | 'saddled' | 'oppLandsGE' | 'incr' | 'spentGE' | 'leftYours' | 'enduring' | 'chosenNonland' | 'teamwork' | 'evAmt' | 'ctrIn' | 'ctrEq' | 'sneakPaid' | 'webSlung' | 'libEmpty' | 'attachedCreature' | 'refIs';
+  k: 'ctlCommander' | 'yourTurn' | 'notYourTurn' | 'control' | 'controlNo' | 'lifeGE' | 'lifeLE' | 'kicked' | 'handLE' | 'handGE' | 'gyGE' | 'oppControlsMore' | 'attacking' | 'tapped' | 'untapped' | 'evCtlYou' | 'evCtlOpp' | 'evIs' | 'xGE' | 'lifeGainedThisTurn' | 'cardsInGyGE' | 'noCardsHand' | 'manaSpent' | 'oppLifeLE' | 'gotCounters' | 'creatureDiedThisTurn' | 'descended' | 'oppsGE' | 'not' | 'enteredThisTurn' | 'prepared' | 'ctrGE' | 'maxSpeed' | 'void' | 'saddled' | 'oppLandsGE' | 'incr' | 'spentGE' | 'leftYours' | 'enduring' | 'chosenNonland' | 'teamwork' | 'evAmt' | 'ctrIn' | 'ctrEq' | 'sneakPaid' | 'webSlung' | 'libEmpty' | 'attachedCreature' | 'refIs';
   f?: Filter; n?: number; max?: number; ref?: Ref; c?: Cond; kind?: string;
 }
 export interface TokenSpec { name: string; p?: number; t?: number; colors: Color[]; types: string[]; sub?: string[]; kws?: string[]; legendary?: boolean; /** compiled quoted abilities (\"{t}: add {g}.\") */ ext?: Pick<CardDef, 'text' | 'mana' | 'abilities' | 'triggers' | 'statics' | 'keywords'>; preset?: 'Lander' | 'Heartwood' | 'Treasure' | 'Food' | 'Clue' | 'Blood' | 'Map' | 'Gold' | 'Powerstone' }
@@ -49,6 +49,8 @@ export interface TriggerDef {
 }
 export interface Static { k: 'pt' | 'kw' | 'cantBlock' | 'cantAttack' | 'costLess' | 'costMore' | 'unblockable' | 'mustAttack' | 'noMaxHand' | 'cantBeBlockedBy' | 'doesntUntap' | 'playerHexproof' | 'drawLimit' | 'oppsSorcery' | 'noSearch' | 'winOnEmptyDraw' | 'tokenDouble' | 'pwInstant' | 'manaExtra' | 'cantBeAttacked' | 'atkLimit1'; add?: string[]; who: 'self' | 'attached' | 'others' | 'all'; f?: Filter; p?: number | Amt; t?: number | Amt; kws?: string[]; n?: number; spellF?: Filter; cond?: Cond }
 export interface CardDef {
+  /** 'If you control a commander, you may cast this spell without paying its mana cost.' */
+  freeCmdr?: boolean;
   id: string; name: string; types: string[]; legendary?: boolean; basic?: boolean; cost: Cost; colors: Color[]; power?: number; toughness?: number;
   keywords?: string[]; text: string; typeLine?: string; img?: string; art?: string; sub?: string[];
   mana?: ManaAbility[]; abilities?: ActAbility[]; triggers?: TriggerDef[]; spell?: { target?: TargetSpec; effects: Effect[]; tslots?: TSlot[]; modes?: Modes };

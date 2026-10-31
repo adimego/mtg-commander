@@ -132,10 +132,11 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   if (d.warp && p.hand.includes(c) && !canCast(g, pid, c) && !warp) return false;
   // evoke: only for the enters/leaves value when the full cost isn't affordable
   const normal = canCast(g, pid, c, { x: d.cost.x ? 1 : 0 }) || warp;
-  const evoke = !normal && !!d.evoke && canCast(g, pid, c, { evoke: true }) && (d.triggers ?? []).some(t => t.ev === 'etb' || t.ev === 'ltb' || t.ev === 'dies');
+  const free = !!d.freeCmdr && canCast(g, pid, c, { free: true, x: d.cost.x ? 1 : 0 });
+  const evoke = !free && !normal && !!d.evoke && canCast(g, pid, c, { evoke: true }) && (d.triggers ?? []).some(t => t.ev === 'etb' || t.ev === 'ltb' || t.ev === 'dies');
   // web-slinging: return a tapped creature worth less than this one
   const webRet = !normal && !evoke && d.webSling && canCast(g, pid, c, { webSling: true }) ? webRets(g, pid).filter(q => !q.token && cmc(def(q)) < cmc(d)).sort((a, b) => cmc(def(a)) - cmc(def(b)))[0] : undefined;
-  if (!normal && !evoke && !webRet) return false;
+  if (!free && !normal && !evoke && !webRet) return false;
   // teamwork: tap creatures that won't attack this turn anyway
   const tw = d.teamwork !== undefined ? teamworkPick(g, pid, c) : null;
   const teamwork = !!tw && (g.active !== pid || g.step === 'main2' || tw.every(x => !canAttack(g, x, true)));
@@ -152,7 +153,7 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
     if (!aura && fx.some(e => HARMFUL.includes(e.op)) && ts.every(t => !t || ownerOfT(g, t) === pid) && !mandatory) return false;
     targets = slots.map(() => undefined); active.forEach((i, k) => (targets[i] = ts[k]));
   }
-  return castSpell(g, pid, c.uid, { targets, modes, x, kicked, warp, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined });
+  return castSpell(g, pid, c.uid, { targets, modes, x, kicked, warp, free, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined });
 }
 const isCounter = (d: CardDef) => !!(d.spell?.effects.some(e => e.op === 'counter' || (e.op === 'unless' && e.sub?.some(s => s.op === 'counter'))));
 const isPump = (d: CardDef) => !!d.spell?.effects.some(e => e.op === 'pump') && !d.spell.effects.some(e => HARMFUL.includes(e.op));
@@ -250,7 +251,7 @@ function mainPhase(g: Game, pid: number): boolean {
     if (!def(c).back?.adventure && canCast(g, pid, c)) continue;
     flipFace(c); if (tryCast(g, pid, c)) return true; frontFace(c);
   }
-  const opts = [...p.hand, ...p.command, ...p.graveyard, ...p.exile].filter(c => castZone(g, pid, c) && (canCast(g, pid, c, { x: def(c).cost.x ? 1 : 0 }) || canCast(g, pid, c, { evoke: true }) || canCast(g, pid, c, { webSling: true })) && !isCounter(def(c)) && !isPump(def(c)))
+  const opts = [...p.hand, ...p.command, ...p.graveyard, ...p.exile].filter(c => castZone(g, pid, c) && (canCast(g, pid, c, { x: def(c).cost.x ? 1 : 0 }) || canCast(g, pid, c, { evoke: true }) || canCast(g, pid, c, { free: true }) || canCast(g, pid, c, { webSling: true })) && !isCounter(def(c)) && !isPump(def(c)))
     .sort((a, b) => (def(b).mana ? 100 : 0) + cmc(def(b)) - ((def(a).mana ? 100 : 0) + cmc(def(a))));
   for (const c of opts) if (tryCast(g, pid, c)) return true;
   if (g.step === 'main2' || !creatures(p).some(c => canAttack(g, c, true))) { if (useAbilities(g, pid, 'main')) return true; }
@@ -295,7 +296,7 @@ export function aiPriority(g: Game, pid: number) {
   const p = g.players[pid]; const top = g.stack[g.stack.length - 1];
   if (top) {
     if (isThreat(g, pid, top)) {
-      const ctr = p.hand.find(c => isCounter(def(c)) && canCast(g, pid, c));
+      const ctr = p.hand.find(c => isCounter(def(c)) && (canCast(g, pid, c) || canCast(g, pid, c, { free: true })));
       if (ctr && tryCast(g, pid, ctr, true)) return;
     }
     if (savePump(g, pid)) return;

@@ -24,7 +24,7 @@ const KW_HELP: Record<string, string> = {
 type AbLike = { tap?: boolean; untap?: boolean; mana?: Cost; sac?: boolean; loyalty?: number; loyX?: boolean; sacF?: { n: number }; discard?: number; life?: number; remC?: { kind: string; n: number }; exileGy?: { n: number; self?: boolean }; tapF?: { n: number } };
 const abCost = (a: AbLike) => [a.loyalty !== undefined ? (a.loyX ? '−X' : `${a.loyalty > 0 ? '+' : a.loyalty === 0 ? '±' : '−'}${Math.abs(a.loyalty)}`) : '', a.mana ? costText(a.mana) : '', a.tap ? '{T}' : '', a.untap ? '{Q}' : '', a.sac ? 'Sac' : '', a.sacF ? `Sac ${a.sacF.n}` : '', a.discard ? `Discard ${a.discard}` : '', a.life ? `${a.life} life` : '', a.remC ? `−${a.remC.n} ${a.remC.kind}` : '', a.exileGy ? (a.exileGy.self ? 'Exile from gy' : `Exile ${a.exileGy.n} from gy`) : '', a.tapF ? `Tap ${a.tapF.n}` : ''].filter(Boolean).join(', ');
 /** A cast or activation being set up: kicker → X → modes → one target per active slot. */
-type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; alt?: 'evoke' | 'web' | ''; warp?: boolean; sneak?: boolean; teamwork?: boolean; kicked?: boolean; x?: number; modes?: number[]; ts: (Target | undefined)[] };
+type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; alt?: 'evoke' | 'web' | 'free' | ''; warp?: boolean; sneak?: boolean; teamwork?: boolean; kicked?: boolean; x?: number; modes?: number[]; ts: (Target | undefined)[] };
 type PendingAct = Flow;
 const SAVED0 = decks.activateAll();
 type Hover = { id: string; uid?: number } | null;
@@ -348,7 +348,7 @@ export default function App() {
   const flowModesEff = flowModes && flow?.kind === 'cast' && g ? { ...flowModes, max: modesMax(g, HUMAN, flowModes, { teamwork: flow.teamwork }) } : flowModes;
   const flowActive = flowModes ? (flow?.modes ?? []).flatMap(i => modeRange(flowModes, i)) : flowSlots.map((_, i) => i);
   const flowStage: null | 'alt' | 'teamwork' | 'warp' | 'kicker' | 'x' | 'modes' | 'targets' = !g || !flow ? null
-    : flow.kind === 'cast' && flowCard && flow.alt === undefined && (def(flowCard).evoke || def(flowCard).webSling) ? 'alt'
+    : flow.kind === 'cast' && flowCard && flow.alt === undefined && (def(flowCard).evoke || def(flowCard).webSling || def(flowCard).freeCmdr) ? 'alt'
     : flow.kind === 'cast' && flowCard && flow.warp === undefined && def(flowCard).warp && me!.hand.includes(flowCard) ? 'warp'
     : flow.kind === 'cast' && flowCard && def(flowCard).teamwork !== undefined && flow.teamwork === undefined ? 'teamwork'
     : flow.kind === 'cast' && flowCard && def(flowCard).kicker && flow.kicked === undefined ? 'kicker'
@@ -390,7 +390,7 @@ export default function App() {
     setPending(null);
     act(g => {
       if (f.kind === 'trigger') chooseTriggerTargets(g, full, f.modes);
-      else if (f.kind === 'cast') { if (!castSpell(g, HUMAN, f.uid, { targets: full, modes: f.modes, x: f.x, kicked: f.kicked, evoke: f.alt === 'evoke', webSling: f.alt === 'web', warp: f.warp, sneak: f.sneak, teamwork: f.teamwork })) flash("Couldn't cast that (targets or mana no longer valid)."); }
+      else if (f.kind === 'cast') { if (!castSpell(g, HUMAN, f.uid, { targets: full, modes: f.modes, x: f.x, kicked: f.kicked, free: f.alt === 'free', evoke: f.alt === 'evoke', webSling: f.alt === 'web', warp: f.warp, sneak: f.sneak, teamwork: f.teamwork })) flash("Couldn't cast that (targets or mana no longer valid)."); }
       else if (!activate(g, HUMAN, f.uid, f.idx!, { targets: full, modes: f.modes, x: f.x })) flash("Couldn't activate that.");
     });
   }
@@ -403,7 +403,7 @@ export default function App() {
     if (!g) return;
     const d = def(c); const f: Flow = { kind: 'cast', uid: c.uid, ts: [], ...base };
     if (d.sneak && canCast(g, HUMAN, c, { sneak: true }) && !canCast(g, HUMAN, c)) f.sneak = true;
-    if ((d.evoke || d.webSling) && f.alt === undefined) { const alts = ([['evoke', !!d.evoke && canCast(g, HUMAN, c, { evoke: true })], ['web', !!d.webSling && canCast(g, HUMAN, c, { webSling: true })]] as const).filter(x => x[1]).map(x => x[0]); const n = canCast(g, HUMAN, c); if (!alts.length) f.alt = ''; else if (!n && alts.length === 1) f.alt = alts[0]; else { setPending(f); return; } }
+    if ((d.evoke || d.webSling || d.freeCmdr) && f.alt === undefined) { const alts = ([['free', !!d.freeCmdr && canCast(g, HUMAN, c, { free: true })], ['evoke', !!d.evoke && canCast(g, HUMAN, c, { evoke: true })], ['web', !!d.webSling && canCast(g, HUMAN, c, { webSling: true })]] as const).filter(x => x[1]).map(x => x[0]); const n = canCast(g, HUMAN, c); if (!alts.length) f.alt = ''; else if (!n && alts.length === 1) f.alt = alts[0]; else { setPending(f); return; } }
     if (d.teamwork !== undefined && !teamworkPick(g, HUMAN, c)) f.teamwork = false;
     if (d.kicker && !canCast(g, HUMAN, c, { kicked: true })) f.kicked = false;
     if (d.warp && me!.hand.includes(c)) { const n = canCast(g, HUMAN, c), w = canCast(g, HUMAN, c, { warp: true }); if (n && !w) f.warp = false; else if (w && !n) f.warp = true; else { setPending(f); return; } }
@@ -634,7 +634,7 @@ export default function App() {
           <Battlefield ui={ui} pid={HUMAN} />
         </section>
         <div className="hand" style={{ ['--n' as string]: n }}>
-          {hand.map((c, i) => { const ok = canPlayLand(g, HUMAN, c) || canCast(g, HUMAN, c) || canCast(g, HUMAN, c, { warp: true }) || canCast(g, HUMAN, c, { sneak: true }) || canCast(g, HUMAN, c, { back: true }) || canPlayLand(g, HUMAN, c, true) || canForetell(g, HUMAN, c) || canCast(g, HUMAN, c, { evoke: true }) || canCast(g, HUMAN, c, { webSling: true }); const off = i - (n - 1) / 2; return (
+          {hand.map((c, i) => { const ok = canPlayLand(g, HUMAN, c) || canCast(g, HUMAN, c) || canCast(g, HUMAN, c, { warp: true }) || canCast(g, HUMAN, c, { sneak: true }) || canCast(g, HUMAN, c, { back: true }) || canPlayLand(g, HUMAN, c, true) || canForetell(g, HUMAN, c) || canCast(g, HUMAN, c, { evoke: true }) || canCast(g, HUMAN, c, { free: true }) || canCast(g, HUMAN, c, { webSling: true }); const off = i - (n - 1) / 2; return (
             <div key={c.uid} className={`hcard ${ok ? 'playable' : ''} ${pending?.uid === c.uid ? 'selected' : ''}`} style={{ ['--r' as string]: `${off * Math.min(4, 24 / Math.max(n, 1))}deg`, ['--y' as string]: `${Math.abs(off) * Math.abs(off) * 0.25}vh`, zIndex: i + 1 }}
               draggable={ok && spellSlots(def(c)).length > 0} onDragStart={e => dragStart(c, e)} onDragEnd={() => { /* keep pending if not dropped on target */ }}
               onClick={() => clickHand(c)} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}>
@@ -675,7 +675,7 @@ export default function App() {
       {bdrag?.moved && <DragLine uid={bdrag.uid} x={bdrag.x} y={bdrag.y} color={bdrag.over === null ? '#9ec3ff' : blockReason(g, findCard(g, bdrag.uid)!, findCard(g, bdrag.over)!) ? '#ef5350' : '#42a5f5'} />}
       {toast && <div className="toast">{toast}</div>}
       {blockDec && <DecisionDialog key={blockDec.key + blockDec.kind} g={g} d={blockDec} castNow={u => { const c = g.players[HUMAN].exile.find(x => x.uid === u); if (c) startCast(c); }} answer={a => act(g => { answerDecision(g, a); })} Face={CardFace} setHover={id => setHover(id ? { id } : null)} />}
-      {!blockDec && flow && flowStage === 'alt' && flowCard && <AltCostDialog name={flowName} opts={[...(canCast(g, HUMAN, flowCard) ? [{ k: '', label: `Cast normally (${costText(def(flowCard).cost)})` }] : []), ...(def(flowCard).evoke && canCast(g, HUMAN, flowCard, { evoke: true }) ? [{ k: 'evoke', label: `Evoke (${costText(def(flowCard).evoke!)}) — sacrificed when it enters` }] : []), ...(def(flowCard).webSling && canCast(g, HUMAN, flowCard, { webSling: true }) ? [{ k: 'web', label: `Web-slinging (${costText(def(flowCard).webSling!)}) — return a tapped creature you control to hand` }] : [])]} cancel={() => setPending(null)} pick={k => startCast(flowCard, { alt: k as Flow['alt'] })} />}
+      {!blockDec && flow && flowStage === 'alt' && flowCard && <AltCostDialog name={flowName} opts={[...(canCast(g, HUMAN, flowCard) ? [{ k: '', label: `Cast normally (${costText(def(flowCard).cost)})` }] : []), ...(def(flowCard).freeCmdr && canCast(g, HUMAN, flowCard, { free: true }) ? [{ k: 'free', label: 'Cast it free (you control a commander)' }] : []), ...(def(flowCard).evoke && canCast(g, HUMAN, flowCard, { evoke: true }) ? [{ k: 'evoke', label: `Evoke (${costText(def(flowCard).evoke!)}) — sacrificed when it enters` }] : []), ...(def(flowCard).webSling && canCast(g, HUMAN, flowCard, { webSling: true }) ? [{ k: 'web', label: `Web-slinging (${costText(def(flowCard).webSling!)}) — return a tapped creature you control to hand` }] : [])]} cancel={() => setPending(null)} pick={k => startCast(flowCard, { alt: k as Flow['alt'] })} />}
       {!blockDec && flow && flowStage === 'warp' && flowCard && <WarpDialog name={flowName} cost={costText(def(flowCard).warp!)} normal={costText(def(flowCard).cost)} cancel={() => setPending(null)} pick={w => startCast2({ ...flow, warp: w }, flowCard)} />}
       {!blockDec && flow && flowStage === 'teamwork' && flowCard && <TeamworkDialog name={flowName} n={def(flowCard).teamwork!} cancel={() => setPending(null)} pick={t => begin2({ ...flow, teamwork: t }, flowCard)} />}
       {!blockDec && flow && flowStage === 'kicker' && flowCard && <KickerDialog name={flowName} cost={costText(def(flowCard).kicker!)} cancel={() => setPending(null)} pick={k => begin2({ ...flow, kicked: k }, flowCard)} />}
