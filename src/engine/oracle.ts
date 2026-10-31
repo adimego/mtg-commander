@@ -647,6 +647,7 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if (/^~ dies$|^~ is put into a graveyard from the battlefield$/.test(h)) return self('dies');
   if (/^~ enters or dies$/.test(h)) return { defs: [{ ev: 'etb', subj: 'self' }, { ev: 'dies', subj: 'self' }], cx: { it: 'self' } };
   if (/^~ leaves the battlefield$/.test(h)) return self('ltb');
+  if (/^you cycle ~$/.test(h)) return self('cycled');
   if (/^~ attacks$/.test(h)) return { ...self('attacks'), cx: { it: 'self', thatPl: 'def' } };
   if (/^~ blocks$/.test(h)) return self('blocks');
   if (/^~ attacks or blocks$/.test(h)) return { defs: [{ ev: 'attacks', subj: 'self' }, { ev: 'blocks', subj: 'self' }], cx: { it: 'self' } };

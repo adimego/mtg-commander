@@ -13,6 +13,10 @@ const YOUR_CREATURES: Filter = { types: ['Creature'], ctrl: 'you' };
 const OPP_CREATURES: Filter = { types: ['Creature'], ctrl: 'opp' };
 const SOLDIER: TokenSpec = { name: 'Soldier', p: 1, t: 1, colors: ['W'], types: ['Creature'], sub: ['Soldier'] };
 
+/** 'for each opponent, … up to one target … that player controls': one optional slot per opponent (up to 3 in a 4-player pod; extra slots stay empty). */
+const eachOpp = (f: Filter, harm = true): TSlot[] => [0, 1, 2].map(i => ({ who: 'perm' as const, f, opt: true, oppIdx: i, harm }));
+const chapter = (d: CardDef, n: number[], effects: Effect[], tslots?: TSlot[]) => trig(d, ...n.map(k => T('chapter', effects, { subj: 'self', ifc: { k: 'evAmt', n: k }, label: `chapter ${'I'.repeat(k).replace('IIII', 'IV')}`, tslots })));
+const ROBOT: TokenSpec = { name: 'Robot Villain', p: 2, t: 2, colors: [], types: ['Artifact', 'Creature'], sub: ['Robot', 'Villain'] };
 export const SCRIPTS: Record<string, Record<string, Patch>> = {
   'Syphon Mind': { 'each other player discards a card. you draw a card for each card discarded this way': d => spell(d, [{ op: 'discard', n: 1, pl: 'opps' }, { op: 'draw', n: 'chosen' }]) },
   'Cut a Deal': { 'each opponent draws a card, then you draw a card for each opponent who drew a card this way': d => spell(d, [S('cutDeal')]) },
@@ -26,6 +30,20 @@ export const SCRIPTS: Record<string, Record<string, Patch>> = {
   'The Wasp, Winsome Avenger': { 'whenever ~ attacks, tap target creature defending player controls': d => trig(d, T('attacks', [{ op: 'tap', who: 't0' }], { subj: 'self', label: 'tap target creature defending player controls', tslots: [{ who: 'perm', f: { types: ['Creature'], defP: true }, harm: true }] })) },
   'Everett K. Ross, Hapless Attaché': { 'whenever an opponent attacks you with two or more creatures, draw a card': d => trig(d, T('youAttack', [{ op: 'draw', n: 1 }], { pl: 'notyou', ifc: { k: 'atkMeGE', n: 2 }, label: 'draw a card' })) },
   'Heart-Shaped Herb': { "{2}, {t}, sacrifice ~: you may sacrifice a creature. if you do, return that card to the battlefield under its owner's control with three +1/+1 counters on it and you become the monarch": d => { (d.abilities ??= []).push({ label: 'Sacrifice a creature; it returns with three +1/+1 counters; become the monarch', mana: { generic: 2 }, tap: true, sac: true, effects: [S('herb')] }); } },
+  'Age of Ultron': {
+    'i — for each opponent, destroy up to one target nonartifact creature that player controls': d => chapter(d, [1], [{ op: 'destroy', who: 'tr:0-2' }], eachOpp({ types: ['Creature'], notTypes: ['Artifact'] })),
+    'iii — artifact creatures you control gain deathtouch until end of turn. put a +1/+1 counter on each of them': d => chapter(d, [3], [{ op: 'grant', who: { all: { types: ['Artifact', 'Creature'], ctrl: 'you' } }, kw: ['deathtouch'] }, { op: 'addC', who: { all: { types: ['Artifact', 'Creature'], ctrl: 'you' } }, kind: '+1/+1', n: 1 }]),
+  },
+  'Dismantling Wave': {
+    'for each opponent, destroy up to one target artifact or enchantment that player controls': d => spell(d, [{ op: 'destroy', who: 'tr:0-2' }], eachOpp({ anyType: ['Artifact', 'Enchantment'] })),
+    'when you cycle ~, destroy all artifacts and enchantments': d => trig(d, T('cycled', [{ op: 'destroy', who: { all: { anyType: ['Artifact', 'Enchantment'] } } }], { subj: 'self', label: 'destroy all artifacts and enchantments' })),
+  },
+  'Tri-Sentinel, Act of Vengeance': { 'when ~ enters, for each opponent, ~ deals 3 damage to up to one target creature that player controls': d => trig(d, T('etb', [{ op: 'damage', who: 'tr:0-2', n: 3 }], { subj: 'self', label: '3 damage to up to one creature of each opponent', tslots: eachOpp({ types: ['Creature'] }) })) },
+  "King Solomon's Frogs": { 'when ~ enters, if you cast it, for each opponent, exile up to one target permanent that player controls with mana value 3 or greater. for each permanent exiled this way, its controller draws a card': d => trig(d, T('etb', [S('frogs')], { subj: 'self', ifc: { k: 'wasCast' }, label: 'exile up to one permanent (MV 3+) of each opponent', tslots: eachOpp({ mvGE: 3 }) })) },
+  'Kang Dynasty': {
+    'i, ii — for each opponent, tap up to one target creature that player controls. goad those creatures. until your next turn, whenever any of those creatures deals combat damage to a player, draw a card': d => chapter(d, [1, 2], [{ op: 'tap', who: 'tr:0-2' }, { op: 'goad', who: 'tr:0-2' }, { op: 'watch', who: 'tr:0-2', kind: 'combatDamagePlayer', until: 'yourNext', text: 'draw a card', sub: [{ op: 'draw', n: 1 }] }], eachOpp({ types: ['Creature'] })),
+    "iii — target creature you control gets +1/+1 until end of turn for each card in your hand and can't be blocked this turn": d => chapter(d, [3], [{ op: 'pump', who: 't0', n: { cards: 'hand', pl: 'you' }, m: { cards: 'hand', pl: 'you' } }, { op: 'grant', who: 't0', kw: ['_unblockable'] }], [{ who: 'perm', f: YOUR_CREATURES }]),
+  },
 };
 
 /** Apply scripts for lines the compiler couldn't parse; covered lines are removed from `unparsed`. */
