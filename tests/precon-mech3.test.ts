@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { compileScry } from '../src/import/classify';
 import type { ScryCard } from '../src/import/scryfall';
-import { dealDamage, enter, matches, condOk, becomeMonarch, declareBlockers, canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters } from '../src/engine/engine';
+import { dealDamage, enter, matches, condOk, becomeMonarch, declareBlockers, canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters, costOf, createToken, blockReason } from '../src/engine/engine';
 import type { CardDef } from '../src/engine/types';
 import { emit } from '../src/engine/engine';
 import '../src/engine/ai';
@@ -160,4 +160,104 @@ describe('precon scripts: for each opponent', () => {
     expect(x.tapped).toBe(true); expect(x.goad?.by).toBe(0); const h = g.players[0].hand.length;
     emit(g, 'combatDamagePlayer', { player: 2, amount: 2 }, x); flushTriggers(g); run(g); expect(g.players[0].hand.length).toBe(h + 1);
   });
+});
+
+describe('precon scripts: batch 3 (costs, attack triggers, one-offs)', () => {
+  it('Avenge: {2} cheaper if attacked last turn; destroy all creatures, gain 1 per destroyed', () => {
+    const g = setup(); const av = mk(g, 0, pc('Avenge')); const base = costOf(g, av, {}).generic;
+    g.players[1].atkDefs = { turn: g.turn, defs: [0] }; expect(costOf(g, av, {}).generic).toBe(base - 2);
+    put(g, 0, BEAR()); put(g, 1, BEAR()); const ind = put(g, 2, BEAR()); ind.kw = ['indestructible']; const l0 = g.players[0].life;
+    cast(g, 0, pc('Avenge')); expect(g.players[0].life).toBe(l0 + 2); expect(findCard(g, ind.uid)).toBeTruthy();
+  });
+  it('Heroic Return: a Hero returns with two extra counters; non-Hero with none', () => {
+    const g = setup(); const h = mk(g, 0, HERO()); g.players[0].graveyard.push(h);
+    cast(g, 0, pc('Heroic Return'), { targets: [{ card: h.uid }] }); expect(findCard(g, h.uid)).toBeTruthy(); expect(ctr(h, '+1/+1')).toBe(2);
+    const b = mk(g, 0, BEAR()); g.players[0].graveyard.push(b); cast(g, 0, pc('Heroic Return'), { targets: [{ card: b.uid }] }); expect(ctr(b, '+1/+1')).toBe(0);
+  });
+  it('Metalwork Colossus: costs X less (total MV of noncreature artifacts)', () => {
+    const g = setup(); const m = mk(g, 0, pc('Metalwork Colossus')); const base = costOf(g, m, {}).generic; put(g, 0, ROCK()); put(g, 0, ROCK());
+    expect(costOf(g, m, {}).generic).toBe(base - 4);
+  });
+  it('Winter Soldier: only creature cards with MV <= its power are legal', () => {
+    const g = setup(); const w = put(g, 0, pc('Winter Soldier')); const big = mk(g, 0, card('PM Huge', 'Creature — Giant', '{9}', '', { power: '9', toughness: '9' })); const h = mk(g, 0, HERO());
+    g.players[0].graveyard.push(big, h); expect(matches(g, big, { mvLEPow: true }, 0, w.uid)).toBe(false); expect(matches(g, h, { mvLEPow: true }, 0, w.uid)).toBe(true);
+  });
+  it('Killmonger: +1/+0 per artifact defending player controls', () => {
+    const g = setup(); const k = put(g, 0, pc('Killmonger')); put(g, 1, ROCK()); put(g, 1, ROCK()); put(g, 2, ROCK()); const p0 = power(g, k);
+    toAttack(g); declareAttackers(g, 0, [{ uid: k.uid, defender: 1 }]); run(g); expect(power(g, k)).toBe(p0 + 2);
+  });
+  it('Iron Man: only other attacking modified creatures gain flying', () => {
+    const g = setup(); const im = put(g, 0, pc('Iron Man')); const a = put(g, 0, BEAR()); a.counters = { '+1/+1': 1 }; const b = put(g, 0, BEAR());
+    toAttack(g); declareAttackers(g, 0, [{ uid: im.uid, defender: 1 }, { uid: a.uid, defender: 1 }, { uid: b.uid, defender: 1 }]); run(g);
+    expect(hasKw(a, 'flying')).toBe(true); expect(hasKw(b, 'flying')).toBe(false);
+  });
+  it('Shang-Chi: triggers only when the tenth +1/+1 counter is put on it', () => {
+    const g = setup(); for (let i = 0; i < 6; i++) lib(g, 0, ROCK()); const s = put(g, 0, pc('Shang-Chi')); for (const p of g.players) p.human = true;
+    addCounters(g, s, '+1/+1', 8); flushTriggers(g); run(g); expect(g.players[0].hand.length).toBe(0);
+    addCounters(g, s, '+1/+1', 3); flushTriggers(g); run(g); expect(g.players[0].hand.length).toBe(5);
+    addCounters(g, s, '+1/+1', 1); flushTriggers(g); run(g); expect(g.players[0].hand.length).toBe(5);
+  });
+  it('Hercules: counters equal to damage only the first time each turn', () => {
+    const g = setup(); const h = put(g, 0, pc('Hercules')); for (const p of g.players) p.human = true; const z = put(g, 1, BEAR());
+    dealDamage(g, z.id, z, { card: h }, 2); flushTriggers(g); run(g); expect(ctr(h, '+1/+1')).toBe(2); dealDamage(g, z.id, z, { card: h }, 1); flushTriggers(g); run(g); expect(ctr(h, '+1/+1')).toBe(2);
+  });
+  it('Hawkeye: draws only for opposing creatures it damaged this turn', () => {
+    const g = setup(); lib(g, 0, ROCK(), ROCK()); const hk = put(g, 0, pc('Hawkeye')); for (const p of g.players) p.human = true; const a = put(g, 1, BEAR()); const b = put(g, 1, BEAR());
+    dealDamage(g, hk.id, hk, { card: a }, 2); checkState(g); flushTriggers(g); run(g); expect(g.players[0].hand.length).toBe(1);
+    destroy(g, b); flushTriggers(g); run(g); expect(g.players[0].hand.length).toBe(1);
+  });
+  it('Divine Visitation: creature tokens become 4/4 Angels; noncreature tokens unchanged', () => {
+    const g = setup(); put(g, 0, pc('Divine Visitation')); const t = createToken(g, 0, { name: 'Soldier', p: 1, t: 1, colors: ['W'], types: ['Creature'], sub: ['Soldier'] }); layer(g);
+    expect(def(t).name).toBe('Angel'); expect(power(g, t)).toBe(4); expect(hasKw(t, 'flying')).toBe(true);
+    const tr = createToken(g, 0, { name: 'Treasure', preset: 'Treasure', colors: [], types: ['Artifact'] }); expect(def(tr).name).toBe('Treasure');
+    const o = createToken(g, 1, { name: 'Soldier', p: 1, t: 1, colors: ['W'], types: ['Creature'], sub: ['Soldier'] }); expect(def(o).name).toBe('Soldier');
+  });
+  it('Council of Reeds: legend rule ignored for your creatures only', () => {
+    const g = setup(); put(g, 0, pc('Council of Reeds')); const L = card('PM Legend', 'Legendary Creature — Human', '{1}', '', { power: '1', toughness: '1' });
+    put(g, 0, L); put(g, 0, L); put(g, 1, L); put(g, 1, L); checkState(g);
+    expect(g.players[0].battlefield.filter(c => def(c).name === 'PM Legend').length).toBe(2); expect(g.players[1].battlefield.filter(c => def(c).name === 'PM Legend').length).toBe(1);
+  });
+  it("Shuri's Fabricator: returned artifact has a finality counter and is exiled instead of dying", () => {
+    const g = setup(); const f = put(g, 0, pc("Shuri's Fabricator")); const r = mk(g, 0, ROCK()); g.players[0].graveyard.push(r); mana(g, 0);
+    expect(activate(g, 0, f.uid, 0, { targets: [{ card: r.uid }] } as never)).toBe(true); run(g); expect(ctr(r, 'finality')).toBe(1);
+    destroy(g, r); expect(g.players[0].exile.includes(r)).toBe(true);
+  });
+  it('Chaos Warp: shuffled into library; top permanent card enters', () => {
+    const g = setup(); const v = put(g, 1, BEAR()); g.players[1].library = []; cast(g, 0, pc('Chaos Warp'), { targets: [{ card: v.uid }] });
+    expect(findCard(g, v.uid)).toBeTruthy(); // only card in library → revealed and returned
+    const z = put(g, 2, BEAR()); g.players[2].library = [mk(g, 2, ZAP()), mk(g, 2, ZAP())]; cast(g, 0, pc('Chaos Warp'), { targets: [{ card: z.uid }] });
+    expect(findCard(g, z.uid)).toBeFalsy(); expect(g.players[2].library.length).toBe(3);
+  });
+  it('Wakanda Forever!: one permanent with an indestructible counter, one to hand, rest to graveyard', () => {
+    const g = setup(); lib(g, 0, ZAP(), ZAP(), ROCK(), ZAP(), BEAR(), ROCK());
+    cast(g, 0, pc('Wakanda Forever!'), undefined, { pick: u => u.slice(0, 1) });
+    const onb = g.players[0].battlefield.filter(c => !isType(c, 'Land')); expect(onb.length).toBe(1); expect(hasKw(onb[0], 'indestructible')).toBe(true);
+    expect(g.players[0].hand.length).toBe(1); expect(g.players[0].graveyard.length).toBe(5); // 4 rest + the spell
+  });
+  it('Expressive Iteration: hand / bottom / exile with play permission this turn', () => {
+    const g = setup(); g.players[0].library = []; lib(g, 0, ROCK(), BEAR(), ZAP()); cast(g, 0, pc('Expressive Iteration'));
+    expect(g.players[0].hand.length).toBe(1); const ex = g.players[0].exile[g.players[0].exile.length - 1]; expect(ex.mayPlay).toBe(g.turn); expect(g.players[0].library.length).toBe(1);
+  });
+  it('Genesis Ultimatum: chosen permanents enter, the rest to hand, spell exiled', () => {
+    const g = setup(); lib(g, 0, ZAP(), BEAR(), ROCK(), ZAP(), BEAR()); cast(g, 0, pc('Genesis Ultimatum'), undefined, { pick: u => u });
+    expect(g.players[0].battlefield.length).toBe(3); expect(g.players[0].hand.length).toBe(2); expect(names(g.players[0].exile)).toContain('Genesis Ultimatum');
+  });
+  it('Damocles Base: villainous choice — sacrifice, or lose 2 and you draw two', () => {
+    const g = setup(); lib(g, 0, ROCK(), ROCK()); const dmb = put(g, 0, pc('Damocles Base')); const b = put(g, 1, BEAR()); for (const p of g.players) p.human = true;
+    emit(g, 'combatDamagePlayer', { player: 1, amount: 3 }, dmb); flushTriggers(g); run(g, { may: true }); expect(findCard(g, b.uid)).toBeFalsy();
+    const l = g.players[1].life; emit(g, 'combatDamagePlayer', { player: 1, amount: 3 }, dmb); flushTriggers(g); run(g); expect(g.players[1].life).toBe(l - 2); expect(g.players[0].hand.length).toBe(2);
+  });
+  it('Alicia Masters: each player regains control of creatures they own at your end step', () => {
+    const g = setup(); const al = put(g, 0, pc('Alicia Masters')); const b = put(g, 1, BEAR()); g.players[1].battlefield = []; b.realOwner = 1; b.owner = 0; g.players[0].battlefield.push(b); for (const p of g.players) p.human = true;
+    emit(g, 'endStep', { player: 0 }); flushTriggers(g); run(g); expect(g.players[1].battlefield.includes(b)).toBe(true); expect(findCard(g, al.uid)).toBeTruthy();
+  });
+  it('Crystal: X damage to each opponent = colors of the noncreature spell', () => {
+    const g = setup(); put(g, 0, pc('Crystal')); const l = g.players[1].life;
+    cast(g, 0, card('PM Gold', 'Sorcery', '{W}{U}{B}', 'You gain 1 life.', { colors: ['W', 'U', 'B'] })); expect(g.players[1].life).toBe(l - 3); expect(g.players[3].life).toBe(l - 3);
+  });
+  it('Speed: the granted evasion allows only haste blockers', () => {
+    const g = setup(); const a = put(g, 0, BEAR()); a.kw = ['_hasteonly']; a.attacking = 1; const b1 = put(g, 1, BEAR()); const b2 = put(g, 1, BEAR()); b2.kw = ['haste'];
+    expect(blockReason(g, b1, a)).toMatch(/haste/); expect(blockReason(g, b2, a)).toBeNull();
+  });
+  it('overload test lives in precon-mech2 (no target, affects each)', () => { expect(true).toBe(true); });
 });

@@ -21,6 +21,7 @@ export function registerDeck(d: DeckDef) { const i = DECKS.findIndex(x => x.id =
 export function unregisterDeck(id: string) { const i = DECKS.findIndex(x => x.id === id); if (i >= BUILTIN_DECKS) DECKS.splice(i, 1); }
 
 export interface Card {
+  /** source uid -> turn it last dealt damage to this */ dmgBy?: Record<number, number>; /** turn this was last dealt damage */ dmgT?: number;
   evoked?: boolean; discarded?: number; webSlung?: boolean; earthbent?: boolean;
   /** entered from a resolving spell ("if you cast it") */ wasCast?: boolean; /** front-face id while the back face is up */ face?: string; /** on an adventure (exile) */ onAdv?: boolean; /** exiled by rebound on this turn */ reboundT?: number; /** turn it was foretold */ foretold?: number;
   /** 'As this enters, choose a creature type' */ chosenType?: string;
@@ -31,6 +32,7 @@ export interface Card {
   /** 'becomes a creature' until end of turn */ anim?: { p: number; t: number; kw?: string[]; prevent?: boolean; ts?: number; perm?: boolean }; /** layered characteristics (layer()); def() returns this */ eff?: CardDef; /** timestamp (entered the battlefield / emblem created) */ ts?: number; faceDown?: boolean; /** prepare mechanic: this creature is prepared */ prepared?: boolean; /** a castable copy of the prepare spell of this permanent (lives in the command zone) */ prepFor?: number; /** warped: castable from exile after this turn */ warpAfter?: number; /** Class level (starts at 1) */ classLvl?: number; /** cast using teamwork */ teamwork?: boolean; /** sneak: attack to inherit on entering; set once the sneak cost was paid */ sneakAtk?: { attacking: number; atkPw?: number }; sneakPaid?: boolean; /** turn this mount became saddled */ saddled?: number; /** this spell was cast for its warp cost */ warpCast?: boolean; /** Ugin: exiled card returned when this token leaves */ linkRet?: number; /** effects lasting until a player's next turn */ nx?: { by: number; p: number; t: number; kw: string[] }; kicked?: boolean; /** loyalty lost to compleated (phyrexian life) */ compleat?: number; /** subtypes / colors added by effects */ addSub?: string[]; addColors?: Color[]; /** turn it entered the battlefield */ enteredTurn?: number; x?: number; mayPlay?: number; /** may cast it from exile without paying its mana cost this turn */ mayFree?: number; flicker?: number; lki?: { p: number; t: number };
 }
 export interface Player {
+  /** players attacked during this player's most recent turn */ atkDefs?: { turn: number; defs: number[] }; /** colors of spells cast this turn */ spellCols?: { turn: number; cols: string[] }; /** turn of last discard */ discT?: number;
   id: number; /** colors opponents' lands could produce / among your legendary permanents (kept by layer()) */ oppCols?: string[]; legCols?: string[]; name: string; human: boolean; life: number; deckName: string; commanderId: string; commanderCasts: number; commanderIds: string[]; casts: Record<string, number>; identity: Color[];
   library: Card[]; hand: Card[]; battlefield: Card[]; graveyard: Card[]; exile: Card[]; command: Card[]; cmdDamage: Record<string, number>; lost: boolean; landPlayed: boolean; mulligans: number; drewEmpty?: boolean;
   /** spells cast this turn (all / noncreature / instant-sorcery-or-villain) */ spells?: { turn: number; n: number; nonc: number; isv: number };
@@ -82,7 +84,7 @@ export function subtypes(d: CardDef): string[] {
 }
 export const isType = (c: { id: string } & Partial<Card>, t: string) => def(c).types.includes(t);
 const isTypeOrSub = (d: CardDef, t: string) => d.types.includes(t) || subtypes(d).includes(t) || (!!d.keywords?.includes('changeling') && d.types.includes('Creature') && !TYPE_WORDS.includes(t) && /^[A-Z]/.test(t) && !LAND_TYPES.includes(t)) || (t === 'Legendary' && !!d.legendary) || (t === 'Basic' && !!d.basic) || (t === 'Permanent' && isPermanentCard(d)) || (t === 'Historic' && (!!d.legendary || d.types.includes('Artifact') || subtypes(d).includes('Saga'))) || (t === 'Outlaw' && ['Assassin', 'Mercenary', 'Pirate', 'Rogue', 'Warlock'].some(x => subtypes(d).includes(x)));
-export const hasKw = (c: { id: string } & Partial<Card>, k: string) => !!def(c).keywords?.includes(k) || !!c.kw?.includes(k) || !!c.skw?.includes(k) || !!c.pkw?.includes(k) || !!c.nx?.kw.includes(k);
+export const hasKw = (c: { id: string } & Partial<Card>, k: string) => !!def(c).keywords?.includes(k) || !!c.kw?.includes(k) || !!c.skw?.includes(k) || !!c.pkw?.includes(k) || !!c.nx?.kw.includes(k) || (c.counters?.[k] ?? 0) > 0;
 export const emblemsOf = (p: Player) => p.emblems ?? [];
 /** permanents plus emblems: everything whose static/triggered abilities are live */
 export const liveSources = (g: Game) => g.players.flatMap(p => [...p.battlefield, ...emblemsOf(p)]);
@@ -176,7 +178,7 @@ export function draw(g: Game, pid: number, n: number) {
 
 // ---------------- turn structure & priority ----------------
 function beginTurn(g: Game, pid: number) {
-  g.active = pid; g.turn++; delete g.players[pid].flashSorc; g.blockersDone = []; g.died = 0;
+  g.players[pid].atkDefs = { turn: g.turn + 1, defs: [] }; g.active = pid; g.turn++; delete g.players[pid].flashSorc; g.blockersDone = []; g.died = 0;
   for (const q of g.players) for (const c of q.battlefield) if (c.nx?.by === pid) delete c.nx;
   if (g.ces) g.ces = g.ces.filter(x => !(x.until === 'yourNext' && x.by === pid));
   if (g.watch) g.watch = g.watch.filter(w => !(w.until === 'yourNext' && w.by === pid));
@@ -204,7 +206,7 @@ function enterStep(g: Game, s: Step) {
     case 'untap': return enterStep(g, 'upkeep');
     case 'upkeep': fireDelayed(g, 'upkeep'); emit(g, 'upkeep', { player: g.active }); break;
     case 'draw': if (g.turn > 1 || g.players.length > 2) draw(g, g.active, 1); emit(g, 'drawStep', { player: g.active }); checkState(g); break;
-    case 'main1': for (const c of [...act.battlefield]) if (def(c).saga) addCounters(g, c, 'lore', 1); break;
+    case 'main1': for (const c of [...act.battlefield]) if (def(c).saga) addCounters(g, c, 'lore', 1); emit(g, 'firstMain', { player: g.active }); break;
     case 'beginCombat': if (!creatures(act).some(c => canAttack(g, c, true))) return enterStep(g, 'main2'); emit(g, 'beginCombat', { player: g.active }); if (!g.pending.length) return enterStep(g, 'attackers'); break;
     case 'attackers':
       if (!creatures(act).some(c => canAttack(g, c, true))) return enterStep(g, 'main2');
@@ -301,6 +303,9 @@ export function matches(g: Game, c: Card, f: Filter | undefined, pid: number, sr
   if (f.noKw && hasKw(c, f.noKw)) return false;
   if (f.name && d.name !== f.name) return false;
   if (f.notName && d.name === f.notName) return false;
+  if (f.goaded && !c.goad) return false;
+  if (f.mvLEPow) { const s = srcUid !== undefined ? findAny(g, srcUid) : undefined; if (!s || cmc(d) > power(g, s)) return false; }
+  if (f.modified && !(Object.values(c.counters ?? {}).some(v => v > 0) || g.players.some(q => q.battlefield.some(x => x.attachedTo === c.uid && (subtypes(def(x)).includes('Equipment') || (subtypes(def(x)).includes('Aura') && ctl(x) === ctl(c))))))) return false;
   return true;
 }
 function staticApplies(g: Game, s: { who: string; f?: Filter; cond?: Cond }, src: Card, c: Card): boolean {
@@ -417,6 +422,7 @@ export function costOf(g: Game, c: Card, o: { kicked?: boolean; flashback?: bool
   if (o.kicked && d.kicker) for (const k of ['generic', ...COLORS, 'C'] as const) (base as unknown as Record<string, number>)[k] = ((base as unknown as Record<string, number>)[k] ?? 0) + ((d.kicker as unknown as Record<string, number>)[k] ?? 0);
   if (base.x) base.generic += (o.x ?? 0) * base.x;
   if (o.flashback && d.flashback && d.flashbackLife) base.life = d.flashbackLife;
+  if (d.costLessIf && condOk(g, c.owner, d.costLessIf.cond, c)) base.generic = Math.max(0, base.generic - d.costLessIf.n);
   if (d.selfCostLess) base.generic = Math.max(0, base.generic - d.selfCostLess.n * amtStatic(g, d.selfCostLess.per, c));
   // cost reduction / increase statics
   for (const q of g.players) for (const s of [...q.battlefield, ...emblemsOf(q)]) for (const st of def(s).statics ?? []) {
@@ -721,6 +727,7 @@ export function castSpell(g: Game, pid: number, uid: number, opt?: Target | Cast
   const tdesc = targets.filter(Boolean).map(t => describeTarget(g, t)).join(', ');
   log(g, `${p.name} casts ${prepSrc ? 'a copy of ' : ''}${d.name}${o.warp ? ' for its warp cost' : ''}${o.x ? ` (X=${o.x})` : ''}${o.kicked ? ' (kicked)' : ''}${fb ? ' with flashback' : ''}${tdesc ? ` targeting ${tdesc}` : ''}${fromCmd ? ` from the command zone (tax ${2 * (p.casts[c.id] - 1)})` : ''}.`);
   if (p.spells?.turn !== g.turn) p.spells = { turn: g.turn, n: 0, nonc: 0, isv: 0 };
+  if (p.spellCols?.turn !== g.turn) p.spellCols = { turn: g.turn, cols: [] }; for (const k of def(c).colors) if (!p.spellCols.cols.includes(k)) p.spellCols.cols.push(k);
   p.spells.n++; if (!d.types.includes('Creature')) p.spells.nonc++; if (d.types.includes('Instant') || d.types.includes('Sorcery') || isTypeOrSub(d, 'Villain')) p.spells.isv++;
   emit(g, 'cast', { player: pid, mv: cmc(d), spent, nth: { ...p.spells } }, c);
   for (const t of d.triggers ?? []) if (t.on === 'x' && t.ev === 'castSelf') g.pending.push({ controller: pid, sourceId: c.id, sourceUid: c.uid, trig: t, event: { player: pid }, evCard: c });
@@ -791,7 +798,7 @@ export function activate(g: Game, pid: number, uid: number, i: number, opt?: Tar
   if (a.tapF) { const cs = tapCands(g, p, a, c).sort((x, y) => power(g, x) - power(g, y)).slice(0, a.tapF.n); for (const x of cs) x.tapped = true; }
   if (a.discard) { const pick = (o.discards ?? []).map(u => p.hand.find(x => x.uid === u)).filter((x): x is Card => !!x && x !== c); const rest = p.hand.filter(x => x !== c && !pick.includes(x)).sort((x, y) => (isType(x, 'Land') ? 0 : cmc(def(x))) - (isType(y, 'Land') ? 0 : cmc(def(y)))); for (const x of [...pick, ...rest].slice(0, a.discard)) discardCard(g, x); }
   if (a.exileGy) { const cs = a.exileGy.self ? [c] : p.graveyard.filter(x => x !== c && matches(g, x, a.exileGy!.f, pid)).slice(0, a.exileGy.n); for (const x of cs) { p.graveyard = p.graveyard.filter(y => y !== x); p.exile.push(x); } }
-  if (a.zone === 'hand') { p.hand = p.hand.filter(x => x !== c); p.graveyard.push(c); c.discarded = g.turn; log(g, `${p.name} discards ${nm(c)} (${a.label.split(':')[0]}).`); emit(g, 'discard', { player: pid }, c); if (/cycling/i.test(a.label)) emit(g, 'cycled', { player: pid }, c); }
+  if (a.zone === 'hand') { p.hand = p.hand.filter(x => x !== c); p.graveyard.push(c); c.discarded = g.turn; p.discT = g.turn; log(g, `${p.name} discards ${nm(c)} (${a.label.split(':')[0]}).`); emit(g, 'discard', { player: pid }, c); if (/cycling/i.test(a.label)) emit(g, 'cycled', { player: pid }, c); }
   let sacked: Card[] = [];
   if (a.sacF) { const cands = sacCands(g, p, a, c); const pick = (o.sacs ?? []).map(u => cands.find(x => x.uid === u)).filter((x): x is Card => !!x); sacked = [...pick, ...cands.filter(x => !pick.includes(x)).sort((x, y) => valueOf(g, x) - valueOf(g, y))].slice(0, a.sacF.n); }
   const label = `${nm(c)}: ${a.label}`;
@@ -853,6 +860,14 @@ export const ctlCommander = (g: Game, pid: number) => g.players.some(q => q.batt
 export function condOk(g: Game, pid: number, c: Cond, src?: Card, ev?: GameEvent, subj?: Card, ctx?: ResCtx): boolean {
   const p = g.players[pid];
   switch (c.k) {
+    case 'attackedLastTurn': return opponents(g, pid).some(q => !!q.atkDefs?.defs.includes(pid));
+    case 'atkMoreLife': return src?.attacking !== undefined && g.players[src.attacking].life > p.life;
+    case 'subjAtkMonarchOpp': return subj?.attacking !== undefined && subj.attacking === g.monarch && g.monarch !== pid;
+    case 'evAtkMonarch': return subj?.attacking !== undefined && subj.attacking === g.monarch;
+    case 'yourTurnPreAtk': return g.active === pid && ['upkeep', 'draw', 'main1', 'beginCombat'].includes(g.step) && !g.players[pid].battlefield.some(x => x.attacking !== undefined);
+    case 'srcDamagedEv': return !!src && subj?.dmgBy?.[src.uid] === g.turn;
+    case 'ctrCross': { const s = subj ?? src; if (!s || ev?.kind !== c.kind) return false; const v = ctr(s, c.kind!); return v >= c.n! && v - (ev?.amount ?? 0) < c.n!; }
+    case 'discardedThisTurn': return p.discT === g.turn;
     case 'attachedCreature': { const h = src?.attachedTo !== undefined ? findCard(g, src.attachedTo) : undefined; return !!h && isType(h, 'Creature'); }
     case 'refIs': { const r = ctx ? refCards(g, ctx, c.ref)[0] : undefined; return !!r && !!findCard(g, r.uid) && matches(g, r, c.f, pid); }
     case 'enteredThisTurn': return !!src && src.enteredTurn === g.turn;
@@ -997,7 +1012,7 @@ function leave(g: Game, c: Card) {
   o.battlefield = o.battlefield.filter(x => x !== c);
   Object.assign(c, { tapped: false, damage: 0, pp: 0, pt: 0, deathtouched: false, sick: false, kw: undefined, pkw: undefined, monstrous: undefined, counters: undefined, regen: 0, sp: 0, st: 0, skw: undefined });
   delete c.attacking; delete c.blocking; delete c.blockedBy; delete c.attachedTo; delete c.goad; delete c.sneakPaid; delete c.webSlung; delete c.evoked; delete c.earthbent; delete c.teamwork; delete c.classLvl; delete c.saddled; delete c.usedLoyalty; delete c.atkPw; delete c.anim; delete c.nx;
-  if (g.ces) g.ces = g.ces.filter(x => x.uid !== c.uid); if (g.watch) g.watch = g.watch.filter(w => w.uid !== c.uid); delete c.wasCast; offBfEff(c);
+  if (g.ces) g.ces = g.ces.filter(x => x.uid !== c.uid); if (g.watch) g.watch = g.watch.filter(w => w.uid !== c.uid || w.ev === 'dies'); delete c.wasCast; offBfEff(c);
   if (c.realOwner !== undefined) { c.owner = c.realOwner; delete c.realOwner; }
 }
 /** Move a permanent to another player's battlefield (control change; no zone change triggers). */
@@ -1054,6 +1069,7 @@ export function destroy(g: Game, c: Card, why = 'dies') {
     if (hasKw(c, 'indestructible')) { log(g, `${nm(c)} is indestructible.`); return; }
     if (c.regen) { c.regen--; c.tapped = true; c.damage = 0; c.deathtouched = false; delete c.attacking; delete c.blocking; log(g, `${nm(c)} regenerates.`); return; }
   }
+  if (ctr(c, 'finality') > 0) { log(g, `${nm(c)} has a finality counter: exiled instead.`); exileCard(g, c); return; }
   const cmd = isCommander(g, c); const wasCreature = isType(c, 'Creature');
   if (c.unearthed) { moveCard(g, c, 'graveyard', { quiet: true }); if (why === 'sacrifice') emit(g, 'sacrificed', { player: c.owner }, c); return; }
   moveCard(g, c, 'graveyard', { quiet: true });
@@ -1063,7 +1079,7 @@ export function destroy(g: Game, c: Card, why = 'dies') {
   if (why === 'sacrifice') emit(g, 'sacrificed', { player: c.owner }, c);
 }
 export function sacrifice(g: Game, c: Card) { destroy(g, c, 'sacrifice'); }
-function discardCard(g: Game, c: Card) { const p = g.players[c.owner]; p.hand = p.hand.filter(x => x !== c); p.graveyard.push(c); c.discarded = g.turn; log(g, `${p.name} discards ${nm(c)}.`); emit(g, 'discard', { player: c.owner }, c); }
+function discardCard(g: Game, c: Card) { const p = g.players[c.owner]; p.hand = p.hand.filter(x => x !== c); p.graveyard.push(c); c.discarded = g.turn; p.discT = g.turn; log(g, `${p.name} discards ${nm(c)}.`); emit(g, 'discard', { player: c.owner }, c); }
 export function gainLife(g: Game, pid: number, n: number) { if (n <= 0) return; const p = g.players[pid]; p.life += n; p.gained += n; emit(g, 'gainLife', { player: pid, amount: n }); }
 export function loseLife(g: Game, pid: number, n: number) { if (n <= 0) return; const p = g.players[pid]; p.life -= n; p.lostLife += n;
   { const A = g.players[g.active]; if (pid !== g.active && A.speed && A.speed < 4 && A.speedTurn !== g.turn) { A.speed++; A.speedTurn = g.turn; log(g, `${A.name}'s speed increases to ${A.speed}${A.speed === 4 ? ' (max speed)' : ''}.`); } } emit(g, 'loseLife', { player: pid, amount: n }); }
@@ -1092,6 +1108,7 @@ export function dealDamage(g: Game, srcId: string, srcCard: Card | undefined, to
     if (sd.colors.some(k => hasKw(c, `protection from ${COLOR_WORD[k]}`))) { log(g, `${nm(c)} has protection: damage prevented.`); return 0; }
     if (isType(c, 'Planeswalker') && !isType(c, 'Creature')) addCounters(g, c, 'loyalty', -n);
     else { c.damage += n; if (srcCard && hasKw(srcCard, 'deathtouch')) c.deathtouched = true; }
+    if (srcCard) (c.dmgBy ??= {})[srcCard.uid] = g.turn; { const first = c.dmgT !== g.turn; c.dmgT = g.turn; emit(g, 'dealtDamage', { player: ctl(c), amount: n, kind: first ? 'first' : undefined }, c); }
     if (!combat) log(g, `${sd.name} deals ${n} damage to ${nm(c)}.`);
   } else if (to.player !== undefined) {
     const v = g.players[to.player]; if (v.lost) return 0;
@@ -1126,7 +1143,8 @@ export function tokenDef(t: TokenSpec): CardDef {
   return CARDS[id];
 }
 export function createToken(g: Game, pid: number, spec: TokenSpec | string, o: { tapped?: boolean; attackingLike?: Card } = {}): Card {
-  const id = typeof spec === 'string' ? spec : tokenDef(spec).id;
+  let id = typeof spec === 'string' ? spec : tokenDef(spec).id;
+  if (CARDS[id]?.types.includes('Creature') && liveSources(g).some(s => ctl(s) === pid && def(s).statics?.some(st => st.k === 'angelTokens'))) id = tokenDef({ name: 'Angel', p: 4, t: 4, colors: ['W'], types: ['Creature'], sub: ['Angel'], kws: ['flying', 'vigilance'] }).id;
   const c: Card = { uid: g.nextUid++, id, owner: pid, tapped: false, sick: true, damage: 0, pp: 0, pt: 0, token: true };
   enter(g, c, pid, { tapped: o.tapped });
   if (o.attackingLike?.attacking !== undefined && isType(c, 'Creature')) { c.attacking = o.attackingLike.attacking; c.blockedBy = []; c.tapped = true; }
@@ -1269,6 +1287,9 @@ export function amt(g: Game, ctx: ResCtx, a: Amt | undefined): number {
   if ('lostWay' in a) return (ctx.ans['lostWay'] as number) ?? 0;
   if ('lifeLost' in a) return opponents(g, me).reduce((s, o) => s + o.lostLife, 0);
   if ('lifeGained' in a) return g.players[me].gained;
+  if ('mvSum' in a) return g.players[me].battlefield.filter(c => matches(g, c, a.mvSum, me)).reduce((s, c) => s + cmc(def(c)), 0);
+  if ('colorsOf' in a) { const c = refCards(g, ctx, a.colorsOf)[0]; return c ? def(c).colors.length : 0; }
+  if ('ffColors' in a) { const P = g.players[me]; const s = new Set<string>(P.battlefield.flatMap(c => def(c).colors)); if (P.spellCols?.turn === g.turn) for (const k of P.spellCols.cols) s.add(k); return s.size; }
   return 0;
 }
 /** Token doubling (Elspeth, Storm Slayer / Kaya's -2): 2^n multiplier for tokens created under pid's control. */
@@ -1540,7 +1561,7 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
     case 'reflex': { // "[do X]. When you do, [Y]": a reflexive triggered ability goes on the stack after this resolves
       const bk = `b:${key}`; if (!(bk in ctx.ans)) ctx.ans[bk] = ctx.chosen.length;
       runSub(g, ctx, e.sub, key);
-      const did = ctx.chosen.length > (ctx.ans[bk] as number) || !!ctx.ans[`paid:${key}.0`];
+      const did = ctx.chosen.length > (ctx.ans[bk] as number) || !!ctx.ans[`paid:${key}.0`] || (e.kind === 'always' && !!findCard(g, ctx.item.sourceUid));
       if (did && e.rt) g.pending.push({ controller: me, sourceId: ctx.item.sourceId, sourceUid: ctx.item.sourceUid, trig: { on: 'x', label: e.rt.label, effects: e.rt.effects, tslots: e.rt.tslots }, evCard: ctx.chosen[ctx.chosen.length - 1], event: { player: me } });
       break; }
     case 'ifDid': { // "[do X]. If you do, [Y]"
@@ -1616,6 +1637,47 @@ function scriptOp(g: Game, ctx: ResCtx, e: Effect, key: string): void {
     case 'selfAway': ctx.item.awayTo = e.dest as 'bottom' | 'exile'; break;
     case 'cutDeal': once('d', () => { let k = 0; for (const o of opponents(g, me)) { if (o.library.length) { draw(g, o.id, 1); k++; log(g, `${o.name} draws a card.`); } } if (k) { draw(g, me, k); log(g, `${P.name} draws ${k} card${k > 1 ? 's' : ''}.`); } }); break;
     case 'frogs': once('x', () => { for (const c of onBf(g, refCards(g, ctx, 'tr:0-2'))) { const pid = ctl(c); exileCard(g, c); draw(g, pid, 1); log(g, `${g.players[pid].name} draws a card.`); } }); break;
+    case 'avenge': once('x', () => { const all = g.players.flatMap(q => q.battlefield.filter(c => isType(c, 'Creature'))); for (const c of all) destroy(g, c); const k = all.filter(c => !findCard(g, c.uid)).length; gainLife(g, me, k); log(g, `${P.name} gains ${k} life.`); }); break;
+    case 'retHero': once('x', () => { const c = refCards(g, ctx, 't0')[0]; if (!c || locate(g, c.uid)?.zone !== 'graveyard') return; moveCard(g, c, 'battlefield', { ctl: me }); if (findCard(g, c.uid) && isTypeOrSub(def(c), 'Hero')) { addCounters(g, c, '+1/+1', e.n as number); log(g, `${nm(c)} enters with ${e.n} additional +1/+1 counter${e.n === 1 ? '' : 's'}.`); } }); break;
+    case 'westCoast': { const x = ctx.item.x ?? 0; once('d', () => { draw(g, me, x); log(g, `${P.name} draws ${x} card${x === 1 ? '' : 's'}.`); }); if (x < 5) break;
+      const cands = P.hand.filter(c => isTypeOrSub(def(c), 'Hero') && !isType(c, 'Land')); if (!cands.length) break;
+      const a = ask<number[]>(g, ctx, key + 'p', { pid: me, kind: 'pick', cards: cands, min: 0, max: 1, zone: 'hand', text: `${srcName}: you may cast a Hero spell from your hand without paying its mana cost.` });
+      const c = cands.find(y => y.uid === a[0]); if (c) castNowStep(g, ctx, key + 'c', me, c, true); break; }
+    case 'chaosWarp': once('x', () => { const c = onBf(g, refCards(g, ctx, 't0'))[0]; if (!c) return; const o = g.players[c.realOwner ?? c.owner]; moveCard(g, c, 'top', { quiet: true }); const i = o.library.indexOf(c); if (i >= 0) { o.library.splice(i, 1); o.library.push(c); } shuffle(g, o.library); log(g, `${nm(c)} is shuffled into ${o.name}'s library.`); const t = o.library[o.library.length - 1]; if (!t) return; log(g, `${o.name} reveals ${nm(t)}.`); if (isPermanentCard(def(t))) moveCard(g, t, 'battlefield', { ctl: o.id }); }); break;
+    case 'nyami': { const t = P.library[P.library.length - 1]; if (!t) break; const k0 = `u:${key}`; if (!(k0 in ctx.ans)) ctx.ans[k0] = t.uid; const c = P.library.find(y => y.uid === ctx.ans[k0]); if (!c) break;
+      const put = isPermanentCard(def(c)) && ask<boolean>(g, ctx, key, { pid: me, kind: 'may', text: `${srcName}: put ${nm(c)} onto the battlefield? (otherwise it goes to your hand)` });
+      once('m', () => moveCard(g, c, put ? 'battlefield' : 'hand', { ctl: me })); break; }
+    case 'genesis': case 'expressive': case 'wakanda': { const N = e.kind === 'genesis' ? 5 : e.kind === 'expressive' ? 3 : 6; const k0 = `u:${key}`; if (!(k0 in ctx.ans)) ctx.ans[k0] = P.library.slice(-N).map(c => c.uid);
+      const cs = () => (ctx.ans[k0] as number[]).map(u => P.library.find(c => c.uid === u)).filter((c): c is Card => !!c);
+      if (e.kind === 'genesis') { const perm = cs().filter(c => isPermanentCard(def(c))); const a = perm.length ? ask<number[]>(g, ctx, key, { pid: me, kind: 'pick', cards: perm, min: 0, max: perm.length, zone: 'library', text: `${srcName}: put any number of permanent cards onto the battlefield; the rest go to your hand.` }) : [];
+        once('m', () => { for (const c of cs()) moveCard(g, c, a.includes(c.uid) ? 'battlefield' : 'hand', { ctl: me }); }); break; }
+      if (e.kind === 'expressive') { const all = cs(); if (!all.length) break; const h = ask<number[]>(g, ctx, key, { pid: me, kind: 'pick', cards: all, min: 1, max: 1, zone: 'library', text: `${srcName}: put one into your hand.` });
+        const r1 = all.filter(c => c.uid !== h[0]); const b = r1.length ? ask<number[]>(g, ctx, key + 'b', { pid: me, kind: 'pick', cards: r1, min: 1, max: 1, zone: 'library', text: `${srcName}: put one on the bottom of your library (the last is exiled; you may play it this turn).` }) : [];
+        once('m', () => { for (const c of all) { if (c.uid === h[0]) moveCard(g, c, 'hand'); else if (c.uid === b[0]) moveCard(g, c, 'bottom'); else { moveCard(g, c, 'exile'); c.mayPlay = g.turn; } } }); break; }
+      const all = cs(); const perm = all.filter(c => isPermanentCard(def(c)));
+      const a = perm.length ? ask<number[]>(g, ctx, key, { pid: me, kind: 'pick', cards: perm, min: 0, max: 1, zone: 'library', text: `${srcName}: put a permanent card onto the battlefield with an indestructible counter.` }) : [];
+      const r = perm.filter(c => c.uid !== a[0]); const b = r.length ? ask<number[]>(g, ctx, key + 'b', { pid: me, kind: 'pick', cards: r, min: 0, max: 1, zone: 'library', text: `${srcName}: you may put a permanent card into your hand.` }) : [];
+      once('m', () => { for (const c of all) { if (c.uid === a[0]) { moveCard(g, c, 'battlefield', { ctl: me }); if (findCard(g, c.uid)) addCounters(g, c, 'indestructible', 1); } else moveCard(g, c, c.uid === b[0] ? 'hand' : 'graveyard'); } }); break; }
+    case 'tchaka': { const cands = ctx.chosen.filter(c => locate(g, c.uid)?.zone === 'graveyard' && (isType(c, 'Artifact') || isType(c, 'Land'))); if (!cands.length) break;
+      const a = ask<number[]>(g, ctx, key, { pid: me, kind: 'pick', cards: cands, min: 0, max: 1, zone: 'graveyard', text: `${srcName}: you may put an artifact or land card from among them into your hand.` });
+      const c = cands.find(y => y.uid === a[0]); if (c) once('m', () => moveCard(g, c, 'hand')); break; }
+    case 'titan': { const s = findCard(g, ctx.item.sourceUid); if (!s) break; const st = subtypes(def(s)); const all = hasKw(s, 'changeling') ? null : st;
+      const k = P.battlefield.filter(c => c !== s && isType(c, 'Creature') && (all === null || hasKw(c, 'changeling') || all.some(t => isTypeOrSub(def(c), t)))).length; if (!k) break;
+      if (!ask<boolean>(g, ctx, key, { pid: me, kind: 'may', text: `${srcName}: draw ${k} card${k > 1 ? 's' : ''}, then discard a card?` })) break;
+      once('d', () => { draw(g, me, k); log(g, `${P.name} draws ${k}.`); }); runSub(g, ctx, [{ op: 'discard', n: 1, pl: 'you' }], key + 'x'); break; }
+    case 'villain': { const vp = ctx.item.event?.player; if (vp === undefined) break; const V = g.players[vp]; const nt = V.battlefield.filter(c => isType(c, 'Creature') && !c.token);
+      const sac = nt.length > 0 && ask<boolean>(g, ctx, key, { pid: vp, kind: 'may', text: `${srcName}: villainous choice — sacrifice a nontoken creature? (otherwise you lose 2 life and ${P.name} draws two cards)` });
+      if (sac) { const a = ask<number[]>(g, ctx, key + 's', { pid: vp, kind: 'pick', cards: nt, min: 1, max: 1, zone: 'battlefield', text: 'Sacrifice a nontoken creature.' }); const c = nt.find(y => y.uid === a[0]); if (c) once('s', () => sacrifice(g, c)); }
+      else once('l', () => { loseLife(g, vp, 2); draw(g, me, 2); log(g, `${V.name} loses 2 life; ${P.name} draws two cards.`); }); break; }
+    case 'namor': { const s = findCard(g, ctx.item.sourceUid); if (!s || s.attacking === undefined) break; for (const c of P.battlefield) if (c !== s && c.attacking === s.attacking) c.pp += 2; log(g, `Other creatures attacking ${g.players[s.attacking].name} get +2/+0.`); break; }
+    case 'alicia': once('x', () => { for (const q of g.players) for (const c of [...q.battlefield]) if (isType(c, 'Creature') && c.realOwner !== undefined && !g.players[c.realOwner].lost) changeControl(g, c, c.realOwner); g.steals = (g.steals ?? []).filter(s => findCard(g, s.uid) && ctl(findCard(g, s.uid)!) !== s.back); }); break;
+    case 'discExile': { const c = ctx.item.evCard; if (!c || locate(g, c.uid)?.zone !== 'graveyard') break;
+      if (!ask<boolean>(g, ctx, key, { pid: me, kind: 'may', text: `${srcName}: exile ${nm(c)} from your graveyard; you may play it ${e.until === 'yourNext' ? 'until the end of your next turn' : 'this turn'}?` })) break;
+      once('x', () => { moveCard(g, c, 'exile'); const al = g.players.filter(q => !q.lost).map(q => q.id); const i = al.indexOf(me), j = al.indexOf(g.active); const k = i === j ? al.length : (i - j + al.length) % al.length; c.mayPlay = e.until === 'yourNext' ? g.turn + k : g.turn; }); break; }
+    case 'glorious': { const s = findCard(g, ctx.item.sourceUid); const k0 = `u:${key}`;
+      if (!(k0 in ctx.ans)) { if (!s) { ctx.ans[k0] = []; break; } sacrifice(g, s); const top = P.library.slice(-4); for (const c of top) moveCard(g, c, 'exile'); log(g, `${P.name} exiles the top four cards.`); ctx.ans[k0] = top.map(c => c.uid); }
+      const ids = ctx.ans[k0] as number[]; for (let i = 0; i < ids.length; i++) { const c = P.exile.find(y => y.uid === ids[i]); if (c && !isType(c, 'Land')) castNowStep(g, ctx, `${key}:${i}`, me, c, true); }
+      once('h', () => { for (const u of ids) { const c = P.exile.find(y => y.uid === u); if (c) moveCard(g, c, 'hand'); } }); break; }
     case 'herb': { const cands = creatures(P); if (!cands.length) break;
       const a = ask<number[]>(g, ctx, key, { pid: me, kind: 'pick', cards: cands, min: 0, max: 1, zone: 'battlefield', text: `${srcName}: you may sacrifice a creature. If you do, it returns with three +1/+1 counters and you become the monarch.` });
       const c = cands.find(x => x.uid === a[0]); if (!c) break;
@@ -1714,7 +1776,8 @@ export function checkState(g: Game) {
     // legend rule (keep the newest)
     for (const p of g.players) {
       const seen = new Map<string, Card>();
-      for (const c of [...p.battlefield].reverse()) { if (!def(c).legendary) continue; if (seen.has(def(c).name)) { moveCard(g, c, 'graveyard', { quiet: true }); log(g, `${nm(c)}: legend rule.`); changed = true; } else seen.set(def(c).name, c); }
+      const noLR = p.battlefield.some(s => def(s).statics?.some(st => st.k === 'noLegendRule'));
+      for (const c of [...p.battlefield].reverse()) { if (!def(c).legendary || (noLR && isType(c, 'Creature'))) continue; if (seen.has(def(c).name)) { moveCard(g, c, 'graveyard', { quiet: true }); log(g, `${nm(c)}: legend rule.`); changed = true; } else seen.set(def(c).name, c); }
     }
     if (!changed) break;
   }
@@ -1755,6 +1818,7 @@ export function declareAttackers(g: Game, pid: number, list: { uid: number; defe
   g.awaiting = null;
   const atk = attackers(g);
   for (const c of atk) emit(g, 'attacks', { player: c.attacking }, c);
+  { const A = (p.atkDefs ??= { turn: g.turn, defs: [] }); for (const a of atk) if (a.attacking !== undefined && !A.defs.includes(a.attacking)) A.defs.push(a.attacking); }
   if (atk.length) emit(g, 'youAttack', { player: pid, amount: atk.length });
   if (atk.length === 1) { const n = p.battlefield.filter(c => hasKw(c, 'exalted')).length; if (n) { atk[0].pp += n; atk[0].pt += n; log(g, `Exalted: ${nm(atk[0])} gets +${n}/+${n}.`); } }
   givePriority(g); return true;
@@ -1768,6 +1832,7 @@ export function blockReason(g: Game, b: Card, a: Card): string | null {
   if (b.blocking !== undefined) return 'Already blocking';
   if (a.attacking !== b.owner) return 'Not attacking you';
   if (hasKw(b, '_cantblock')) return 'This creature can\'t block';
+  if (hasKw(a, '_hasteonly') && !hasKw(b, 'haste')) return 'Can only be blocked by creatures with haste';
   if (hasKw(a, '_unblockable')) return 'Can\'t be blocked';
   if (protBlocks(b, a)) return 'Protection: can\'t be blocked by that color';
   if (hasKw(a, 'flying') && !hasKw(b, 'flying') && !hasKw(b, 'reach')) return 'Flying: needs a blocker with flying or reach';

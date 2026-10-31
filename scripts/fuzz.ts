@@ -42,7 +42,7 @@ for (let gi = 0; gi < +gamesS; gi++) {
   let steps = 0;
   try {
     startGame(g);
-    while (g.winner === null && g.turn < 40 && steps < 30000) { tick(g); steps++; }
+    while (g.winner === null && g.turn < 40 && steps < 30000 && g.players.reduce((s, p) => s + p.battlefield.length, 0) < 300) { tick(g); steps++; } // 300+ permanents: a runaway (often unbounded) combo; stop the game
     turns.push(g.turn); pwActs += g.log.filter(l => /activates .*: [+\-−0x]/.test(l) && / [+\-−]?[0-9x]+: /i.test(l)).length; pwCast += g.log.filter(l => / casts /.test(l) && Object.values(CARDS).some(d => d.types.includes('Planeswalker') && l.includes(d.name))).length; if (gi < 3) console.log(`game ${gi}: winner ${g.winner} turn ${g.turn} life ${g.players.map(p => p.life).join("/")} bf ${g.players.map(p => p.battlefield.length).join("/")} hand ${g.players.map(p => p.hand.length).join("/")} lib ${g.players.map(p => p.library.length).join("/")}`);
     if (steps >= 30000) console.log(`game ${gi}: STALL at turn ${g.turn} step ${g.step} prio ${g.priority} awaiting ${g.awaiting} decision ${g.decision?.kind} choice ${!!g.choice} res ${!!g.res}\n  ${g.log.slice(-6).join('\n  ')}`);
   } catch (e) { crashes++; console.log(`game ${gi}: CRASH turn ${g.turn}: ${(e as Error).stack?.split('\n').slice(0, 5).join('\n')}\n  last: ${g.log.slice(-4).join('\n  ')}`); }

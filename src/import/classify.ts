@@ -94,7 +94,7 @@ export function compileScry(c: ScryCard): Classified {
   if (types.includes('Land') && !d.mana && c.produced_mana?.length && res.unparsed.length) {
     const pm = c.produced_mana.filter(x => 'WUBRGC'.includes(x)); if (pm.length) d.mana = [{ add: [pm.length === 1 ? pm[0] as ManaSym : pm.join('|') as ManaSym] }];
   }
-  if ((d.sub?.includes('Saga') && !d.saga) || (d.sub?.includes('Vehicle') && !d.abilities?.some(a => a.crew !== undefined))) problems.push(`${d.sub?.includes('Saga') ? 'Saga chapters' : 'crewing'} not modelled`);
+  if ((d.sub?.includes('Saga') && !d.saga) || (d.sub?.includes('Vehicle') && /\bcrew \d/i.test(d.text ?? '') && !d.abilities?.some(a => a.crew !== undefined))) problems.push(`${d.sub?.includes('Saga') ? 'Saga chapters' : 'crewing'} not modelled`);
   res.unparsed.push(...prepUn);
   if (!res.unparsed.length && !problems.length) return { def: d, support: 'auto' };
   const works = describeWorks(d);
