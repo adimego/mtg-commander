@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { compileScry } from '../src/import/classify';
 import type { ScryCard } from '../src/import/scryfall';
-import { dealDamage, enter, matches, condOk, becomeMonarch, declareBlockers, canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters, costOf, createToken, blockReason } from '../src/engine/engine';
+import { dealDamage, enter, matches, condOk, becomeMonarch, declareBlockers, canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters, costOf, createToken, blockReason, atkBlocked } from '../src/engine/engine';
 import type { CardDef } from '../src/engine/types';
 import { emit } from '../src/engine/engine';
 import '../src/engine/ai';
@@ -29,7 +29,7 @@ function run(g: Game, o: RunOpt = {}) {
     if (g.choice) { const t = o.tgt!(); expect(chooseTriggerTargets(g, (Array.isArray(t) ? t : [t]) as never)).toBe(true); continue; }
     const d = g.decision as { kind: string; cards?: Card[] } | null;
     if (d && d.kind === 'cast' && o.cast) { const dd = d as unknown as { pid: number; uid: number }; expect(castSpell(g, dd.pid, dd.uid)).toBe(true); continue; }
-    if (d) answerDecision(g, (d.kind === 'pick' ? (o.pick ?? (u => u.slice(0, 1)))((d.cards ?? []).map(c => c.uid)) : d.kind === 'may' ? !!o.may : d.kind === 'cast' ? !!o.cast : d.kind === 'color' ? o.color ?? 'R' : false) as never);
+    if (d) answerDecision(g, (d.kind === 'pick' ? (o.pick ?? (u => u.slice(0, 1)))((d.cards ?? []).map(c => c.uid)) : d.kind === 'may' ? !!o.may : d.kind === 'cast' ? !!o.cast : d.kind === 'color' ? o.color ?? 'R' : d.kind === 'order' ? [] : false) as never);
     else pass(g, g.priority!);
   }
 }
@@ -260,4 +260,77 @@ describe('precon scripts: batch 3 (costs, attack triggers, one-offs)', () => {
     expect(blockReason(g, b1, a)).toMatch(/haste/); expect(blockReason(g, b2, a)).toBeNull();
   });
   it('overload test lives in precon-mech2 (no target, affects each)', () => { expect(true).toBe(true); });
+});
+
+describe('precon scripts: batch 4 (attack restrictions, graveyard triggers, one-offs)', () => {
+  const H = (g: Game) => { for (const p of g.players) p.human = true; };
+  it('Queen Mother Ramonda: power ≤2 creatures can\'t attack the monarch', () => {
+    const g = setup(); put(g, 1, pc('Queen Mother Ramonda')); const b = put(g, 0, BEAR()); expect(atkBlocked(g, b, 1)).toBeNull();
+    becomeMonarch(g, 1); expect(atkBlocked(g, b, 1)).toMatch(/Ramonda/); b.counters = { '+1/+1': 1 }; expect(atkBlocked(g, b, 1)).toBeNull();
+  });
+  it('Propaganda: attacker pays {2} per creature or is removed', () => {
+    const g = setup(); put(g, 1, pc('Propaganda')); const a = put(g, 0, BEAR()); const b = put(g, 0, BEAR()); toAttack(g); g.players[0].pool = ['G', 'G'];
+    declareAttackers(g, 0, [{ uid: a.uid, defender: 1 }, { uid: b.uid, defender: 1 }]); expect(a.attacking).toBe(1); expect(b.attacking).toBeUndefined();
+  });
+  it('Promise of Loyalty: each keeps one creature with a vow counter that can\'t attack the caster', () => {
+    const g = setup(); const k = put(g, 1, BEAR()); const s = put(g, 1, BEAR()); put(g, 0, BEAR());
+    cast(g, 0, pc('Promise of Loyalty'), {}, { pick: u => u.slice(0, 1) }); expect(findCard(g, k.uid)).toBeTruthy(); expect(findCard(g, s.uid)).toBeFalsy();
+    expect(ctr(k, 'vow')).toBe(1); expect(atkBlocked(g, k, 0)).toMatch(/vow/); expect(atkBlocked(g, k, 2)).toBeNull();
+  });
+  it('Palace Jailer: exile returns when an opponent becomes the monarch', () => {
+    const g = setup(); const v = put(g, 1, BEAR()); const j = mk(g, 0, pc('Palace Jailer')); g.players[0].hand.push(j); mana(g, 0); H(g);
+    expect(castSpell(g, 0, j.uid)).toBe(true); run(g, { tgt: () => ({ card: v.uid }) }); expect(findCard(g, v.uid)).toBeFalsy(); expect(g.monarch).toBe(0);
+    becomeMonarch(g, 1); expect(findCard(g, v.uid)).toBeTruthy(); expect(g.players[1].battlefield.some(c => c.uid === v.uid)).toBe(true);
+  });
+  it('Ant-Man: creatures with greater power can\'t block it', () => {
+    const g = setup(); const a = put(g, 0, pc('Ant-Man')); a.attacking = 1; const big = put(g, 1, card('PM Ogre', 'Creature — Ogre', '{4}', '', { power: '5', toughness: '5' })); const sm = put(g, 1, VAMP());
+    expect(blockReason(g, big, a)).toMatch(/greater power/); expect(blockReason(g, sm, a)).toBeNull();
+  });
+  it('She-Hulk: a blocked Hero gets a counter per blocker (one trigger)', () => {
+    const g = setup(); put(g, 0, pc('She-Hulk')); const h = put(g, 0, HERO()); h.blockedBy = [put(g, 1, BEAR()).uid, put(g, 1, BEAR()).uid]; H(g);
+    emit(g, 'blocked', { player: 0 }, h); flushTriggers(g); run(g); expect(ctr(h, '+1/+1')).toBe(2);
+  });
+  it('Photon: combat damage adds kept mana that survives a step change', () => {
+    const g = setup(); const p = put(g, 0, pc('Photon')); H(g); emit(g, 'combatDamagePlayer', { player: 1, amount: 3 }, p); flushTriggers(g); run(g, { color: 'U' });
+    expect(g.players[0].pool.filter(u => u === 'U@keep').length).toBe(3); pass(g, g.priority!); let i = 0; while (g.step !== 'main2' && i++ < 40) { if (g.decision) answerDecision(g, false); else pass(g, g.priority!); }
+    expect(g.players[0].pool.filter(u => u === 'U@keep').length).toBe(3);
+  });
+  it('Willie Lumpkin: damaged opponent may draw, then can\'t attack you next turn', () => {
+    const g = setup(); const w = put(g, 0, pc('Willie Lumpkin')); lib(g, 0, ROCK()); lib(g, 1, ROCK()); H(g);
+    emit(g, 'combatDamagePlayer', { player: 1, amount: 1 }, w); flushTriggers(g); run(g, { may: true }); expect(g.players[1].hand.length).toBe(1); expect(g.players[0].hand.length).toBe(1);
+    expect(atkBlocked(g, put(g, 1, BEAR()), 0)).toMatch(/Willie/);
+  });
+  it('Endless Ranks of HYDRA: pays {1}{B} from the graveyard when your commander attacks', () => {
+    const g = setup(); const e = mk(g, 0, pc('Endless Ranks')); g.players[0].graveyard.push(e); const cm = put(g, 0, BEAR()); g.players[0].commanderIds = [cm.id]; mana(g, 0); H(g);
+    emit(g, 'attacks', { player: 0 }, cm); flushTriggers(g); run(g, { may: true }); expect(g.players[0].hand.some(c => c.uid === e.uid)).toBe(true);
+  });
+  it('Jocasta: returns tapped and attacking alongside your commander', () => {
+    const g = setup(); const j = mk(g, 0, pc('Jocasta')); g.players[0].graveyard.push(j); const cm = put(g, 0, BEAR()); g.players[0].commanderIds = [cm.id]; toAttack(g); H(g);
+    declareAttackers(g, 0, [{ uid: cm.uid, defender: 2 }]); run(g, { may: true }); const jj = findCard(g, j.uid)!; expect(jj).toBeTruthy(); expect(jj.tapped).toBe(true); expect(jj.attacking).toBe(2);
+  });
+  it('Kimoyo Beads: each end step picks an unchosen mode; Prime Bead blinks and resets', () => {
+    const g = setup(); put(g, 0, pc('Kimoyo Beads')); lib(g, 0, ROCK()); H(g); const l = g.players[0].life;
+    emit(g, 'endStep', { player: 0 }); flushTriggers(g); run(g, { color: 'AV Bead — draw a card' }); expect(g.players[0].hand.length).toBe(1);
+    emit(g, 'endStep', { player: 0 }); flushTriggers(g); run(g, { color: 'Prime Bead — gain 3 life, blink' }); expect(g.players[0].life).toBe(l + 3);
+    const kb = g.players[0].battlefield.find(c => def(c).name === 'Kimoyo Beads')!; expect(kb.chosenModes ?? []).toEqual([]);
+  });
+  it('Tragic Arrogance: each player keeps one of each chosen type', () => {
+    const g = setup(); const a = put(g, 1, BEAR()); const b = put(g, 1, BEAR()); const r = put(g, 1, ROCK()); const r2 = put(g, 1, ROCK()); const f = put(g, 1, FOREST());
+    cast(g, 0, pc('Tragic Arrogance')); expect([a, b].filter(c => findCard(g, c.uid)).length).toBe(1); expect([r, r2].filter(c => findCard(g, c.uid)).length).toBe(1); expect(findCard(g, f.uid)).toBeTruthy();
+  });
+  it('Fight for the Throne: counter, fight; you become monarch when it dies (with your commander)', () => {
+    const g = setup(); const me = put(g, 0, BEAR()); g.players[0].commanderIds = [me.id]; const v = put(g, 1, VAMP());
+    cast(g, 0, pc('Fight for the Throne'), { targets: [{ card: me.uid }, { card: v.uid }] }); expect(ctr(me, '+1/+1')).toBe(1); expect(findCard(g, v.uid)).toBeFalsy(); expect(g.monarch).toBe(0);
+  });
+  it('Typhoid Mary: you choose the mode after discarding this turn', () => {
+    const g = setup(); const t = put(g, 0, pc('Typhoid Mary')); g.players[0].discT = g.turn; H(g); const l = g.players[1].life;
+    emit(g, 'attacks', { player: 0 }, t); flushTriggers(g); run(g, { color: 'Bloody Mary — each opponent loses 2 life and you gain 2 life' }); expect(g.players[1].life).toBe(l - 2);
+  });
+  it('Galactus must attack the opponent with the most life unless you control Silver Surfer', () => {
+    const g = setup(); const ga = put(g, 0, pc('Galactus')); g.players[2].life = 50; toAttack(g); declareAttackers(g, 0, [{ uid: ga.uid, defender: 1 }]); expect(ga.attacking).toBe(2);
+  });
+  it('Captain Marvel copies counters you put on another non-Kree creature', () => {
+    const g = setup(); const cm = put(g, 0, pc('Captain Marvel')); const b = put(g, 0, BEAR()); cast(g, 0, card('PM Grow', 'Sorcery', '{G}', 'Put two +1/+1 counters on target creature.'), { targets: [{ card: b.uid }] }, { may: true });
+    expect(ctr(cm, '+1/+1')).toBe(2);
+  });
 });
