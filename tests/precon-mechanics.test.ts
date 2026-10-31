@@ -125,5 +125,20 @@ describe('precon shared mechanics', () => {
     const d = card('PM Wall', 'Enchantment', '{2}', 'Creatures you control with toughness 3 or greater get +1/+0.');
     expect(d.statics?.[0].f).toMatchObject({ touGE: 3 });
   });
+  it('unless-restrictions, two-target destroy, MV cast filter, chosen-type cost reduction, commander equip', () => {
+    const bast = card('PM Bast', 'Creature — Cat God', '{1}{W}', "PM Bast can't attack or block unless you control three or more creatures.", { power: '5', toughness: '5' });
+    expect(bast.statics?.map(x => x.k)).toEqual(['cantAttack', 'cantBlock']); expect(bast.statics?.[0].cond).toMatchObject({ k: 'not' });
+    const hb = card('PM Breach', 'Sorcery', '{2}{R}', 'Destroy target artifact and target enchantment.');
+    expect(hb.spell?.effects.map(e => e.op)).toEqual(['destroy', 'destroy']); expect(hb.spell?.tslots?.length).toBe(2);
+    const tc = card('PM Panther', 'Creature — Human Hero', '{2}{G}', 'Whenever you cast an artifact spell with mana value 4 or greater, put two +1/+1 counters on PM Panther.', { power: '2', toughness: '2' });
+    expect(tc.triggers?.[0].f).toMatchObject({ mvGE: 4, types: ['Artifact'] });
+    const hh = card('PM Horn', 'Artifact', '{1}', 'As PM Horn enters, choose a creature type.\nCreature spells you cast of the chosen type cost {1} less to cast.');
+    expect(hh.statics?.[0]).toMatchObject({ k: 'costLess', spellF: { chosenType: true } });
+    const eq = card('PM Suit', 'Artifact — Equipment', '{2}', 'Equipped creature gets +1/+1.\nEquip commander {2}');
+    expect(eq.abilities?.[0].tslots?.[0].f).toMatchObject({ cmdr: 'any' });
+    const kd = card('PM Discovery', 'Enchantment', '{2}{U}', 'As PM Discovery enters, choose a creature type.\nWhenever a creature you control of the chosen type enters or attacks, draw a card.');
+    expect(kd.triggers?.map(t => t.ev)).toEqual(['etb', 'attacks']);
+    const g = setup(); const b = put(g, 0, bast); layer(g); expect(condOk(g, 0, bast.statics![0].cond!, b)).toBe(true); put(g, 0, BEAR()); put(g, 0, BEAR()); layer(g); expect(condOk(g, 0, bast.statics![0].cond!, b)).toBe(false);
+  });
 });
 function until(g: Game, pred: () => boolean, max = 800) { for (const p of g.players) p.human = false; let i = 0; while (!pred() && i++ < max) { if (g.decision) answerDecision(g, false); else pass(g, g.priority!); } return pred(); }

@@ -3,6 +3,8 @@
  *  'walkers' mode stuffs every deck with up to 15 supported planeswalkers. */
 import fs from 'node:fs';
 import { compileScry } from '../src/import/classify';
+import { loadPrecons } from '../src/import/precons';
+const PRECON = !!process.env.PRECON;
 import { registerCards, registerDeck, newGame, startGame, colorIdentity, CARDS } from '../src/engine/engine';
 import { tick } from '../src/engine/controller';
 import type { CardDef } from '../src/engine/types';
@@ -35,6 +37,7 @@ for (let gi = 0; gi < +gamesS; gi++) {
     while (cards.length < 99) cards.push(basicIds[cols[cards.length % cols.length]] ?? basicIds.W);
     const dd = { id: `fz-${gi}-${p}`, name: cmd.name, commander: cmd.id, cards }; registerDeck(dd); deckIds.push(dd.id);
   }
+  if (PRECON) { const ps = loadPrecons(); deckIds.splice(0, deckIds.length, ...[0, 1, 2, 3].map(k => ps[(gi + k) % ps.length].id)); }
   const g = newGame({ decks: deckIds, humans: [], seed: gi + 1 });
   let steps = 0;
   try {
