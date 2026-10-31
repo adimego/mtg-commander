@@ -99,3 +99,54 @@ describe('precon mechanics 2b', () => {
     expect(st.some(s => s.k === 'unblockable')).toBe(true); expect(st.some(s => s.k === 'kw' && s.kws?.includes('shroud'))).toBe(true);
   });
 });
+describe('precon mechanics 3', () => {
+  const LEG = () => card('PM Legend', 'Legendary Creature — Human Hero', '{1}{W}', '', { power: '3', toughness: '3' });
+  it('token copy except not legendary; "that token gains haste" lasts', () => {
+    const g = setup(); const l = put(g, 0, LEG());
+    const qm = card('PM Misalign', 'Instant', '{2}{U}', "Create a token that's a copy of target creature you control, except it isn't legendary.");
+    const c = mk(g, 0, qm); g.players[0].hand.push(c); for (let i = 0; i < 3; i++) put(g, 0, card('Island', 'Basic Land — Island', '', '({T}: Add {U}.)'));
+    expect(castSpell(g, 0, c.uid, { targets: [{ card: l.uid }] })).toBe(true); run(g); checkState(g);
+    const legs = g.players[0].battlefield.filter(x => def(x).name === 'PM Legend'); expect(legs.length).toBe(2);
+    const tok = legs.find(x => x.token)!; expect(def(tok).legendary).toBeFalsy(); expect(def(l).legendary).toBe(true);
+    const helm = card('PM Helm', 'Legendary Artifact — Equipment', '{4}', "At the beginning of combat on your turn, create a token that's a copy of equipped creature, except the token isn't legendary. That token gains haste.\nEquip {5}");
+    expect(JSON.stringify(def(mk(g, 0, helm)).triggers)).toContain('"until":"perm"');
+    tok.pkw = ['haste']; layer(g); expect(hasKw(tok, 'haste')).toBe(true);
+  });
+  it('pay X life as an additional cost (Toxic Deluge)', () => {
+    const g = setup(); const td = card('PM Deluge', 'Sorcery', '{2}{B}', 'As an additional cost to cast this spell, pay X life.\nAll creatures get -X/-X until end of turn.');
+    const b = put(g, 1, BEAR()); const big = put(g, 1, card('PM Big', 'Creature — Beast', '{4}', '', { power: '5', toughness: '5' }));
+    for (let i = 0; i < 3; i++) put(g, 0, card('Swamp', 'Basic Land — Swamp', '', '({T}: Add {B}.)'));
+    const c = mk(g, 0, td); g.players[0].hand.push(c); const life = g.players[0].life;
+    expect(canCast(g, 0, c, { x: life + 1 })).toBe(false);
+    expect(castSpell(g, 0, c.uid, { x: 2 })).toBe(true); expect(g.players[0].life).toBe(life - 2); run(g); checkState(g);
+    expect(findCard(g, b.uid)).toBeFalsy(); expect(findCard(g, big.uid)).toBeTruthy();
+  });
+  it('overload: no target, affects each', () => {
+    const g = setup(); const vb = card('PM Blast', 'Sorcery', '{R}', "Destroy target artifact you don't control.\nOverload {4}{R}");
+    expect(def(mk(g, 0, vb)).overload?.spell).toBeTruthy();
+    const r1 = put(g, 1, ROCK()); const r2 = put(g, 2, ROCK()); const mine = put(g, 0, ROCK());
+    for (let i = 0; i < 5; i++) put(g, 0, card('Mountain', 'Basic Land — Mountain', '', '({T}: Add {R}.)'));
+    const c = mk(g, 0, vb); g.players[0].hand.push(c);
+    expect(castSpell(g, 0, c.uid, { overload: true })).toBe(true); run(g);
+    expect(findCard(g, r1.uid)).toBeFalsy(); expect(findCard(g, r2.uid)).toBeFalsy(); expect(findCard(g, mine.uid)).toBeTruthy();
+    expect(g.players[0].graveyard.some(x => x.uid === c.uid && x.id === vb.id)).toBe(true);
+  });
+  it('monstrosity: counters once, then the as-long-as-monstrous static', () => {
+    const g = setup(); const d = card('PM Lion', 'Creature — Cat', '{G}{W}', '{1}: Monstrosity 1.\nAs long as PM Lion is monstrous, it has hexproof and indestructible.', { power: '4', toughness: '4' });
+    const c = put(g, 0, d); put(g, 0, FOREST()); put(g, 0, FOREST());
+    expect(hasKw(c, 'indestructible')).toBe(false);
+    activate(g, 0, c.uid, 0); run(g); layer(g); expect(ctr(c, '+1/+1')).toBe(1); expect(hasKw(c, 'indestructible')).toBe(true); expect(hasKw(c, 'hexproof')).toBe(true);
+    activate(g, 0, c.uid, 0); run(g); expect(ctr(c, '+1/+1')).toBe(1);
+  });
+  it('unearth: returns with haste, exiled instead of dying, exiled at end step', () => {
+    const g = setup(); const d = card('PM Sentinel', 'Artifact Creature — Construct', '{6}', 'Unearth {1}', { power: '6', toughness: '6' });
+    const c = mk(g, 0, d); g.players[0].graveyard.push(c); put(g, 0, FOREST());
+    activate(g, 0, c.uid, 0); run(g); const on = findCard(g, c.uid)!; expect(g.players[0].battlefield.includes(on)).toBe(true); expect(hasKw(on, 'haste')).toBe(true);
+    destroy(g, on); expect(g.players[0].exile.includes(on)).toBe(true); expect(g.players[0].graveyard.includes(on)).toBe(false);
+  });
+  it('affinity for artifacts', () => {
+    const g = setup(); const d = card('PM Robot', 'Artifact Creature — Robot', '{4}{W}', 'Affinity for artifacts', { power: '4', toughness: '4' });
+    put(g, 0, ROCK()); put(g, 0, ROCK()); put(g, 0, ROCK()); put(g, 0, card('Plains', 'Basic Land — Plains', '', '({T}: Add {W}.)')); put(g, 0, FOREST());
+    const c = mk(g, 0, d); g.players[0].hand.push(c); expect(canCast(g, 0, c)).toBe(true);
+  });
+});

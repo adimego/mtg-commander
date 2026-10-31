@@ -128,6 +128,7 @@ function scoreFx(g: Game, pid: number, fx: Effect[], x = 0): number {
 /** Try to cast a spell with sensible X / kicker / modes / targets. */
 function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   const d = def(c); const p = g.players[pid];
+  if (d.overload?.spell && canCast(g, pid, c, { overload: true }) && scoreFx(g, pid, d.overload.spell.effects, 0) >= 2 && castSpell(g, pid, c.uid, { overload: true })) return true;
   const kicked = !!d.kicker && canCast(g, pid, c, { kicked: true }) && !!planPayment(p, costOf(g, c, { kicked: true }));
   // warp: only when we can't cast it normally and it does something on entering (or can attack right away)
   const warp = !!d.warp && p.hand.includes(c) && !canCast(g, pid, c) && canCast(g, pid, c, { warp: true }) && (hasKw(c, 'haste') || (d.triggers ?? []).some(t => t.ev === 'etb'));
@@ -142,8 +143,9 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   // teamwork: tap creatures that won't attack this turn anyway
   const tw = d.teamwork !== undefined ? teamworkPick(g, pid, c) : null;
   const teamwork = !!tw && (g.active !== pid || g.step === 'main2' || tw.every(x => !canAttack(g, x, true)));
-  const x = d.cost.x ? maxX(g, pid, c, { kicked }) : 0;
-  if (d.cost.x && x < 1) return false;
+  const lx = d.extraCost?.lifeX ? Math.min(g.players[pid].life - 5, Math.max(0, ...g.players.filter(q => q.id !== pid).flatMap(q => q.battlefield.filter(b => isType(b, 'Creature')).map(b => toughness(g, b))))) : 0;
+  const x = d.cost.x ? maxX(g, pid, c, { kicked }) : lx;
+  if ((d.cost.x || d.extraCost?.lifeX) && x < 1) return false;
   let modes: number[] | undefined; let fx = d.spell?.effects ?? [];
   const slots = spellSlots(d); let active = slots.map((_, i) => i);
   if (d.spell?.modes) { modes = chooseModes(g, pid, { ...d.spell.modes, max: modesMax(g, pid, d.spell.modes, { teamwork }) }, c.uid); if (modes.length < d.spell.modes.min) return false; active = modes.flatMap(i => modeRange(d.spell!.modes!, i)); fx = modes.flatMap(i => d.spell!.modes!.list[i].effects); }

@@ -184,6 +184,7 @@ function withForEach(base: Amt, s: string | undefined, cx: Cx): Amt | null {
 function cond(s: string, cx: Cx): Cond | null {
   s = s.trim(); let m: RegExpExecArray | null;
   if (/^it's your turn$/.test(s)) return { k: 'yourTurn' };
+  if (/^~ is monstrous$/.test(s)) return { k: 'monstrous' };
   if (/^you control a commander$/.test(s)) return { k: 'ctlCommander' };
   if (/^it's not your turn$/.test(s)) return { k: 'notYourTurn' };
   if (/^you've cast a noncreature spell this turn$/.test(s)) return { k: 'castNoncThisTurn' };
@@ -427,11 +428,13 @@ const PATS: Pat[] = [
     const n = withForEach(a, m[7], cx); if (n === null) return null;
     return [{ op: 'token', n, pl: p, tok, tapped: !!m[3] || !!m[6], attacking: !!m[6] }];
   }],
+  [/^create (?:a|one) token that's a copy of (.+?), except (?:it|the token) isn't legendary$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'copyTok', n: 1, who: o.ref, kind: 'nl' }] : null; }],
   [/^create (?:a|one) token that's a copy of (.+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'copyTok', n: 1, who: o.ref }] : null; }],
   [/^(.+?) (?:gets?|get) ([+-](?:\d+|x))\/([+-](?:\d+|x))(?: and (?:gains?|gain) (.+?))? until end of turn(?: for each (.+))?$/, (m, cx) => pump(m, cx)],
   [/^(.+?) (?:gets?|get) ([+-](?:\d+|x))\/([+-](?:\d+|x)) for each (.+?) until end of turn$/, (m, cx) => pump([m[0], m[1], m[2], m[3], undefined, m[4]] as unknown as RegExpExecArray, cx)],
   [/^until end of turn, (.+?) (?:gets?|get) ([+-](?:\d+|x))\/([+-](?:\d+|x))(?: and (?:gains?|gain) (.+?))?$/, (m, cx) => pump(m, cx)],
   [/^(.+?) (?:gains?|gain) (.+?) until end of turn$/, (m, cx) => { const k = kwList(m[2]); const o = obj(m[1], cx, false); return k && o ? [{ op: 'grant', who: o.ref, kw: k }] : null; }],
+  [/^(that token|those tokens|the token|the tokens) gains? (.+?)$/, (m, cx) => { const k = kwList(m[2]); const o = obj(m[1], cx, false); return k && o ? [{ op: 'grant', who: o.ref, kw: k, until: 'perm' }] : null; }],
   [/^until end of turn, (.+?) (?:gains?|gain) (.+?)$/, (m, cx) => { const k = kwList(m[2]); const o = obj(m[1], cx, false); return k && o ? [{ op: 'grant', who: o.ref, kw: k }] : null; }],
   [/^(.+?) can't block this turn$/, (m, cx) => { const o = obj(m[1], cx, true); return o ? [{ op: 'grant', who: o.ref, kw: ['_cantblock'] }] : null; }],
   [/^(.+?) can't be blocked this turn$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'grant', who: o.ref, kw: ['_unblockable'] }] : null; }],
@@ -446,6 +449,7 @@ const PATS: Pat[] = [
   [new RegExp(`^(?:${P_RE} )?blights? (\\d+)$`), (m, cx) => { const p = pl(m[1], cx); return p ? [{ op: 'blight', n: +m[2], pl: p }] : null; }],
   [/^transform ~$/, () => [{ op: 'transform', who: 'self' }]],
   [/^exile ~, then return (?:it|~) to the battlefield transformed under your control$/, () => [{ op: 'exileRetT', who: 'self' }]],
+  [/^monstrosity (\d+)$/, m => [{ op: 'monstrosity', n: +m[1] }]],
   [/^discover (\d+)$/, m => [{ op: 'discover', n: +m[1] }]],
   [/^(.+?) connives?$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'connive', who: o.ref }] : null; }],
   [/^its controller may draw up to two cards at the beginning of the next turn's upkeep$/, () => [{ op: 'arcaneDraws', kind: 'ctl' }]],
@@ -698,6 +702,14 @@ const ORD: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4 }
 export function compile(sc: ScryLike, d: CardDef): CompileResult {
   const unparsed: string[] = []; const notes: string[] = []; CUR_NAME = sc.name;
   const text = normalize(sc.oracle_text ?? '', sc.name);
+  { const ov = /^overload (\{[^}]+\}(?:\{[^}]+\})*)\.?\s*$/m.exec(text); const oc = ov ? parseCost(ov[1].toUpperCase()) : null;
+    if (ov && oc && (d.types.includes('Instant') || d.types.includes('Sorcery'))) {
+      const body = (sc.oracle_text ?? '').split('\n').filter(l => !/^overload /i.test(l.trim())).join('\n');
+      const d2: CardDef = JSON.parse(JSON.stringify(d)); const r2 = compile({ ...sc, oracle_text: body.replace(/\btarget\b/gi, 'each') }, d2);
+      const r1 = compile({ ...sc, oracle_text: body }, d); CUR_NAME = sc.name;
+      if (!r2.unparsed.length && d2.spell && !(d2.spell.target || d2.spell.tslots?.length)) { d.overload = { cost: oc, spell: d2.spell }; return r1; }
+      return { ...r1, ok: false, unparsed: [...r1.unparsed, ov[0]] };
+    } }
   const rawLines = text.split('\n').map(x => x.trim()).filter(Boolean);
   // join modal bullets
   const lines: string[] = [];
@@ -899,6 +911,8 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
     const fx: Effect[] = !m[1] ? [{ op: 'draw', n: 1, pl: 'you' }] : [{ op: 'search', n: 1, f: m[1] === 'basic land' ? { types: ['Land'], basic: true } : m[1] === 'land' ? { types: ['Land'] } : { types: [SUB.get(m[1])!] }, dest: 'hand', text: `${m[1]} card` }];
     abilities.push({ label: `${m[1] ? m[1][0].toUpperCase() + m[1].slice(1) : ''}${m[1] ? 'cycling' : 'Cycling'} ${m[2].toUpperCase()}`, mana: c, zone: 'hand', effects: fx }); return true;
   }
+  if ((m = /^unearth (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && d.types.includes('Creature')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; abilities.push({ label: `Unearth ${m[1].toUpperCase()}`, mana: c, zone: 'graveyard', sorcery: true, effects: [{ op: 'unearth' }] }); return true; }
+  if (p === 'affinity for artifacts') { const a = forEach('artifact you control', newCx()); if (a === null) return false; d.selfCostLess = { n: 1, per: a }; return true; }
   if (p === 'convoke') { d.convoke = true; return true; }
   if (p === 'rebound' && (d.types.includes('Instant') || d.types.includes('Sorcery'))) { d.rebound = true; return true; }
   if ((m = /^enchant (.+)$/.exec(p))) { const fp = parseFilter(m[1]); if (!fp) return false; d.aura = { who: 'perm', f: fp.f }; return true; }
@@ -909,7 +923,7 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
 function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>): boolean {
   let m: RegExpExecArray | null; let c: Cond | undefined; let s = l;
   const cm = /^(.+?) as long as (.+)$/.exec(s) ?? /^as long as (.+?), (.+)$/.exec(s);
-  if (cm) { const [body, cs] = s.startsWith('as long as') ? [cm[2], cm[1]] : [cm[1], cm[2]]; const cc = cond(cs, newCx()); if (!cc) return false; c = cc; s = body; }
+  if (cm) { const [body, cs] = s.startsWith('as long as') ? [cm[2], cm[1]] : [cm[1], cm[2]]; const cc = cond(cs, newCx()); if (!cc) return false; c = cc; s = body.replace(/^it (has|gets|can't)\b/, '~ $1'); }
   const dm = /^during your turn, (.+)$/.exec(s); if (dm) { c = { k: 'yourTurn' }; s = dm[1]; }
   { const um = /^(~ can't attack or block|~ can't attack|~ can't block) unless (.+)$/.exec(s); if (um && !c) { const cc = cond(um[2], newCx()); if (!cc) return false; const nc: Cond = { k: 'not', c: cc } as Cond; const ks: Static['k'][] = um[1].endsWith('attack or block') ? ['cantAttack', 'cantBlock'] : um[1].endsWith('attack') ? ['cantAttack'] : ['cantBlock']; for (const k of ks) statics.push({ k, who: 'self', cond: nc }); return true; } }
   if (/^~ enters tapped$/.test(s) && !c) { d.etbTapped = true; return true; }
@@ -919,7 +933,8 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   if (/^~ is the chosen type in addition to its other types$/.test(s) && !c) { d.addChosen = true; return true; }
   if ((m = /^(each other |other )?(.+?) enters? with an additional ([+-]\d\/[+-]\d|[a-z]+) counter on (?:it|them)$/.exec(s)) && !c) { const fp = parseFilter(m[2]); if (!fp || fp.card || fp.spell) return false; statics.push({ k: 'etbExtra', who: 'all', f: { ...fp.f, other: m[1] ? true : undefined }, kws: [m[3]], n: 1 }); return true; }
   if ((m = /^~ enters tapped unless (.+)$/.exec(s))) { const t = m[1].replace(/^you have two or more opponents$/, '§opp'); const cc: Cond | null = t === '§opp' ? { k: 'oppsGE', n: 2 } : cond(t, newCx()); if (!cc) return false; d.etbTappedUnless = cc; return true; }
-  if ((m = /^as an additional cost to cast (?:this spell|~), (sacrifice|discard|pay) (an|a|one|two|\d+) (.*?)$/.exec(s))) {
+  if ((m = /^as an additional cost to cast (?:this spell|~), (sacrifice|discard|pay) (an|a|one|two|x|\d+) (.*?)$/.exec(s))) {
+    if (m[1] === 'pay' && m[2] === 'x' && m[3] === 'life') { d.extraCost = { lifeX: true }; return true; }
     const n0 = num(m[2]); if (typeof n0 !== "number") return false; const n = n0;
     if (m[1] === 'pay' && /^life$/.test(m[3])) { d.extraCost = { life: +m[2] }; return true; }
     if (m[1] === 'discard' && /^cards?$/.test(m[3])) { d.extraCost = { discard: n }; return true; }
