@@ -117,7 +117,7 @@ function obj(s: string, cx: Cx, harm: boolean): ObjR | null {
   const tm = /^(?:(up to )?(one|two|three|four|five|x|\d+) )?(other |another )?target (.+)$/.exec(s);
   if (tm) {
     const n = tm[2] ? num(tm[2]) : 1; if (n === null || n === 'X') return null; const opt = !!tm[1]; let noun = tm[4];
-    if (/^(creature or player|player or planeswalker|creature, player, or planeswalker|creature or planeswalker or player)$/.test(noun)) { const i = cx.slots.length; for (let k = 0; k < n; k++) addSlot(cx, { who: 'any', harm, opt }); return { ref: n === 1 ? 't' + i : `tr:${i}-${i + n - 1}` }; }
+    if (/^(creature or player|player or planeswalker|creature, player, or planeswalker|creature or planeswalker or player)$/.test(noun)) { const i = cx.slots.length; for (let k = 0; k < n; k++) addSlot(cx, { who: 'any', harm, opt, ...(n > 1 ? { grp: i } : {}) }); return { ref: n === 1 ? 't' + i : `tr:${i}-${i + n - 1}` }; }
     if (/^(player|players)$/.test(noun)) return { ref: addSlot(cx, { who: 'player', harm, opt }), pl: 't' + (cx.slots.length - 1) };
     if (/^(opponent|opponents)$/.test(noun)) return { ref: addSlot(cx, { who: 'opp', harm: true, opt }), pl: 't' + (cx.slots.length - 1) };
     if (/^(activated or triggered ability|activated ability|triggered ability)$/.test(noun)) return { ref: addSlot(cx, { who: 'ability', harm: true }) };
@@ -127,7 +127,7 @@ function obj(s: string, cx: Cx, harm: boolean): ObjR | null {
     const fp = parseFilter(noun); if (!fp) return null;
     if (fp.spell) who = 'spell'; else if (fp.card && who !== 'card') return null;
     if (tm[3]) fp.f.other = true;
-    const i = cx.slots.length; for (let k = 0; k < n; k++) addSlot(cx, { who, f: fp.f, harm: who === 'card' ? false : harm, opt, zoneOwner });
+    const i = cx.slots.length; for (let k = 0; k < n; k++) addSlot(cx, { who, f: fp.f, harm: who === 'card' ? false : harm, opt, zoneOwner, ...(n > 1 ? { grp: i } : {}), ...(tm[3] && i > 0 ? { distinct: true } : {}) });
     return { ref: n === 1 ? 't' + i : `tr:${i}-${i + n - 1}`, card: who === 'card' };
   }
   const am = /^(?:each|all) (.+)$/.exec(s);

@@ -22,7 +22,8 @@ export function chooseTargets(g: Game, pid: number, slots: TSlot[], effects: Eff
   const out: (Target | undefined)[] = []; const tc: TCtx = { srcUid, taken: out };
   const n = dmgOf(effects, x);
   for (const s of slots) {
-    const legal = slotTargets(g, pid, s, { ...tc, taken: [...out] }).filter(t => !out.some(o => o && o.card === t.card && o.player === t.player && o.stack === t.stack));
+    // prefer different objects for different 'target' words (rules allow the same one; fall back to it if needed)
+    const all = slotTargets(g, pid, s, { ...tc, taken: [...out], takenSlots: slots.slice(0, out.length) }); const fresh = all.filter(t => !out.some(o => o && o.card === t.card && o.player === t.player && o.stack === t.stack)); const legal = fresh.length || s.opt ? fresh : all;
     const harm = s.harm ?? effects.some(e => HARMFUL.includes(e.op));
     let pick: Target | undefined;
     if (s.who === 'spell' || s.who === 'ability') pick = legal.filter(t => (stackCtl(g, t.stack) !== pid) === harm).pop();

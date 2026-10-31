@@ -18,7 +18,7 @@ export interface Filter {
   /** one or more colors */ colored?: boolean; /** has a counter of this kind */ ctr?: string; /** mana value <= / == the ability's X */ mvLEX?: boolean; mvEqX?: boolean;
 }
 /** One target slot. who: perm = permanent on battlefield; any = creature/planeswalker/player; player/opp = players; spell / ability = on the stack; card = card in a graveyard. */
-export interface TSlot { who: 'perm' | 'any' | 'player' | 'opp' | 'spell' | 'ability' | 'card'; f?: Filter; zoneOwner?: 'you' | 'opp' | 'any'; opt?: boolean; harm?: boolean; label?: string; same?: number }
+export interface TSlot { who: 'perm' | 'any' | 'player' | 'opp' | 'spell' | 'ability' | 'card'; f?: Filter; zoneOwner?: 'you' | 'opp' | 'any'; opt?: boolean; harm?: boolean; label?: string; same?: number; /** slots made by one 'target' word (e.g. 'two target creatures') share a group: they need different objects */ grp?: number; /** 'another target …' after an earlier target: must differ from every earlier target */ distinct?: boolean }
 export type Amt = number | string | { maxPow: Filter } | { count: Filter; zone?: 'battlefield' | 'graveyard'; pl?: PRef } | { pow: Ref } | { tough: Ref } | { mv: Ref } | { cards: 'hand' | 'graveyard' | 'library'; pl: PRef; f?: Filter } | { life: PRef } | { mul: number; of: Amt } | { plus: number; of: Amt } | { ctr: string; who: Ref } | { half: Amt } | { devotion: Color[] } | { opps: true } | { lifeLost: true } | { lostWay: true } | { lifeGained: true };
 /** Reference to objects: self, ev (event card), t0..tN (targets), created, chosen, attached (what the source is attached to), host, all:filter. */
 export type Ref = string | { all: Filter; zone?: 'graveyard' };

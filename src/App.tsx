@@ -356,7 +356,7 @@ export default function App() {
     : flowModes && !flow.modes ? 'modes'
     : flow.ts.length < flowActive.length ? 'targets' : null;
   const curSlot = flowStage === 'targets' ? flowSlots[flowActive[flow!.ts.length]] : undefined;
-  const tctx = flow ? { srcUid: flow.kind === 'trigger' ? humanChoice!.sourceUid : flow.kind === 'ability' ? flow.uid : undefined, srcId: flow.kind === 'trigger' ? humanChoice!.sourceId : flowCard?.id, taken: flow.ts } : {};
+  const tctx = flow ? { srcUid: flow.kind === 'trigger' ? humanChoice!.sourceUid : flow.kind === 'ability' ? flow.uid : undefined, srcId: flow.kind === 'trigger' ? humanChoice!.sourceId : flowCard?.id, taken: flow.ts, takenSlots: flowActive.slice(0, flow.ts.length).map(i => flowSlots[i]) } : {};
   const isTarget = (t: Target) => !!g && !!curSlot && validSlot(g, HUMAN, curSlot, t, tctx);
   const spec = curSlot; // truthy while choosing a target
   const pendingCard = flowCard;

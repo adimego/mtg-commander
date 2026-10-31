@@ -459,12 +459,13 @@ export function slotOf(spec: TargetSpec): TSlot {
 }
 export const needsTarget = (d: CardDef) => !!d.spell?.target || !!d.spell?.tslots?.length;
 const protFrom = (c: Card, colors: Color[]) => colors.some(k => hasKw(c, `protection from ${({ W: 'white', U: 'blue', B: 'black', R: 'red', G: 'green' } as const)[k]}`));
-export interface TCtx { selfStackId?: number; srcUid?: number; srcId?: string; taken?: (Target | undefined)[] }
+export interface TCtx { selfStackId?: number; srcUid?: number; srcId?: string; taken?: (Target | undefined)[]; /** the slots the 'taken' targets were chosen for (same order) */ takenSlots?: (TSlot | undefined)[] }
 export function validSlot(g: Game, pid: number, slot: TSlot, t: Target | undefined, x: TCtx = {}): boolean {
   if (!t) return !!slot.opt;
   if (t.player !== undefined && t.player !== pid && liveSources(g).some(c => ctl(c) === t.player && def(c).statics?.some(st => st.k === 'playerHexproof'))) return false;
   if (t.player !== undefined && liveSources(g).some(c => ctl(c) === t.player && def(c).statics?.some(st => st.k === 'playerHexproof' && st.kws?.[0] === 'shroud'))) return false;
-  if (x.taken?.some(o => o && ((o.card !== undefined && o.card === t.card) || (o.player !== undefined && o.player === t.player) || (o.stack !== undefined && o.stack === t.stack)))) return false;
+  // 115.3: one object can't be chosen twice for the same word 'target', but different 'target' words may pick the same object
+  if (x.taken?.some((o, j) => o && ((o.card !== undefined && o.card === t.card) || (o.player !== undefined && o.player === t.player) || (o.stack !== undefined && o.stack === t.stack)) && (slot.distinct || (slot.grp !== undefined && x.takenSlots?.[j]?.grp === slot.grp)))) return false;
   if (slot.who === 'spell' || slot.who === 'ability') {
     const it = g.stack.find(s => s.id === t.stack); if (!it || it.id === x.selfStackId) return false;
     if (slot.who === 'ability') return it.kind !== 'spell';
@@ -504,8 +505,8 @@ export function slotTargets(g: Game, pid: number, slot: TSlot, x: TCtx = {}): Ta
 export function legalTargets(g: Game, pid: number, spec?: TargetSpec | TSlot): Target[] { if (!spec) return []; return slotTargets(g, pid, typeof spec === 'string' ? slotOf(spec) : spec); }
 /** Can every required slot get a (distinct) legal target? */
 export function slotsFillable(g: Game, pid: number, slots: TSlot[] | undefined, x: TCtx = {}): boolean {
-  if (!slots) return true; const taken: Target[] = [];
-  for (const s of slots) { if (s.opt) continue; const t = slotTargets(g, pid, s, { ...x, taken }); if (!t.length) return false; taken.push(t[0]); }
+  if (!slots) return true; const taken: Target[] = []; const takenSlots: TSlot[] = [];
+  for (const s of slots) { if (s.opt) continue; const t = slotTargets(g, pid, s, { ...x, taken, takenSlots }); if (!t.length) return false; taken.push(t[0]); takenSlots.push(s); }
   return true;
 }
 export function describeTarget(g: Game, t?: Target): string {
@@ -599,8 +600,8 @@ export function maxX(g: Game, pid: number, c: Card, o: { kicked?: boolean; abil?
   let x = 0; while (x < 30 && planPayment(g.players[pid], { ...base, generic: base.generic + (x + 1) * base.x, x: 0 }, { exclude: o.exclude, convoke: def(c).convoke })) x++; return x;
 }
 function checkTargets(g: Game, pid: number, slots: TSlot[], ts: (Target | undefined)[], active: number[], x: TCtx): boolean {
-  const taken: (Target | undefined)[] = [];
-  for (const i of active) { if (!validSlot(g, pid, slots[i], ts[i], { ...x, taken })) return false; taken.push(ts[i]); }
+  const taken: (Target | undefined)[] = []; const takenSlots: TSlot[] = [];
+  for (const i of active) { if (!validSlot(g, pid, slots[i], ts[i], { ...x, taken, takenSlots })) return false; taken.push(ts[i]); takenSlots.push(slots[i]); }
   return true;
 }
 export function modesMax(g: Game, pid: number, m: Modes, o: CastOpts = {}): number { if (!m.bothIf) return m.max; return (m.bothIf.k === 'teamwork' ? !!o.teamwork : condOk(g, pid, m.bothIf)) ? 2 : m.max; }
