@@ -3,7 +3,7 @@ import { compileScry } from '../src/import/classify';
 import type { ScryCard } from '../src/import/scryfall';
 import { dealDamage, enter, matches, condOk, becomeMonarch, declareBlockers, canActivate, planPayment, castZone, def, newGame, startGame, Game, Card, CARDS, registerCards, activate, pass, alive, answerDecision, declareAttackers, ctr, findCard, power, toughness, castSpell, canCast, canBeCommander, emblemsOf, layer, checkState, destroy, isType, hasKw, chooseTriggerTargets, canBeAttackedPw, tapForMana, offBfEff, flushTriggers, prepCopyOf, loseLife, playLand, canPlayLand, foretell, canForetell, addCounters, costOf, createToken, blockReason, atkBlocked } from '../src/engine/engine';
 import type { CardDef } from '../src/engine/types';
-import { emit, draw } from '../src/engine/engine';
+import { emit, draw, checkState as cs2 } from '../src/engine/engine';
 import '../src/engine/ai';
 let n = 0;
 function card(name: string, type_line: string, mana_cost: string, oracle_text: string, o: Partial<ScryCard> = {}): CardDef {
@@ -464,5 +464,42 @@ describe('precon scripts: batch 10 (trigger copying / doubling)', () => {
     const c = mk(g, 0, card('PM Insight3', 'Instant', '{U}', 'Draw a card.')); g.players[0].hand.push(c); mana(g, 0); expect(castSpell(g, 0, c.uid)).toBe(true); flushTriggers(g);
     const tr = g.stack.find(s => s.kind === 'trigger')!; expect(tr).toBeTruthy(); mana(g, 0); const l0 = g.players[0].life;
     activate(g, 0, mf.uid, mf ? def(mf).abilities!.length - 1 : 0, { stack: tr.id } as never); run(g); expect(g.players[0].life).toBe(l0 + 3);
+  });
+});
+describe('precon scripts: batch 11 (token copies, granted triggers, redirection, targeting, untap)', () => {
+  it('Living Laser: a tapped attacking non-legendary token copy per card discarded this turn, exiled at end step', () => {
+    const g = setup(); const s = put(g, 0, pc('Living Laser')); g.players[0].discT = g.turn; g.players[0].discN = 2; s.attacking = 1; s.tapped = true;
+    emit(g, 'attacks', { player: 0 }, s); flushTriggers(g); run(g);
+    const toks = g.players[0].battlefield.filter(c => c.token); expect(toks.length).toBe(2); expect(toks.every(c => c.attacking === 1 && c.tapped && def(c).name === 'Living Laser' && !def(c).legendary)).toBe(true);
+    expect((g.delayed ?? []).length).toBe(2);
+  });
+  it('Loki: token copy of another Villain, an Illusion, attacking; Villains connecting draw once', () => {
+    const g = setup(); const lk = put(g, 0, pc('Loki, the Deceiver')); const vil = put(g, 0, card('PM Villain', 'Legendary Creature — Human Villain', '{2}', '', { power: '3', toughness: '3' })); lk.attacking = 1; lk.tapped = true;
+    emit(g, 'attacks', { player: 0 }, lk); flushTriggers(g); run(g, { tgt: () => ({ card: vil.uid }) });
+    const tok = g.players[0].battlefield.find(c => c.token)!; expect(tok.attacking).toBe(1); expect(def(tok).sub).toContain('Illusion'); expect(def(tok).legendary).toBe(false);
+  });
+  it('Folk Hero: your commander draws once a turn when a spell shares its creature type', () => {
+    const g = setup(); put(g, 0, pc('Folk Hero')); const cd = card('PM Elf Lord', 'Legendary Creature — Elf Druid', '{2}', '', { power: '2', toughness: '2' }); const cm = put(g, 0, cd); g.players[0].commanderIds = [cd.id];
+    const h = g.players[0].hand.length; cast(g, 0, card('PM Elf', 'Creature — Elf Warrior', '{G}', '', { power: '1', toughness: '1' })); expect(g.players[0].hand.length).toBe(h + 1);
+    cast(g, 0, card('PM Elf2', 'Creature — Elf', '{G}', '', { power: '1', toughness: '1' })); expect(g.players[0].hand.length).toBe(h + 1); expect(cm).toBeTruthy();
+  });
+  it('Heroic Sacrifice: damage to you and your creatures goes to the chosen one; when it dies, move its counters and draw', () => {
+    const g = setup(); const big = put(g, 0, BEAR()); big.counters = { '+1/+1': 2 }; const other = put(g, 0, VAMP()); const foe = put(g, 1, BEAR());
+    cast(g, 0, pc('Heroic Sacrifice'), { card: big.uid }); const l0 = g.players[0].life; dealDamage(g, foe.id, foe, { player: 0 }, 2); expect(g.players[0].life).toBe(l0); expect(big.damage).toBe(2);
+    const h = g.players[0].hand.length; dealDamage(g, foe.id, foe, { card: other }, 3); checkState(g); flushTriggers(g); run(g, { pick: u => u.slice(0, 1) });
+    expect(findCard(g, big.uid)).toBeFalsy(); expect(ctr(other, '+1/+1')).toBe(2); expect(g.players[0].hand.length).toBe(h + 1);
+  });
+  it('Archnemesis: enchants an opponent; attacking them drains; being attacked lets you move it', () => {
+    const g = setup(); const a = cast(g, 0, pc('Archnemesis')); const arch = findCard(g, g.players[0].battlefield.find(c => def(c).name === 'Archnemesis')!.uid)!; expect(arch.encP).toBeDefined(); expect(a).toBeTruthy();
+    const v = arch.encP!; const b = put(g, 0, BEAR()); b.attacking = v; const l0 = g.players[v].life, m0 = g.players[0].life;
+    emit(g, 'youAttack', { player: 0, amount: 1 }); flushTriggers(g); run(g); expect(g.players[v].life).toBe(l0 - 2); expect(g.players[0].life).toBe(m0 + 2);
+  });
+  it('Black Bolt: targeted by an opponent → destroy a nonland permanent that player controls', () => {
+    const g = setup(); const bb = put(g, 0, pc('Black Bolt, Inhuman King')); const r = put(g, 1, ROCK()); const l = put(g, 1, card('PM Land', 'Land', '', ''));
+    const sh = mk(g, 1, card('PM Shock', 'Instant', '{R}', 'PM Shock deals 2 damage to any target.')); g.players[1].hand.push(sh); mana(g, 1); g.priority = 1; expect(castSpell(g, 1, sh.uid, { card: bb.uid } as never)).toBe(true);
+    run(g, { pick: u => u.slice(0, 1) }); expect(findCard(g, r.uid)).toBeFalsy(); expect(findCard(g, l.uid)).toBeTruthy();
+  });
+  it('Captain America, Living Legend: a creature tapped for the first time on your turn untaps', () => {
+    const g = setup(); put(g, 0, pc('Captain America, Living Legend')); const b = put(g, 0, BEAR()); b.tapped = true; flushTriggers(g); expect(b.tapped).toBe(false); b.tapped = true; flushTriggers(g); expect(b.tapped).toBe(true);
   });
 });

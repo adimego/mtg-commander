@@ -163,6 +163,21 @@ export const SCRIPTS: Record<string, Record<string, Patch>> = {
   'Mister Fantastic': { '{r}{g}{w}{u}, {t}: copy target triggered ability you control twice. you may choose new targets for the copies': d => { (d.abilities ??= []).push({ label: 'Copy target triggered ability you control twice', tap: true, mana: { generic: 0, R: 1, G: 1, W: 1, U: 1 }, tslots: [{ who: 'ability', label: 'triggered ability you control' }], effects: [S('copyTrig')] }); } },
   'Annie Joins Up': { 'if a triggered ability of a legendary creature you control triggers, that ability triggers an additional time': d => { d.legendTrigTwice = true; } },
 
+  'Living Laser': { "whenever ~ attacks, for each card you've discarded this turn, create a token that's a copy of ~, except the token isn't legendary. the tokens enter tapped and attacking. exile the tokens at the beginning of the next end step": d => trig(d, T('attacks', [S('laser')], { subj: 'self', label: "a tapped and attacking token copy for each card you've discarded this turn" })) },
+  'Loki, the Deceiver': {
+    "whenever ~ attacks, create a tapped and attacking token that's a copy of another target villain you control, except it isn't legendary and it's an illusion in addition to its other types. sacrifice that token at the beginning of the next end step": d => trig(d, T('attacks', [S('loki')], { subj: 'self', label: 'tapped and attacking token copy of another target Villain you control', tslots: [{ who: 'perm', f: { types: ['Creature'], sub: ['Villain'], ctrl: 'you', other: true } as Filter }] })),
+    'whenever one or more villains you control deal combat damage to a player, draw a card': d => trig(d, T('combatDamagePlayer', [{ op: 'draw', n: 1 }], { pl: 'any', subj: 'any', f: { sub: ['Villain'], ctrl: 'you' } as Filter, batch: true, label: 'draw a card' })),
+  },
+  'Folk Hero': { 'commander creatures you own have "whenever you cast a spell that shares a creature type with ~, draw a card. this ability triggers only once each turn."': d => trig(d, T('cast', [S('folkHero')], { pl: 'you', label: 'commander creatures you own: draw a card if the spell shares a creature type (once each turn)' })) },
+  'Heroic Sacrifice': { 'choose target creature you control. until end of turn, all damage that would be dealt to you and creatures you control is dealt to the chosen creature instead. when that creature dies this turn, put its counters on up to one target creature you control and draw a card': d => spell(d, [S('heroic')], [{ who: 'perm', f: YOUR_CREATURES }]) },
+  'Archnemesis': {
+    'enchant opponent': d => { d.asEnters = [...(d.asEnters ?? []), S('archEnter')]; },
+    'whenever you attack enchanted player, that player loses 2 life. you draw a card and gain 2 life': d => trig(d, T('youAttack', [S('archAtk')], { pl: 'you', label: 'enchanted player loses 2 life; you draw a card and gain 2 life' })),
+    'whenever a player attacks you, you may attach ~ to that player': d => trig(d, T('youAttack', [S('archMove')], { pl: 'any', label: 'you may attach it to the attacking player' })),
+  },
+  'Black Bolt, Inhuman King': { 'lethal voice — whenever ~ becomes the target of a spell or ability an opponent controls, destroy target nonland permanent that player controls': d => trig(d, T('targeted', [S('blackBolt')], { subj: 'self', label: 'destroy target nonland permanent that player controls' })) },
+  'Captain America, Living Legend': { "whenever a creature you control becomes tapped during your turn, if it's the first time that creature has become tapped this turn, untap it": d => { (d.keywords ??= []).push('_capUntap'); } },
+
 };
 
 /** Apply scripts for lines the compiler couldn't parse; covered lines are removed from `unparsed`. */
