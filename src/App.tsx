@@ -420,7 +420,7 @@ export default function App() {
   function clickHand(c: Card) {
     if (!g) return;
     if (canPlayLand(g, HUMAN, c)) return act(g => playLand(g, HUMAN, c.uid));
-    if (!canCast(g, HUMAN, c)) return;
+    if (!(['', 'warp', 'sneak', 'evoke', 'free', 'webSling'] as const).some(k => canCast(g, HUMAN, c, k ? { [k]: true } : {}))) return;
     startCast(c);
   }
   function activateAb(c: Card, i: number) {
@@ -675,7 +675,7 @@ export default function App() {
       {bdrag?.moved && <DragLine uid={bdrag.uid} x={bdrag.x} y={bdrag.y} color={bdrag.over === null ? '#9ec3ff' : blockReason(g, findCard(g, bdrag.uid)!, findCard(g, bdrag.over)!) ? '#ef5350' : '#42a5f5'} />}
       {toast && <div className="toast">{toast}</div>}
       {blockDec && <DecisionDialog key={blockDec.key + blockDec.kind} g={g} d={blockDec} castNow={u => { const c = g.players[HUMAN].exile.find(x => x.uid === u); if (c) startCast(c); }} answer={a => act(g => { answerDecision(g, a); })} Face={CardFace} setHover={id => setHover(id ? { id } : null)} />}
-      {!blockDec && flow && flowStage === 'alt' && flowCard && <AltCostDialog name={flowName} opts={[...(canCast(g, HUMAN, flowCard) ? [{ k: '', label: `Cast normally (${costText(def(flowCard).cost)})` }] : []), ...(def(flowCard).freeCmdr && canCast(g, HUMAN, flowCard, { free: true }) ? [{ k: 'free', label: 'Cast it free (you control a commander)' }] : []), ...(def(flowCard).evoke && canCast(g, HUMAN, flowCard, { evoke: true }) ? [{ k: 'evoke', label: `Evoke (${costText(def(flowCard).evoke!)}) — sacrificed when it enters` }] : []), ...(def(flowCard).webSling && canCast(g, HUMAN, flowCard, { webSling: true }) ? [{ k: 'web', label: `Web-slinging (${costText(def(flowCard).webSling!)}) — return a tapped creature you control to hand` }] : [])]} cancel={() => setPending(null)} pick={k => startCast(flowCard, { alt: k as Flow['alt'] })} />}
+      {!blockDec && flow && flowStage === 'alt' && flowCard && <AltCostDialog name={flowName} opts={[...(canCast(g, HUMAN, flowCard) ? [{ k: '', label: `Cast normally: ${costText(def(flowCard).cost)}` }] : []), ...(def(flowCard).freeCmdr && canCast(g, HUMAN, flowCard, { free: true }) ? [{ k: 'free', label: 'Cast it free (you control a commander)' }] : []), ...(def(flowCard).evoke && canCast(g, HUMAN, flowCard, { evoke: true }) ? [{ k: 'evoke', label: `Evoke: ${costText(def(flowCard).evoke!)} — sacrificed when it enters` }] : []), ...(def(flowCard).webSling && canCast(g, HUMAN, flowCard, { webSling: true }) ? [{ k: 'web', label: `Web-slinging: ${costText(def(flowCard).webSling!)} — return a tapped creature you control to hand` }] : [])]} cancel={() => setPending(null)} pick={k => startCast(flowCard, { alt: k as Flow['alt'] })} />}
       {!blockDec && flow && flowStage === 'warp' && flowCard && <WarpDialog name={flowName} cost={costText(def(flowCard).warp!)} normal={costText(def(flowCard).cost)} cancel={() => setPending(null)} pick={w => startCast2({ ...flow, warp: w }, flowCard)} />}
       {!blockDec && flow && flowStage === 'teamwork' && flowCard && <TeamworkDialog name={flowName} n={def(flowCard).teamwork!} cancel={() => setPending(null)} pick={t => begin2({ ...flow, teamwork: t }, flowCard)} />}
       {!blockDec && flow && flowStage === 'kicker' && flowCard && <KickerDialog name={flowName} cost={costText(def(flowCard).kicker!)} cancel={() => setPending(null)} pick={k => begin2({ ...flow, kicked: k }, flowCard)} />}
