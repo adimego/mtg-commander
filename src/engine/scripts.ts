@@ -134,6 +134,25 @@ export const SCRIPTS: Record<string, Record<string, Patch>> = {
   'Spark Double': { "you may have ~ enter as a copy of a creature or planeswalker you control, except it enters with an additional +1/+1 counter on it if it's a creature, it enters with an additional loyalty counter on it if it's a planeswalker, and it isn't legendary": d => { d.asEnters = [S('cloneSpark')]; } },
   'Chameleon, Master of Disguise': { 'you may have ~ enter as a copy of a creature you control, except his name is ~': d => { d.asEnters = [S('clone')]; } },
   'Mirage Mirror': { '{2}: ~ becomes a copy of target artifact, creature, enchantment, or land until end of turn': d => { (d.abilities ??= []).push({ label: 'Become a copy until end of turn', mana: { generic: 2 }, tslots: [{ who: 'perm', f: { anyType: ['Artifact', 'Creature', 'Enchantment', 'Land'] } }], effects: [S('mirage')] }); } },
+  'Ancestral Communion': { 'when you cast ~ while you control your commander, copy ~. you may choose a new target for the copy': d => trig(d, T('castSelf', [S('copySpell')], { ifc: { k: 'ctlCommander' }, label: 'copy this spell' })) },
+  'Hatut Zeraze Strike Force': { "when you cast ~, copy it for each time you've cast your commander from the command zone this game": d => trig(d, T('castSelf', [S('copySpellCmd')], { label: 'copy it per commander cast from the command zone' })) },
+  'Galvanic Iteration': { 'when you next cast an instant or sorcery spell this turn, copy that spell. you may choose new targets for the copy': d => spell(d, [S('galvanic')]) },
+  'Cosmic Crucible': {
+    'at the beginning of your first main phase, add four mana in any combination of colors': d => trig(d, T('firstMain', [S('crucibleMana')], { pl: 'you', label: 'add four mana in any combination of colors' })),
+    'whenever you cast a noncreature spell, you may copy it. you may choose new targets for the copy. do this only once each turn': d => trig(d, T('cast', [S('copySpellOnce')], { pl: 'you', filter: 'noncreature', label: 'you may copy it (once each turn)' })),
+  },
+  'Batroc the Leaper': {
+    'multikicker {2}': d => { d.multikicker = 2; },
+    '~ enters with a +1/+1 counter on ~ for each time ~ was kicked': d => { d.asEnters = [...(d.asEnters ?? []), S('kickCtr')]; },
+    "when ~ enters, ~ deals damage equal to ~'s power to each of up to x targets, where x is the number of times ~ was kicked": d => trig(d, T('etb', [S('batroc')], { subj: 'self', label: "damage equal to its power to each of up to X targets", tslots: Array.from({ length: 8 }, (_, i) => ({ who: 'any' as const, opt: true, harm: true, xIdx: i, grp: 1 })) })),
+  },
+  'Collective Effort': {
+    'escalate—tap an untapped creature you control': d => { if (d.spell?.modes) d.spell.modes.escalate = true; else (d as { _esc?: boolean })._esc = true; },
+    'choose one or more —\n• destroy target creature with power 4 or greater.\n• destroy target enchantment.\n• put a +1/+1 counter on each creature target player controls': d => { d.spell = { effects: [], modes: { min: 1, max: 3, escalate: true, list: [
+      { label: 'Destroy target creature with power 4 or greater', tslots: [{ who: 'perm', f: { types: ['Creature'], powGE: 4 }, harm: true }], effects: [{ op: 'destroy', who: 't0' }] },
+      { label: 'Destroy target enchantment', tslots: [{ who: 'perm', f: { types: ['Enchantment'] }, harm: true }], effects: [{ op: 'destroy', who: 't1' }] },
+      { label: 'Put a +1/+1 counter on each creature target player controls', tslots: [{ who: 'player' }], effects: [S('tpCounters')] }] } }; },
+  },
 };
 
 /** Apply scripts for lines the compiler couldn't parse; covered lines are removed from `unparsed`. */

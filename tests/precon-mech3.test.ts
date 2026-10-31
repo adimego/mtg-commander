@@ -372,3 +372,47 @@ describe('precon scripts: batch 6 (clones)', () => {
     let i = 0; while (g.active === 0 && i++ < 60) { if (g.decision) answerDecision(g, false); else pass(g, g.priority!); } expect(def(mm).name).toBe('Mirage Mirror');
   });
 });
+
+describe('precon scripts: batch 7 (spell copies)', () => {
+  it('Ancestral Communion: copy with a new target while you control your commander', () => {
+    const g = setup(); const cm = put(g, 0, BEAR()); g.players[0].commanderIds = [cm.id]; const a = mk(g, 0, ROCK()); const b = mk(g, 0, ROCK()); g.players[0].graveyard.push(a, b);
+    cast(g, 0, pc('Ancestral Communion'), { targets: [{ card: a.uid }] }, { pick: u => u.slice(0, 1) }); expect(g.players[0].hand.map(c => c.uid).sort()).toEqual([a.uid, b.uid].sort());
+  });
+  it('Hatut Zeraze: one token copy per commander cast from the command zone', () => {
+    const g = setup(); const cm = put(g, 0, BEAR()); g.players[0].commanderIds = [cm.id]; g.players[0].casts[cm.id] = 2;
+    const h = cast(g, 0, pc('Hatut Zeraze'), {}, { tgt: () => [undefined] }); const all = g.players[0].battlefield.filter(c => def(c).name === def(h).name); expect(all.length).toBe(3); expect(all.filter(c => c.token).length).toBe(2);
+  });
+  it('Galvanic Iteration: copies the next instant this turn', () => {
+    const g = setup(); cast(g, 0, pc('Galvanic Iteration')); const l = g.players[0].life; cast(g, 0, card('PM Heal', 'Instant', '{W}', 'You gain 2 life.')); expect(g.players[0].life).toBe(l + 4);
+    cast(g, 0, card('PM Heal2', 'Instant', '{W}', 'You gain 2 life.')); expect(g.players[0].life).toBe(l + 6);
+  });
+  it('Cosmic Crucible: copies only once each turn', () => {
+    const g = setup(); put(g, 0, pc('Cosmic Crucible')); const l = g.players[0].life; const heal = () => card('PM Heal3', 'Instant', '{W}', 'You gain 2 life.');
+    cast(g, 0, heal(), {}, { may: true }); expect(g.players[0].life).toBe(l + 4); cast(g, 0, heal(), {}, { may: true }); expect(g.players[0].life).toBe(l + 6);
+  });
+});
+
+describe('precon scripts: batch 8 (escalate, multikicker)', () => {
+  it('Collective Effort: escalate taps a creature per extra mode; modes use their own targets', () => {
+    const g = setup(); const big = put(g, 1, card('PM Ogre4', 'Creature — Ogre', '{4}', '', { power: '4', toughness: '4' })); const en = put(g, 1, card('PM Ench', 'Enchantment', '{1}', ''));
+    const t1 = put(g, 0, BEAR()); const t2 = put(g, 0, VAMP());
+    cast(g, 0, pc('Collective Effort'), { modes: [0, 1, 2], targets: [{ card: big.uid }, { card: en.uid }, { player: 0 }] });
+    expect(findCard(g, big.uid)).toBeFalsy(); expect(findCard(g, en.uid)).toBeFalsy(); expect(t1.tapped && t2.tapped).toBe(true); expect(ctr(t1, '+1/+1')).toBe(1);
+  });
+  it('Collective Effort: can\'t choose more modes than creatures to tap + 1', () => {
+    const g = setup(); const big = put(g, 1, card('PM Ogre5', 'Creature — Ogre', '{4}', '', { power: '4', toughness: '4' })); const en = put(g, 1, card('PM Ench2', 'Enchantment', '{1}', ''));
+    const c = mk(g, 0, pc('Collective Effort')); g.players[0].hand.push(c); mana(g, 0);
+    expect(castSpell(g, 0, c.uid, { modes: [0, 1], targets: [{ card: big.uid }, { card: en.uid }] })).toBe(false);
+  });
+  it('Batroc: multikicker twice = two counters and two targets', () => {
+    const g = setup(); const v1 = put(g, 1, VAMP()); const v2 = put(g, 2, VAMP()); const b = mk(g, 0, pc('Batroc')); const base = costOf(g, b, {}); expect(base.x).toBe(2);
+    g.players[0].hand.push(b); mana(g, 0); expect(castSpell(g, 0, b.uid, { x: 2 })).toBe(true); run(g, { tgt: () => [{ card: v1.uid }, { card: v2.uid }] });
+    expect(ctr(b, '+1/+1')).toBe(2); expect(findCard(g, v1.uid)).toBeFalsy(); expect(findCard(g, v2.uid)).toBeFalsy();
+  });
+});
+describe('precon scripts: batch 8b', () => {
+  it('Collective Effort: a single non-first mode hits its own target, no escalate tap', () => {
+    const g = setup(); const en = put(g, 1, card('PM Ench3', 'Enchantment', '{1}', '')); const t1 = put(g, 0, BEAR());
+    cast(g, 0, pc('Collective Effort'), { modes: [1], targets: [undefined, { card: en.uid }] }); expect(findCard(g, en.uid)).toBeFalsy(); expect(t1.tapped).toBe(false);
+  });
+});

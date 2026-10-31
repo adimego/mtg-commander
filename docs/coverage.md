@@ -6,13 +6,13 @@ A card counts as **fully supported** only if *every* line of its rules text comp
 
 | Set | Fully supported |
 |---|---|
-| All Commander-legal cards (32116) | **12512 (39.0%)** |
+| All Commander-legal cards (32116) | **12518 (39.0%)** |
 | Top 500 by EDHREC rank | **362/500 (72.4%)** |
-| Creature (16391) | 6700 (40.9%) |
-| Instant (3673) | 1461 (39.8%) |
-| Enchantment (3603) | 943 (26.2%) |
+| Creature (16391) | 6702 (40.9%) |
+| Instant (3673) | 1462 (39.8%) |
+| Enchantment (3603) | 944 (26.2%) |
 | Artifact (3567) | 1428 (40.0%) |
-| Sorcery (3393) | 1175 (34.6%) |
+| Sorcery (3393) | 1177 (34.7%) |
 | Land (1109) | 711 (64.1%) |
 | Planeswalker (296) | 94 (31.8%) |
 | Other (48) | 0 (0.0%) |
@@ -31,35 +31,29 @@ Per-card support for the four Marvel Super Heroes Commander precons (generated b
 - Gift of Immortality
 - Captain America, Living Legend
 
-### Wakanda Forever — T'Challa, the Black Panther: **96/100**
+### Wakanda Forever — T'Challa, the Black Panther: **98/100**
 
-- Hatut Zeraze Strike Force
-- Ancestral Communion
 - Conduit of Worlds
 - Coveted Jewel
 
-### The Fantastic Four — Invisible Woman + Mister Fantastic + Human Torch + The Thing: **88/100**
+### The Fantastic Four — Invisible Woman + Mister Fantastic + Human Torch + The Thing: **91/100**
 
 - Mister Fantastic
 - The Thing
 - Black Bolt, Inhuman King
-- Cosmic Crucible
 - Dragon Man, Reformed Robot
 - Power Pack
 - Negative Zone Portal
 - Clever Concealment
-- Collective Effort
-- Galvanic Iteration
 - Mind's Dilation
 - Annie Joins Up
 
-### Doom Prevails — Doctor Doom, King of Latveria: **84/100**
+### Doom Prevails — Doctor Doom, King of Latveria: **85/100**
 
 - Molecule Man
 - Extract Power
 - Helmut Zemo, Mastermind
 - Klaw, Master of Sound
-- Batroc the Leaper
 - Lady Loki, Agent of Chaos
 - Living Laser
 - Stilt-Man, Towering Terror
@@ -78,7 +72,7 @@ Per-card support for the four Marvel Super Heroes Commander precons (generated b
 |---|---|---|---|
 | Oct 30 2026, before planeswalker batch 2 | 40/296 | 10577 (32.9%) | 317/500 |
 | Oct 30 2026, before planeswalker batch 3 | 77/296 | 10918 (34.0%) | 319/500 |
-| Now (2026-10-31) | **94/296** | 12512 (39.0%) | 362/500 |
+| Now (2026-10-31) | **94/296** | 12518 (39.0%) | 362/500 |
 
 The 20 most popular planeswalkers (EDHREC rank):
 
@@ -155,7 +149,7 @@ Cards are grouped by the set that first printed them (Scryfall `not:reprint`), C
 | Reality Fracture (FRA) | 2026-10-02 | expansion | 268 | 118 (44%) | **123 (46%)** | 2× {M}{M}: return ~ from your graveyard to the battlefield with a finality counter on it. act<br>1× whenever you gain life, put a loyalty counter on ajani.<br>1× whenever you activate a loyalty ability, create a N/N colorless wizard soldier creature to |
 | The Hobbit (HOB) | 2026-08-14 | expansion | 186 | 57 (31%) | **78 (42%)** | 1× whenever a creature card leaves your graveyard, amass goblins N.<br>1× when ~ enters, destroy up to one other target creature. its controller amasses goblins x, <br>1× whenever ~ or another dwarf you control enters, you may discard your hand. draw x cards, w |
 | Marvel Super Heroes (MSH) | 2026-06-26 | expansion | 270 | 72 (27%) | **98 (36%)** | 5× {M}: add {M} or {M}. activate only if ~ entered this turn or if you control a basic land.<br>2× improvise<br>2× you may look at the top card of your library any time. |
-| Marvel Super Heroes Commander (MSC) | 2026-06-26 | commander | 385 | 125 (32%) | **230 (60%)** | 2× ~ costs {M} less to cast if it targets a tapped creature.<br>2× whenever another artifact is put into your graveyard from the battlefield or an artifact c<br>1× double all damage that creature sources you control would deal. |
+| Marvel Super Heroes Commander (MSC) | 2026-06-26 | commander | 385 | 125 (32%) | **234 (61%)** | 2× ~ costs {M} less to cast if it targets a tapped creature.<br>2× whenever another artifact is put into your graveyard from the battlefield or an artifact c<br>1× double all damage that creature sources you control would deal. |
 | Secrets of Strixhaven (SOS) | 2026-04-24 | expansion | 255 | 95 (37%) | **111 (44%)** | 5× paradigm<br>4× repartee — whenever you cast an instant or sorcery spell that targets a creature, put a +N<br>3× converge — ~ enters with a +N/+N counter on it for each color of mana spent to cast it. |
 | Secrets of Strixhaven Commander (SOC) | 2026-04-24 | commander | 60 | 12 (20%) | **13 (22%)** | 1× exile the top four cards of your library in a face-down pile, then exile the top four card<br>1× at the beginning of your first main phase, mill a card, then exile a card from your gravey<br>1× whenever one or more cards leave your graveyard, ~ deals N damage to each opponent. |
 | Teenage Mutant Ninja Turtles (TMT) | 2026-03-06 | expansion | 187 | 71 (38%) | **95 (51%)** | 4× when ~ enters, create a mutagen token.<br>1× at the beginning of your end step, draw a card for each card type among spells you've cast<br>1× whenever ~ attack or block, sacrifice a permanent unless you discard a card. |
