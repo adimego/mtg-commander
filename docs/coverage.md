@@ -1,6 +1,6 @@
 # Ability coverage
 
-Generated 2026-10-31 by `npx vite-node scripts/coverage.ts --write` from Scryfall's Oracle Cards bulk data (Commander-legal cards only).
+Generated 2026-11-01 by `npx vite-node scripts/coverage.ts --write` from Scryfall's Oracle Cards bulk data (Commander-legal cards only).
 
 A card counts as **fully supported** only if *every* line of its rules text compiled into the engine's ability system, its mana cost parsed exactly, and the engine models its card layout: normal cards (including Vehicles and Sagas), Adventures, prepare cards, and transforming or modal double-faced cards, where every face must compile. Split, flip, meld and other multi-face layouts are always `Limited`. Everything else is badged **Limited** in game; the lines that did compile still work.
 
@@ -40,7 +40,7 @@ Per-card support for the four Marvel Super Heroes Commander precons (generated b
 |---|---|---|---|
 | Oct 30 2026, before planeswalker batch 2 | 40/296 | 10577 (32.9%) | 317/500 |
 | Oct 30 2026, before planeswalker batch 3 | 77/296 | 10918 (34.0%) | 319/500 |
-| Now (2026-10-31) | **94/296** | 12550 (39.1%) | 362/500 |
+| Now (2026-11-01) | **94/296** | 12550 (39.1%) | 362/500 |
 
 The 20 most popular planeswalkers (EDHREC rank):
 

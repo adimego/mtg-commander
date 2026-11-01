@@ -549,6 +549,14 @@ describe('precon scripts: batch 12 (the one-offs)', () => {
     const g = setup(); const z = put(g, 0, pc('Helmut Zemo, Mastermind')); const so = mk(g, 0, card('PM Opt', 'Sorcery', '{U}', 'You gain 1 life.')); g.players[0].graveyard.push(so); mana(g, 0);
     emit(g, 'attacks', { player: 0 }, z); flushTriggers(g); run(g, { tgt: () => ({ card: so.uid }), cast: true }); expect(g.players[0].exile).toContain(so); expect(ctr(z, '+1/+1')).toBe(1);
   });
+  it('Helmut Zemo: only an MV ≤ power card is targetable; with none, the trigger has no legal target (regression)', () => {
+    const g = setup(); const z = put(g, 0, pc('Helmut Zemo, Mastermind')); const big = mk(g, 0, card('PM Big3', 'Sorcery', '{2}{U}', 'You gain 1 life.')); g.players[0].graveyard.push(big); mana(g, 0);
+    emit(g, 'attacks', { player: 0 }, z); flushTriggers(g); run(g, { cast: true });
+    expect(g.players[0].graveyard).toContain(big); expect(ctr(z, '+1/+1')).toBe(0); expect(g.log.some(l => l.includes('no legal target'))).toBe(true);
+    const ok = mk(g, 0, card('PM Opt2', 'Sorcery', '{U}', 'You gain 1 life.')); g.players[0].graveyard.push(ok);
+    emit(g, 'attacks', { player: 0 }, z); flushTriggers(g); run(g, { tgt: () => ({ card: ok.uid }), cast: true });
+    expect(g.players[0].graveyard).toContain(big); expect(g.players[0].exile).toContain(ok); expect(ctr(z, '+1/+1')).toBe(1);
+  });
   it("Klaw: exiles that player's top card, playable with any mana; playing from exile grants indestructible", () => {
     const g = setup(); const k = put(g, 0, pc('Klaw, Master of Sound')); const b = mk(g, 1, BEAR()); g.players[1].library.push(b); emit(g, 'combatDamagePlayer', { player: 1, amount: 1 }, k); flushTriggers(g); run(g);
     expect(g.players[0].exile).toContain(b); expect(costOf2(g, b).G ?? 0).toBe(0); g.players[0].pool.push('R', 'R'); expect(castSpell(g, 0, b.uid)).toBe(true); run(g); expect(hasKw(k, 'indestructible')).toBe(true);

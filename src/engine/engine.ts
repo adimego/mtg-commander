@@ -561,13 +561,13 @@ export function validSlot(g: Game, pid: number, slot: TSlot, t: Target | undefin
   if (slot.who === 'spell' || slot.who === 'ability') {
     const it = g.stack.find(s => s.id === t.stack); if (!it || it.id === x.selfStackId) return false;
     if (slot.who === 'ability') return it.kind !== 'spell';
-    return it.kind === 'spell' && matches(g, it.card!, slot.f, pid);
+    return it.kind === 'spell' && matches(g, it.card!, slot.f, pid, x.srcUid);
   }
   if (t.card !== undefined) {
     if (slot.who === 'card') {
       const l = locate(g, t.card); if (!l || l.zone !== 'graveyard') return false;
       if (slot.zoneOwner === 'you' && l.p.id !== pid) return false; if (slot.zoneOwner === 'opp' && l.p.id === pid) return false;
-      return matches(g, l.c, slot.f, pid);
+      return matches(g, l.c, slot.f, pid, x.srcUid);
     }
     if (slot.who !== 'perm' && slot.who !== 'any') return false;
     const c = findCard(g, t.card); if (!c) return false;
