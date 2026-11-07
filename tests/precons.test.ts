@@ -5,11 +5,11 @@ import '../src/engine/ai';
 
 /** Supported-card floors per official Marvel Super Heroes Commander precon. Target is 100/100;
  * these floors only stop regressions. The cards still missing are listed by scripts/precon-check.ts and docs/coverage.md. */
-const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100 };
+const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100, 'Namor the Sub-Mariner': 100 };
 
 describe('official precons', () => {
   const ps = loadPrecons();
-  it('all four MSC precons load with exact 100-card lists', () => {
+  it('official precons and the Namor preset load with exact 100-card lists', () => {
     expect(ps.map(p => p.name).sort()).toEqual(Object.keys(FLOOR).sort());
     for (const p of ps) expect(1 + (p.extra?.length ?? 0) + p.cards.length).toBe(100);
   });
@@ -18,7 +18,7 @@ describe('official precons', () => {
     expect(p.supported + p.unsupported.length).toBeLessThanOrEqual(100);
   });
   it('Fantastic Four: four commanders start in the command zone and the game runs', () => {
-    const ff = ps.find(p => p.name === 'The Fantastic Four')!; const others = ps.filter(p => p !== ff).map(p => p.id);
+    const ff = ps.find(p => p.name === 'The Fantastic Four')!; const others = ps.filter(p => p !== ff).map(p => p.id).slice(0, 3);
     const g = newGame({ seed: 11, humans: [], decks: [ff.id, ...others], skipAiMulligan: true });
     expect(g.players[0].command.length).toBe(4); expect(g.players[0].command.every(c => isCommander(g, c))).toBe(true);
     startGame(g); let i = 0; while (g.turn < 12 && g.winner === null && i++ < 20000) { if (g.decision) answerDecision(g, false); else if (g.priority !== null) pass(g, g.priority); else break; }
