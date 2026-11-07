@@ -48,6 +48,14 @@ export function DecisionDialog({ g, d, answer, Face, setHover, castNow }: { g: G
           <button className="sec" onClick={() => setSel(d.cards.map(c => c.uid))}>Keep all on top</button></div>
       </Box>;
     }
+    case 'orderTop': {
+      const rest = d.cards.filter(c => !sel.includes(c.uid));
+      return <Box wide title="Reorder your library" sub={d.text + ' Click cards in the order they should sit, first click on top.'}>
+        <CardPick cards={d.cards} sel={sel} toggle={u => toggle(u)} Face={Face} setHover={setHover} badge={c => sel.includes(c.uid) ? `Top ${sel.indexOf(c.uid) + 1}` : '…'} />
+        <div className="cbtns"><button className="big" disabled={sel.length + rest.length !== d.cards.length || sel.length === 0 && d.cards.length > 0} data-ans="confirm" onClick={() => answer({ order: [...sel, ...rest.map(c => c.uid)] })}>Confirm</button>
+          <button className="sec" onClick={() => answer({ order: d.cards.map(c => c.uid) })}>Keep this order</button></div>
+      </Box>;
+    }
     case 'order': {
       return <Box title="Order your triggers" sub={d.text + ' Click them in the order they should resolve (1 resolves first).'}>
         <div className="olist">{d.items.map((it, i) => { const k = sel.indexOf(i); return (
@@ -92,9 +100,10 @@ export function XDialog({ name, max, pick, cancel }: { name: string; max: number
 export function ModesDialog({ name, m, avail, pick, cancel }: { name: string; m: Modes; avail: boolean[]; pick: (ms: number[]) => void; cancel?: () => void }) {
   const [sel, setSel] = useState<number[]>([]);
   const ok = sel.length >= m.min && sel.length <= m.max;
-  const toggle = (i: number) => setSel(s => (s.includes(i) ? s.filter(x => x !== i) : m.max === 1 ? [i] : s.length >= m.max ? s : [...s, i]));
-  return <Box title={`${name}: choose ${m.min === m.max ? (m.min === 1 ? 'one' : m.min) : `${m.min}–${m.max}`}`}>
-    <div className="olist">{m.list.map((md, i) => <button key={i} disabled={!avail[i]} className={`oitem ${sel.includes(i) ? 'on' : ''}`} data-mode={i} onClick={() => toggle(i)}><b>{sel.includes(i) ? "✓" : "•"}</b> {md.label.replace(/~/g, name).replace(/^./, ch => ch.toUpperCase())}</button>)}</div>
-    <div className="cbtns"><button className="big" disabled={!ok} data-ans="confirm" onClick={() => pick([...sel].sort((a, b) => a - b))}>Confirm</button>{cancel && <button className="sec" onClick={cancel}>Cancel</button>}</div>
+  const toggle = (i: number) => setSel(s => m.repeat ? (s.length >= m.max ? s : [...s, i]) : (s.includes(i) ? s.filter(x => x !== i) : m.max === 1 ? [i] : s.length >= m.max ? s : [...s, i]));
+  const drop = (i: number) => setSel(s => { const k = s.lastIndexOf(i); return k < 0 ? s : s.filter((_, j) => j !== k); });
+  return <Box title={`${name}: choose ${m.min === m.max ? (m.min === 1 ? 'one' : m.min) : `${m.min}–${m.max}`}`} sub={m.repeat ? 'You may choose the same mode more than once. Click to add it; − removes one.' : undefined}>
+    <div className="olist">{m.list.map((md, i) => { const n = sel.filter(x => x === i).length; return <button key={i} disabled={!avail[i] && !n} className={`oitem ${n ? 'on' : ''}`} data-mode={i} onClick={() => toggle(i)}><b>{n ? (m.repeat ? `×${n}` : '✓') : '•'}</b> {md.label.replace(/~/g, name).replace(/^./, ch => ch.toUpperCase())}{m.repeat && n > 0 && <span className="sec" onClick={e => { e.stopPropagation(); drop(i); }}> −</span>}</button>; })}</div>
+    <div className="cbtns"><button className="big" disabled={!ok} data-ans="confirm" onClick={() => pick(m.repeat ? sel : [...sel].sort((a, b) => a - b))}>Confirm</button>{cancel && <button className="sec" onClick={cancel}>Cancel</button>}</div>
   </Box>;
 }

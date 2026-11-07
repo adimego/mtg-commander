@@ -1,5 +1,6 @@
 /** Official preconstructed Commander decks (exact Wizards decklists, see scripts/fetch-precons.mjs), compiled from Oracle text. */
 import data from '../data/precons.json';
+import namor from '../data/namor.json';
 import { classify, images } from './classify';
 import type { ScryCard } from './scryfall';
 import { registerCards, registerDeck } from '../engine/engine';
@@ -11,7 +12,9 @@ let cache: Precon[] | null = null;
 /** Compile + register every precon (idempotent). */
 export function loadPrecons(): Precon[] {
   if (cache) return cache;
-  const raw = data as unknown as Raw; const cls = new Map(Object.entries(raw.cards).map(([n, c]) => [n, classify(c)]));
+  const extra = namor as unknown as Raw;
+  const raw: Raw = { decks: [...(data as unknown as Raw).decks, ...extra.decks], cards: { ...(data as unknown as Raw).cards, ...extra.cards } };
+  const cls = new Map(Object.entries(raw.cards).map(([n, c]) => [n, classify(c)]));
   registerCards([...cls.values()].flatMap(x => [x.def, ...(x.def.prepDef ? [x.def.prepDef] : [])]));
   cache = raw.decks.map(d => {
     const ids = (n: string) => cls.get(n)!.def.id;

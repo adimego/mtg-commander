@@ -3,7 +3,7 @@ import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretel
   declareAttackers, declareBlockers, canAttack, canBlock, attackers, isCommander, legalTargets, findCard, creatures, canActivate, activate, isMain,
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
   maxX, locate, ctr, manaAvailable, castZone, costOf, planPayment,
-  webRets,
+  webRets, omniOn,
 } from './engine';
 import type { Amt, ActAbility, Modes, TSlot } from './types';
 
@@ -85,6 +85,7 @@ export function decide(g: Game, d: Decision): unknown {
       return { top: keep.map(c => c.uid), away: d.cards.filter(c => !keep.includes(c)).map(c => c.uid) };
     }
     case 'order': return d.items.map((_, i) => i);
+    case 'orderTop': return { order: [...d.cards].sort((a, b) => (isType(b, 'Land') ? 1 : 0) - (isType(a, 'Land') ? 1 : 0) || cmc(def(a)) - cmc(def(b))).map(c => c.uid) };
     case 'ctype': return aiType(g, d.pid, d.options, d.mode);
     case 'color': { const cnt: Record<string, number> = {}; for (const c of [...p.hand, ...p.battlefield]) for (const k of def(c).colors) cnt[k] = (cnt[k] ?? 0) + 1; return [...d.options].sort((a, b) => (cnt[b] ?? 0) - (cnt[a] ?? 0))[0]; }
     case 'player': { const opps = d.players.filter(x => x !== d.pid); return (opps.length ? opps : d.players).sort((a, b) => boardPower(g, g.players[b]) - boardPower(g, g.players[a]))[0]; }
@@ -96,6 +97,22 @@ const landNeed = (g: Game, p: Player, c: Card) => isType(c, 'Land') && p.battlef
 export function chooseModes(g: Game, pid: number, m: Modes, srcUid?: number): number[] {
   const ok = m.list.map((md, i) => ({ i, s: (md.tslots ?? []).every(s => s.opt || slotTargets(g, pid, s, { srcUid }).length > 0) ? scoreFx(g, pid, md.effects) : -99 }))
     .filter(o => o.s > -99).sort((a, b) => b.s - a.s);
+  if (m.repeat) {
+    const picks: number[] = []; const used = new Set<number>();
+    while (picks.length < m.max) {
+      let best = -1, bestS = -99;
+      for (const o of ok) {
+        const slots = m.list[o.i].tslots ?? [];
+        const blocked = slots.some(s => !s.opt && slotTargets(g, pid, s, { srcUid }).filter(t => !used.has(t.stack ?? t.card ?? -1)).length === 0);
+        if (blocked) continue; if (o.s > bestS) { bestS = o.s; best = o.i; }
+      }
+      if (best < 0 || (bestS <= 0 && picks.length >= m.min)) break;
+      picks.push(best);
+      const sl = m.list[best].tslots?.[0]; if (sl) { const t = slotTargets(g, pid, sl, { srcUid }).find(x => !used.has(x.stack ?? x.card ?? -1)); if (t) used.add(t.stack ?? t.card ?? -1); }
+    }
+    while (picks.length < m.min && ok.length) picks.push(ok[0].i);
+    return picks;
+  }
   return ok.slice(0, Math.max(m.min, Math.min(m.max, ok.filter(o => o.s > 0).length))).map(o => o.i).sort((a, b) => a - b);
 }
 setAI({ targets: (g, pid, slots, effects, mandatory, srcUid) => chooseTargets(g, pid, slots, effects, mandatory, srcUid), decide, modes: chooseModes, castNow: (g, pid, c) => tryCast(g, pid, c) });
@@ -135,11 +152,13 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   if (d.warp && p.hand.includes(c) && !canCast(g, pid, c) && !warp) return false;
   // evoke: only for the enters/leaves value when the full cost isn't affordable
   const normal = canCast(g, pid, c, { x: d.cost.x ? 1 : 0 }) || warp;
+  const omni = p.hand.includes(c) && omniOn(g, pid) && canCast(g, pid, c, { omni: true });
+  const surge = !!d.surge && p.spells?.turn === g.turn && p.spells.n >= 1 && canCast(g, pid, c, { surge: true });
   const free = !!d.freeCmdr && canCast(g, pid, c, { free: true, x: d.cost.x ? 1 : 0 });
   const evoke = !free && !normal && !!d.evoke && canCast(g, pid, c, { evoke: true }) && (d.triggers ?? []).some(t => t.ev === 'etb' || t.ev === 'ltb' || t.ev === 'dies');
   // web-slinging: return a tapped creature worth less than this one
   const webRet = !normal && !evoke && d.webSling && canCast(g, pid, c, { webSling: true }) ? webRets(g, pid).filter(q => !q.token && cmc(def(q)) < cmc(d)).sort((a, b) => cmc(def(a)) - cmc(def(b)))[0] : undefined;
-  if (!free && !normal && !evoke && !webRet) return false;
+  if (!free && !normal && !evoke && !webRet && !omni && !surge) return false;
   // teamwork: tap creatures that won't attack this turn anyway
   const tw = d.teamwork !== undefined ? teamworkPick(g, pid, c) : null;
   const teamwork = !!tw && (g.active !== pid || g.step === 'main2' || tw.every(x => !canAttack(g, x, true)));
@@ -147,17 +166,19 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   const x = d.cost.x ? maxX(g, pid, c, { kicked }) : lx;
   if ((d.cost.x || d.extraCost?.lifeX) && x < 1) return false;
   let modes: number[] | undefined; let fx = d.spell?.effects ?? [];
-  const slots = spellSlots(d); let active = slots.map((_, i) => i);
-  if (d.spell?.modes) { modes = chooseModes(g, pid, { ...d.spell.modes, max: modesMax(g, pid, d.spell.modes, { teamwork }) }, c.uid); if (modes.length < d.spell.modes.min) return false; active = modes.flatMap(i => modeRange(d.spell!.modes!, i)); fx = modes.flatMap(i => d.spell!.modes!.list[i].effects); }
+  let slots = spellSlots(d); let active = slots.map((_, i) => i);
+  let dense = false;
+  if (d.spell?.modes) { modes = chooseModes(g, pid, { ...d.spell.modes, max: modesMax(g, pid, d.spell.modes, { teamwork }) }, c.uid); if (modes.length < d.spell.modes.min) return false; if (d.spell.modes.repeat) { const all = d.spell.modes.list.flatMap(md => md.tslots ?? []); slots = []; for (const i of modes) slots.push(...modeRange(d.spell.modes, i).map(j => all[j])); active = slots.map((_, i) => i); dense = true; } else active = modes.flatMap(i => modeRange(d.spell!.modes!, i)); fx = modes.flatMap(i => d.spell!.modes!.list[i].effects); }
   if (!isPermanentCard(d) && scoreFx(g, pid, fx, x) <= 0 && !mandatory) return false;
   let targets: (Target | undefined)[] = [];
   if (active.length) {
     const aura = d.aura && isPermanentCard(d);
     const ts = chooseTargets(g, pid, active.map(i => aura ? { ...slots[i], harm: !!d.aura!.harm } : slots[i]), fx, mandatory, c.uid, x); if (!ts) return false;
     if (!aura && fx.some(e => HARMFUL.includes(e.op)) && ts.every(t => !t || ownerOfT(g, t) === pid) && !mandatory) return false;
-    targets = slots.map(() => undefined); active.forEach((i, k) => (targets[i] = ts[k]));
+    targets = dense ? ts : slots.map(() => undefined); if (!dense) active.forEach((i, k) => (targets[i] = ts[k]));
   }
-  return castSpell(g, pid, c.uid, { targets, modes, x, kicked, warp, free, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined });
+  const orPay = !!d.costOr && !p.battlefield.some(q => q !== c && isType(q, 'Creature') && def(q).legendary && !isCommander(g, q));
+  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined });
 }
 const isCounter = (d: CardDef) => !!(d.spell?.effects.some(e => e.op === 'counter' || (e.op === 'unless' && e.sub?.some(s => s.op === 'counter'))));
 const isPump = (d: CardDef) => !!d.spell?.effects.some(e => e.op === 'pump') && !d.spell.effects.some(e => HARMFUL.includes(e.op));
