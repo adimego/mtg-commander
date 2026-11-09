@@ -11,6 +11,39 @@ export interface FrcApi {
   once: (k: string, f: () => void) => void;
   ask: <T>(k: string, d: { pid: number; kind: string; text: string } & Record<string, unknown>) => T;
 }
+/** Incubator // Phyrexian, the double-faced incubate token. Both faces stay linked so a copy of either face can still transform. */
+const INCUBATOR_ID = 'tok-incubator';
+const PHYREXIAN_ID = 'tok-incubator--back';
+const PHYREXIAN: CardDef = { id: PHYREXIAN_ID, name: 'Phyrexian', types: ['Artifact', 'Creature'], sub: ['Phyrexian'], cost: { generic: 0 }, colors: [], power: 0, toughness: 0, text: '', typeLine: 'Token Artifact Creature — Phyrexian', token: true };
+const INCUBATOR: CardDef = { id: INCUBATOR_ID, name: 'Incubator', types: ['Artifact'], sub: ['Incubator'], cost: { generic: 0 }, colors: [], text: '{2}: Transform this artifact.', typeLine: 'Token Artifact — Incubator', token: true, back: PHYREXIAN, abilities: [{ label: 'Transform', mana: { generic: 2 }, effects: [{ op: 'transform', who: 'self' }] }] };
+PHYREXIAN.back = INCUBATOR;
+function ensureIncubator() { CARDS[PHYREXIAN_ID] ??= PHYREXIAN; CARDS[INCUBATOR_ID] ??= INCUBATOR; return INCUBATOR_ID; }
+/** How much the caster wants a card. The opponent splits so the better pile is as weak as possible; the caster takes the stronger one. */
+function foilValue(g: Game, pid: number, c: Card): number {
+  const d = def(c);
+  const lands = g.players[pid].battlefield.filter(x => isType(x, 'Land')).length;
+  if (isType(c, 'Land')) return lands < 3 ? 7 : lands < 5 ? 4 : 1;
+  const mv = cmc(d);
+  let s = mv + 1;
+  if (isType(c, 'Creature')) s += (d.power ?? 0) + Math.ceil((d.toughness ?? 0) / 2) + (d.keywords?.length ?? 0);
+  if (isType(c, 'Planeswalker')) s += (d.loyalty ?? 0) + 3;
+  if (mv <= lands + 1) s += 2;
+  return s;
+}
+const pileScore = (g: Game, pid: number, cs: Card[]) => cs.reduce((s, c) => s + foilValue(g, pid, c), 0);
+/** Partition into two piles that minimize the value of the pile the caster will take. */
+function splitPiles(g: Game, caster: number, cards: Card[]): number[] {
+  const sc = cards.map(c => foilValue(g, caster, c));
+  const n = cards.length;
+  let bestMax = Infinity, bestGap = Infinity, best = 0;
+  for (let mask = 0; mask < (1 << n); mask++) {
+    let a = 0, b = 0;
+    for (let i = 0; i < n; i++) if (mask & (1 << i)) a += sc[i]; else b += sc[i];
+    const mx = Math.max(a, b), gap = Math.abs(a - b);
+    if (mx < bestMax || (mx === bestMax && gap < bestGap)) { bestMax = mx; bestGap = gap; best = mask; }
+  }
+  return cards.filter((_, i) => best & (1 << i)).map(c => c.uid);
+}
 const HOLD = new WeakMap<Game, Map<string, unknown>>();
 function held<T>(g: Game, key: string, take: () => T): T {
   let m = HOLD.get(g); if (!m) HOLD.set(g, m = new Map());
@@ -144,9 +177,8 @@ export function runFrc(kind: string | undefined, a: FrcApi): boolean {
       return true;
     }
     case 'tamiyoStun': {
-      const s = findCard(g, ctx.item.sourceUid); if (!s || g.monarch !== me) return true;
-      const tag = `${g.turn}:${g.step}`; if (s.stunTag === tag) return true;
-      once('s', () => { s.stunTag = tag; for (const c of g.players.flatMap(p => p.battlefield).filter(c => c.hitVs === me)) { c.tapped = true; addCounters(g, c, 'stun', 1); log(g, `${def(c).name} is tapped and gets a stun counter.`); } });
+      if (g.monarch !== me) return true;
+      once('s', () => { for (const c of g.players.flatMap(p => p.battlefield).filter(c => c.hitVs === me)) { c.tapped = true; addCounters(g, c, 'stun', 1); log(g, `${def(c).name} is tapped and gets a stun counter.`); } });
       return true;
     }
     case 'urAttack': {
@@ -162,15 +194,7 @@ export function runFrc(kind: string | undefined, a: FrcApi): boolean {
     }
     case 'sunfall': {
       const pack = held(g, key, () => { const n = g.players.flatMap(p => p.battlefield).filter(c => isType(c, 'Creature')).length; for (const c of g.players.flatMap(p => [...p.battlefield])) if (isType(c, 'Creature')) exileCard(g, c); return Array.from({ length: n }, () => ({ uid: -1 } as Card)); });
-      once('t', () => { if (!pack.length) return; const tok = createToken(g, me, { name: 'Incubator', colors: [], types: ['Artifact'], sub: ['Incubator'], ext: { text: '{2}: Transform this token into a 0/0 Phyrexian artifact creature. It keeps its +1/+1 counters.', abilities: [{ label: 'Transform', mana: { generic: 2 }, effects: [{ op: 'script', kind: 'incubateFlip' }] }] } }); addCounters(g, tok, '+1/+1', pack.length); log(g, `${P.name} incubates ${pack.length}.`); });
-      return true;
-    }
-    case 'incubateFlip': {
-      const s = findCard(g, ctx.item.sourceUid); if (!s) return true;
-      once('f', () => {
-        const d: CardDef = { id: `phy-${s.uid}`, name: 'Phyrexian', types: ['Artifact', 'Creature'], sub: ['Phyrexian'], cost: { generic: 0 }, colors: [], power: 0, toughness: 0, text: '', token: true };
-        CARDS[d.id] = d; s.origId ??= s.id; s.id = d.id; delete s.eff; log(g, `Incubator transforms into a Phyrexian.`);
-      });
+      once('t', () => { if (!pack.length) return; const tok = createToken(g, me, ensureIncubator()); addCounters(g, tok, '+1/+1', pack.length); log(g, `${P.name} incubates ${pack.length}.`); });
       return true;
     }
     case 'whiteSun': {
@@ -187,9 +211,14 @@ export function runFrc(kind: string | undefined, a: FrcApi): boolean {
       const cards = held(g, key, () => P.library.splice(Math.max(0, P.library.length - 5), 5));
       if (!cards.length) return true;
       const opps = opponents(g, me); const foe = opps.length <= 1 ? opps[0]?.id ?? me : ask<number>(key + ':who', { pid: me, kind: 'player', players: opps.map(o => o.id), text: `${srcName}: choose an opponent to separate the cards into two piles.` });
-      const pileA: number[] = [];
-      for (const c of cards) { const pile = ask<string>(`${key}:pile:${c.uid}`, { pid: foe, kind: 'color', options: ['Pile A', 'Pile B'], text: `${srcName}: put ${def(c).name} into which pile?` }); if (pile === 'Pile A') pileA.push(c.uid); }
-      const takeA = ask<string>(key + ':take', { pid: me, kind: 'color', options: ['Pile A', 'Pile B'], text: `${srcName}: put one pile into your hand. The other goes to your graveyard.` }) === 'Pile A';
+      const pileA: number[] = g.players[foe].human
+        ? cards.flatMap(c => ask<string>(`${key}:pile:${c.uid}`, { pid: foe, kind: 'color', options: ['Pile A', 'Pile B'], text: `${srcName}: put ${def(c).name} into which pile?` }) === 'Pile A' ? [c.uid] : [])
+        : splitPiles(g, me, cards);
+      const aScore = pileScore(g, me, cards.filter(c => pileA.includes(c.uid)));
+      const bScore = pileScore(g, me, cards.filter(c => !pileA.includes(c.uid)));
+      const takeA = P.human
+        ? ask<string>(key + ':take', { pid: me, kind: 'color', options: ['Pile A', 'Pile B'], text: `${srcName}: put one pile into your hand. The other goes to your graveyard.` }) === 'Pile A'
+        : aScore >= bScore;
       once('m', () => { for (const c of cards) { const hand = pileA.includes(c.uid) === takeA; (hand ? P.hand : P.graveyard).push(c); } log(g, `${P.name} puts ${cards.filter(c => (pileA.includes(c.uid) === takeA)).map(c => def(c).name).join(', ') || 'nothing'} into their hand.`); });
       return true;
     }
