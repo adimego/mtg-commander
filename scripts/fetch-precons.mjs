@@ -1,7 +1,10 @@
 // Builds src/data/precons.json from Wizards' official decklist page (saved in scripts/data) + Scryfall card data.
 // Usage: node scripts/fetch-precons.mjs  (re-download the page with curl first to refresh)
 import { readFileSync, writeFileSync } from 'node:fs';
-const SETS = [{ file: 'scripts/data/msc-decklists.html', set: 'MSC', setName: 'Marvel Super Heroes Commander', ncmd: { 'The Fantastic Four': 4 } }];
+const SETS = [
+  { file: 'scripts/data/msc-decklists.html', set: 'MSC', setName: 'Marvel Super Heroes Commander', ncmd: { 'The Fantastic Four': 4 } },
+  { file: 'scripts/data/frc-decklist.html', set: 'FRC', setName: 'Reality Fracture Commander', ncmd: { 'Multiverse Reforged': 2 } },
+];
 const un = s => s.replace(/&#39;|&#x27;/g, "'").replace(/&amp;/g, '&').replace(/&quot;/g, '"');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function collection(names) {

@@ -8,7 +8,7 @@ const inDeck = (p: Player, id: string) => [...p.library, ...p.hand].filter(c => 
 
 /** Supported-card floors per official Marvel Super Heroes Commander precon. Target is 100/100;
  * these floors only stop regressions. The cards still missing are listed by scripts/precon-check.ts and docs/coverage.md. */
-const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100, 'Namor the Sub-Mariner': 100, "Zurgo, Thunder's Decree": 100 };
+const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100, 'Multiverse Reforged': 100, 'Namor the Sub-Mariner': 100, "Zurgo, Thunder's Decree": 100 };
 
 describe('official precons', () => {
   const ps = loadPrecons();
@@ -20,12 +20,12 @@ describe('official precons', () => {
     const p = ps.find(x => x.name === name)!; expect(p.supported).toBeGreaterThanOrEqual(FLOOR[name]);
     expect(p.supported + p.unsupported.length).toBeLessThanOrEqual(100);
   });
-  it('Namor is a custom preset; the four Marvel decks are the official precons', () => {
-    expect(ps.filter(isOfficialPrecon).map(p => p.name).sort()).toEqual(['Avengers Assemble', 'Doom Prevails', 'The Fantastic Four', 'Wakanda Forever']);
+  it('Namor is a custom preset; Marvel and Reality Fracture are the official precons', () => {
+    expect(ps.filter(isOfficialPrecon).map(p => p.name).sort()).toEqual(['Avengers Assemble', 'Doom Prevails', 'Multiverse Reforged', 'The Fantastic Four', 'Wakanda Forever']);
     expect(ps.filter(p => !isOfficialPrecon(p)).map(p => p.name)).toEqual(['Namor the Sub-Mariner', "Zurgo, Thunder's Decree"]);
   });
-  it('only The Fantastic Four lists more than one face commander', () => {
-    expect(ps.filter(p => faceCommanders(p).length > 1).map(p => p.name)).toEqual(['The Fantastic Four']);
+  it('The Fantastic Four and Multiverse Reforged list more than one face commander', () => {
+    expect(ps.filter(p => faceCommanders(p).length > 1).map(p => p.name).sort()).toEqual(['Multiverse Reforged', 'The Fantastic Four']);
   });
   it('each precon and the Namor preset starts with one commander and 100 cards', () => {
     for (const deck of ps) {
@@ -90,6 +90,26 @@ describe('official precons', () => {
       expect(inDeck(p, 'ruric-thar-the-unbowed')).toBe(1);
       expect(zones(p)).toBe(100);
     } finally { unregisterDeck(d.id); }
+  });
+  it('Multiverse Reforged: Jace is the default commander and Nissa is the other face commander', () => {
+    const mr = ps.find(p => p.name === 'Multiverse Reforged')!;
+    const faces = faceCommanders(mr);
+    expect(faces.map(id => CARDS[id].name)).toEqual(['Jace, Multiverse Architect', 'Nissa, Leyline Tamer']);
+    expect(mr.supported).toBe(100);
+    expect(mr.unsupported).toEqual([]);
+    const g = newGame({ seed: 3, humans: [], decks: [mr.id], skipAiMulligan: true });
+    const p = g.players[0];
+    expect(p.command.map(c => def(c).name)).toEqual(['Jace, Multiverse Architect']);
+    expect(p.commanderIds).toEqual([mr.commander]);
+    expect(inDeck(p, faces[1])).toBe(1);
+    expect(zones(p)).toBe(100);
+    expect(g.log.some(l => l.includes('chooses Jace, Multiverse Architect as commander') && l.includes('Nissa, Leyline Tamer') && l.includes('shuffled into the library'))).toBe(true);
+    const chosen = faces[1];
+    const h = newGame({ seed: 5, humans: [0], decks: [mr.id], skipAiMulligan: true, commanders: [chosen] });
+    expect(h.players[0].command.map(c => def(c).name)).toEqual(['Nissa, Leyline Tamer']);
+    expect(h.players[0].commanderIds).toEqual([chosen]);
+    expect(inDeck(h.players[0], faces[0])).toBe(1);
+    expect(zones(h.players[0])).toBe(100);
   });
   it('Fantastic Four: one commander in the command zone and the game runs', () => {
     const ff = ps.find(p => p.name === 'The Fantastic Four')!; const others = ps.filter(p => p !== ff).map(p => p.id).slice(0, 3);

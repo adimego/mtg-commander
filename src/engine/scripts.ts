@@ -3,6 +3,7 @@
 // ("~" = the card's name, lowercase, no trailing period). If Oracle text changes, the key stops matching and
 // the card honestly falls back to limited support.
 import type { CardDef, Effect, TriggerDef, TSlot, TokenSpec, Filter } from './types';
+import { GINGER, JACE_TOK } from './frc';
 
 type Patch = (d: CardDef) => void;
 const S = (kind: string, extra: Partial<Effect> = {}): Effect => ({ op: 'script', kind, ...extra });
@@ -295,6 +296,52 @@ export const SCRIPTS: Record<string, Record<string, Patch>> = {
     "when ~ dies, return it to the battlefield tapped and transformed under its owner's control": d => trig(d, T('dies', [S('ojerDies')], { subj: 'self', label: 'return tapped and transformed' })),
   },
   'Temple of Civilization': { '{2}{w}, {t}: transform ~. activate only if you attacked with three or more creatures this turn and only as a sorcery': d => { (d.abilities ??= []).push({ label: 'Transform', mana: { generic: 2, W: 1 }, tap: true, sorcery: true, cond: { k: 'atkGE', n: 3 }, effects: [{ op: 'transform', who: 'self' }] }); } },
+
+  'Jace, Multiverse Architect': { "at the beginning of combat on each opponent's turn, they may pay {2}. if they don't, creatures they control can't attack jaces you control this turn": d => trig(d, T('beginCombat', [S('jaceCombat')], { pl: 'opp', label: "pay {2} or creatures can't attack your Jaces" })) },
+  'Nissa, Leyline Tamer': { 'landfall — whenever a land you control enters, draw a card. then if this is the first time this ability has resolved this turn, reveal cards from the top of your library until you reveal a creature card. put that card onto the battlefield and the rest on the bottom of your library in a random order': d => trig(d, T('etb', [S('nissaLand')], { subj: 'any', f: { types: ['Land'], ctrl: 'you' }, label: 'landfall: draw, and the first time, put a creature onto the battlefield' })) },
+  'Dack Fayden, Helping Hand': { "when ~ enters, reveal cards from the top of your library until you reveal x creature cards, where x is the number of opponents you have. put those creature cards onto the battlefield, then shuffle. they're goaded for the rest of the game. for each of those permanents, choose a different opponent. each opponent gains control of the permanent for which they were chosen": d => trig(d, T('etb', [S('dack')], { subj: 'self', label: 'reveal creatures for each opponent; they enter goaded under those opponents' })) },
+  'Ob Nixilis, the Ascended': { 'when ~ enters, destroy all tapped creatures your opponents control. you gain 1 life for each creature destroyed this way': d => trig(d, T('etb', [S('obNix')], { subj: 'self', label: 'destroy tapped creatures opponents control; gain 1 life for each' })) },
+  "Teferi's Reproach": { "choose target opponent. until that player's next turn, they gain protection from everything and their life total can't change. all nonland permanents they control phase out": d => spell(d, [S('reproach')], [{ who: 'opp' }]) },
+  'Jhoira, Weatherlight Corsair': { "whenever ~ enters or attacks, target opponent reveals cards from the top of their library until they reveal a historic permanent card. you put that card onto the battlefield under your control and lose life equal to that permanent's mana value. that player puts the rest of the revealed cards on the bottom of their library in a random order": d => trig(d, ...['etb', 'attacks'].map(ev => T(ev, [S('jhoira')], { subj: 'self', label: 'take a historic permanent from target opponent', tslots: [{ who: 'opp' }] }))) },
+  'Venser, Fervent Forger': { 'when ~ enters, choose one —\n• copy target instant or sorcery spell an opponent controls twice. you may choose new targets for the copies.\n• create two tokens that are copies of target permanent an opponent controls. they gain haste. at the beginning of the next end step, sacrifice them': d => trig(d, T('etb', [], { subj: 'self', label: 'choose one', modes: { min: 1, max: 1, list: [
+    { label: 'Copy target instant or sorcery spell an opponent controls twice', tslots: [{ who: 'spell', f: { anyType: ['Instant', 'Sorcery'], ctrl: 'opp' } }], effects: [S('venserCopy')] },
+    { label: 'Create two hasty token copies of target permanent an opponent controls', tslots: [{ who: 'perm', f: { ctrl: 'opp' } }], effects: [S('venserTok')] },
+  ] } })) },
+  'Niv-Mizzet, Ghost Counsel': { 'whenever you gain life, you may pay that much life. if you do, draw that many cards': d => trig(d, T('gainLife', [S('nivPay')], { pl: 'you', label: 'you may pay that much life to draw that many cards' })) },
+  'Tamiyo, Upriser Crowned': { "whenever one or more creatures deal combat damage to you while you're the monarch, tap those creatures and put a stun counter on each of them": d => trig(d, T('combatDamagePlayer', [S('tamiyoStun')], { pl: 'you', subj: 'any', f: { types: ['Creature'] }, ifc: { k: 'monarch' }, label: 'tap those creatures and stun them' })) },
+  'The Ur-Sphinx': {
+    'eminence — as long as ~ is in the command zone or on the battlefield, other sphinx spells you cast cost {1} less to cast': d => { d.eminence = { n: 1, f: { types: ['Sphinx'], other: true } }; },
+    'whenever one or more sphinxes you control attack, each player mills that many cards. for each player, you may cast a card that player milled this way without paying its mana cost': d => trig(d, T('youAttack', [S('urAttack')], { pl: 'you', label: 'each player mills that many; you may cast one of those cards free' })),
+  },
+  'Ginger, Queen of Sweets': { "at the beginning of each upkeep, if you're the monarch, create a gingerbrute token": d => trig(d, T('upkeep', [{ op: 'token', n: 1, tok: GINGER }], { pl: 'any', ifc: { k: 'monarch' }, label: 'create a Gingerbrute' })) },
+  "Serra's Emissary": {
+    'as ~ enters, choose a card type': d => { d.asEnters = [...(d.asEnters ?? []), S('serra')]; },
+    'you and creatures you control have protection from the chosen card type': d => { /* protection is protType, checked while this is on the battlefield */ },
+  },
+  "Skrelv's Hive": { 'at the beginning of your upkeep, you lose 1 life and create a 1/1 colorless phyrexian mite artifact creature token with toxic 1 and "~ can\'t block."': d => trig(d, T('upkeep', [{ op: 'lose', n: 1, pl: 'you' }, { op: 'token', n: 1, tok: { name: 'Phyrexian Mite', p: 1, t: 1, colors: [], types: ['Artifact', 'Creature'], sub: ['Phyrexian', 'Mite'], kws: ['toxic 1', '_cantblock'] } }], { pl: 'you', label: "lose 1 life and create a Mite that can't block" })) },
+  'Sunfall': { 'exile all creatures. incubate x, where x is the number of creatures exiled this way': d => spell(d, [S('sunfall')]) },
+  "White Sun's Twilight": { 'you gain x life. create x 1/1 colorless phyrexian mite artifact creature tokens with toxic 1 and "~ can\'t block." if x is 5 or more, destroy all other creatures': d => spell(d, [S('whiteSun')]) },
+  'Fact or Fiction': { 'reveal the top five cards of your library. an opponent separates those cards into two piles. put one pile into your hand and the other into your graveyard': d => spell(d, [S('fact')]) },
+  'Mass Polymorph': { 'exile all creatures you control, then reveal cards from the top of your library until you reveal that many creature cards. put all creature cards revealed this way onto the battlefield, then shuffle the rest of the revealed cards into your library': d => spell(d, [S('massPoly')]) },
+  'Occult Epiphany': { 'draw x cards, then discard x cards. create a 1/1 white spirit creature token with flying for each card type among cards discarded this way': d => spell(d, [S('occult')]) },
+  'Shark Typhoon': {
+    "whenever you cast a noncreature spell, create an x/x blue shark creature token with flying, where x is that spell's mana value": d => trig(d, T('cast', [S('shark', { text: 'cast' })], { pl: 'you', filter: 'noncreature', label: "create an X/X Shark, X = that spell's mana value" })),
+    'when you cycle ~, create an x/x blue shark creature token with flying': d => trig(d, T('cycled', [S('shark', { text: 'cycle' })], { subj: 'self', label: 'create an X/X Shark, X = the cycling X' })),
+  },
+  'Synthetic Destiny': { 'exile all creatures you control. at the beginning of the next end step, reveal cards from the top of your library until you reveal that many creature cards, put all creature cards revealed this way onto the battlefield, then shuffle the rest of the revealed cards into your library': d => spell(d, [S('synth')]) },
+  'Cursed Mirror': { 'as ~ enters, you may have it become a copy of any creature on the battlefield until end of turn, except it has haste': d => { d.asEnters = [...(d.asEnters ?? []), S('cursed')]; } },
+  'Windcrag Siege': { 'as ~ enters, choose mardu or jeskai.\n• mardu — if a creature attacking causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.\n• jeskai — at the beginning of your upkeep, create a 1/1 red goblin creature token. it gains lifelink and haste until end of turn': d => { d.asEnters = [S('windcrag')]; trig(d, T('upkeep', [S('windUp')], { pl: 'you', label: 'Jeskai: create a Goblin with lifelink and haste' })); } },
+  'Proteus Staff': { "{2}{u}, {t}: put target creature on the bottom of its owner's library. that creature's controller reveals cards from the top of their library until they reveal a creature card. the player puts that card onto the battlefield and the rest on the bottom of their library in any order. activate only as a sorcery": d => { (d.abilities ??= []).push({ label: "Bottom a creature; its controller reveals until a creature", mana: { generic: 2, U: 1 }, tap: true, sorcery: true, tslots: [{ who: 'perm', f: { types: ['Creature'] }, harm: true }], effects: [S('proteus')] }); } },
+  'Kher Keep': { '{1}{r}, {t}: create a 0/1 red kobold creature token named kobolds of ~': d => { (d.abilities ??= []).push({ label: 'Create a Kobolds of Kher Keep', mana: { generic: 1, R: 1 }, tap: true, effects: [{ op: 'token', n: 1, tok: { name: 'Kobolds of Kher Keep', p: 0, t: 1, colors: ['R'], types: ['Creature'], sub: ['Kobold'] } }] }); } },
+  'Plan for All Outcomes': { 'when ~ enters, the owner of up to one other target nonland permanent puts it on their choice of the top or bottom of their library': d => trig(d, T('etb', [S('planTuck')], { subj: 'self', label: 'tuck up to one other nonland permanent', tslots: [{ who: 'perm', f: { notTypes: ['Land'], other: true }, opt: true }] })) },
+  'Fatehold Charm': { 'choose one —\n• draw a card. empower jace 2.\n• return target spell or creature to its owner\'s hand.\n• creatures you control get +1/+2 until end of turn': d => {
+    const modes = { min: 1, max: 1, list: [
+      { label: 'Draw a card. Empower Jace 2.', effects: [{ op: 'draw', n: 1, pl: 'you' }, { op: 'empower', n: 2, tok: JACE_TOK }] },
+      { label: "Return target spell or creature to its owner's hand", tslots: [{ who: 'spellOrC' as const }], effects: [S('fateBounce')] },
+      { label: 'Creatures you control get +1/+2 until end of turn', effects: [{ op: 'pump', who: { all: YOUR_CREATURES }, n: 1, m: 2 }] },
+    ] };
+    d.spell = { effects: [], modes };
+  } },
 
 };
 
