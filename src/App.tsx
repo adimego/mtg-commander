@@ -1,10 +1,10 @@
 import { ImportDialog } from './ImportDialog';
-import { loadPrecons } from './import/precons';
+import { loadPrecons, isOfficialPrecon, type Precon } from './import/precons';
 import { compileScry } from './import/classify';
 import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
 import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
-import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable } from './engine/engine';
+import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders } from './engine/engine';
 import { DecisionDialog, KickerDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
@@ -29,6 +29,8 @@ type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; a
 type PendingAct = Flow;
 const SAVED0 = decks.activateAll();
 const PRECONS = loadPrecons();
+const OFFICIAL = PRECONS.filter(isOfficialPrecon);
+const CUSTOM_PRESETS = PRECONS.filter(d => !isOfficialPrecon(d));
 type Hover = { id: string; uid?: number } | null;
 type Modal = null | 'settings' | 'help' | 'tips' | 'import' | { pid: number; zone: 'graveyard' | 'exile' };
 
@@ -36,6 +38,18 @@ function ManaCost({ c }: { c: Cost }) {
   return <span className="mcost">{c.generic ? <i className="pip pip-C">{c.generic}</i> : null}{COLORS.flatMap(k => Array.from({ length: c[k] || 0 }, (_, i) => <i key={k + i} className={`pip pip-${k}`}>{k}</i>))}</span>;
 }
 /** Card face: Scryfall image, with a readable text frame if the image fails. */
+function PreconTile({ d, on, pick, dbl }: { d: Precon; on: boolean; pick: () => void; dbl: () => void }) {
+  const cs = faceCommanders(d).map(id => CARDS[id]).filter(Boolean);
+  const official = isOfficialPrecon(d);
+  return (
+    <button data-deck={d.id} className={`deckopt saved ${on ? 'on' : ''}`} onClick={pick} onDoubleClick={dbl}>
+      <div className="dart" style={{ backgroundImage: d.art ? `url(${d.art})` : undefined }}><span className={`dtag ${official ? 'official' : 'custom'}`}>{official ? 'Official' : 'Custom'}</span></div>
+      <b>{d.name}</b>
+      <span title={cs.map(c => c.name).join(', ')}>{cs.length > 1 ? `Choose 1 of ${cs.length} commanders` : cs[0]?.name}</span>
+      <small>{official ? 'Wizards precon' : 'Your list'} · {d.supported === d.total ? 'fully supported' : <span className="limtag" title={d.unsupported.join(', ')}>{d.supported}/{d.total} supported</span>}</small>
+    </button>
+  );
+}
 function CardFace({ d }: { d: CardDef }) {
   const [failed, setFailed] = useState(false);
   const lim = d.limited ? <span className="limbadge" title={d.limited}>Limited</span> : null;
@@ -290,6 +304,7 @@ export default function App() {
   const [deck, setDeck] = useState(() => localStorage.getItem('ca_deck') && DECKS.some(d => d.id === localStorage.getItem('ca_deck')) ? localStorage.getItem('ca_deck')! : DECKS[0].id);
   const [saved, setSaved] = useState<decks.SavedDeck[]>(SAVED0);
   const [aiDecks, setAiDecks] = useState<'precon' | 'mine' | 'official'>(() => (localStorage.getItem('ca_ai_decks') as 'precon' | 'mine' | 'official') || 'precon');
+  const [cmdChoice, setCmdChoice] = useState<{ deckId: string; faces: string[] } | null>(null);
   const [speed, setSpeed] = useState(600);
   const [stopAll, setStopAll] = useState(false);
   const [anim, setAnim] = useState(true);
@@ -316,14 +331,22 @@ export default function App() {
   useEffect(() => { const gg = gref.current; if (!gg || pending) return; const hs = gg.players[HUMAN].hand.filter(c => c.face); if (hs.length) act(() => hs.forEach(frontFace)); }, [pending, act]);
   // test/debug hook (only with ?debug in the URL): lets scripted screenshots stage a board
   useEffect(() => { if (/[?&]debug\b/.test(location.search)) (window as unknown as Record<string, unknown>).__ca = { game: () => gref.current, act, CARDS, compile: (o: Record<string, unknown>) => { const d = compileScry({ colors: [], color_identity: [], keywords: [], mana_cost: '', ...o } as unknown as ScryCard).def; registerCards([d, ...(d.prepDef ? [d.prepDef] : [])]); return d.id; } }; }, [act]);
-  function newMatch() {
-    localStorage.setItem('ca_deck', deck);
-    const pre = DECKS.slice(0, 4).map(d => d.id).filter(x => x !== deck);
-    const mine = saved.map(d => d.id).filter(x => x !== deck).sort(() => Math.random() - 0.5);
-    const off = PRECONS.map(d => d.id).filter(x => x !== deck).sort(() => Math.random() - 0.5);
+  function beginMatch(deckId: string, commanderId?: string) {
+    setCmdChoice(null);
+    localStorage.setItem('ca_deck', deckId);
+    const pre = DECKS.slice(0, 4).map(d => d.id).filter(x => x !== deckId);
+    const mine = [...CUSTOM_PRESETS.map(d => d.id), ...saved.map(d => d.id)].filter(x => x !== deckId).sort(() => Math.random() - 0.5);
+    const off = OFFICIAL.map(d => d.id).filter(x => x !== deckId).sort(() => Math.random() - 0.5);
     const others = (aiDecks === 'mine' ? [...mine, ...pre] : aiDecks === 'official' ? off : pre).slice(0, 3);
-    gref.current = newGame({ decks: [deck, ...others] }); setAtkPlan({}); setBlkPlan({}); setPending(null); setPassUntil(null); bump();
+    gref.current = newGame({ decks: [deckId, ...others], commanders: commanderId ? [commanderId] : undefined }); setAtkPlan({}); setBlkPlan({}); setPending(null); setPassUntil(null); bump();
     if (!localStorage.getItem('ca_tips_seen')) setModal('tips');
+  }
+  function newMatch(deckId = deck) {
+    setDeck(deckId);
+    const d = DECKS.find(x => x.id === deckId);
+    const faces = d ? faceCommanders(d) : [];
+    if (faces.length > 1) { setCmdChoice({ deckId, faces }); return; }
+    beginMatch(deckId);
   }
   useEffect(() => { const f = () => setFs(!!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f); }, []);
   const toggleFs = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.().catch(() => {}); };
@@ -551,7 +574,7 @@ export default function App() {
     const k = e.key.toLowerCase();
     if (k === 'f') { toggleFs(); return; }
     if (k === '?' || k === 'h') { setModal(modal === 'help' ? null : 'help'); return; }
-    if (k === 'escape') { if (modal) setModal(null); else { clearSel(); setAtkPlan({}); setBlkPlan({}); } return; }
+    if (k === 'escape') { if (cmdChoice) setCmdChoice(null); else if (modal) setModal(null); else { clearSel(); setAtkPlan({}); setBlkPlan({}); } return; }
     if (modal || !g) return;
     if (k === 'l') setLogOpen(o => !o);
     if (k === ' ' ) { e.preventDefault(); primary?.run(); }
@@ -569,32 +592,44 @@ export default function App() {
       <p className="sub">Four-player free-for-all Commander: you against three AI opponents. 40 life · 21 commander damage · commander tax · stack &amp; priority</p>
       <h3 className="dsec">Starter decks</h3>
       <div className="deckpick">{DECKS.slice(0, 4).map(d => { const c = CARDS[d.commander]; return (
-        <button key={d.id} className={`deckopt ${deck === d.id ? 'on' : ''}`} onClick={() => setDeck(d.id)} onDoubleClick={newMatch}>
+        <button key={d.id} className={`deckopt ${deck === d.id ? 'on' : ''}`} onClick={() => { setCmdChoice(null); setDeck(d.id); }} onDoubleClick={() => newMatch(d.id)}>
           <div className="dimg"><CardFace d={c} /></div><b>{d.name}</b><span>{c.name}</span><small>{c.text.split('\n').slice(-1)[0]}</small></button>); })}</div>
-      {[...new Set(PRECONS.map(d => d.setName))].map(sn => <div key={sn}><h3 className="dsec">Official precons <span className="muted">· {sn}</span></h3>
-      <div className="deckpick precons">{PRECONS.filter(d => d.setName === sn).map(d => { const cs = [d.commander, ...(d.extra ?? [])].map(x => CARDS[x]); return (
-        <button key={d.id} data-deck={d.id} className={`deckopt saved ${deck === d.id ? 'on' : ''}`} onClick={() => setDeck(d.id)} onDoubleClick={newMatch}>
-          <div className="dart" style={{ backgroundImage: d.art ? `url(${d.art})` : undefined }}><span className="dtag set">{d.set}</span></div>
-          <b>{d.name}</b><span title={cs.map(c => c.name).join(', ')}>{cs.length > 1 ? `${cs.length} commanders: ${cs.map(c => c.name.split(/[ ,]/)[0]).join(', ')}` : cs[0].name}</span>
-          <small>{d.setName} · {d.supported === d.total ? 'fully supported' : <span className="limtag" title={d.unsupported.join(', ')}>{d.supported}/{d.total} supported</span>}</small></button>); })}</div></div>)}
-      <h3 className="dsec">My decks <span className="muted">({saved.length})</span></h3>
-      <div className="deckpick mine">
-        {saved.map(d => { const c = CARDS[d.commander]; const lim = d.stats.limited; return (
-          <div key={d.id} className={`deckopt saved ${deck === d.id ? 'on' : ''}`} onClick={() => setDeck(d.id)} onDoubleClick={newMatch} data-deck={d.id}>
-            <div className="dart" style={{ backgroundImage: d.art ? `url(${d.art})` : undefined }}>{!d.legal && <span className="dtag casual" title="Not Commander-legal; saved for casual play">Casual</span>}</div>
-            <b title={d.name}>{d.name}</b><span>{c?.name}</span>
-            <small>{d.cards.length + 1} cards · {d.colors.join('') || 'C'}{lim ? <> · <span className="limtag" title="Cards whose rules text is simplified">{lim} limited</span></> : ' · fully supported'}{d.stats.swapped ? ` · ${d.stats.swapped} swapped` : ''}</small>
-            <div className="dacts" onClick={e => e.stopPropagation()}>
-              <button title="Rename" onClick={() => { const n = window.prompt("Rename deck", d.name); if (n?.trim()) setSaved(decks.renameDeck(d.id, n.trim())); }}>✎ Rename</button>
-              <button title="Export as text (copies to clipboard and downloads)" onClick={() => { const t = decks.exportText(d); navigator.clipboard?.writeText(t).catch(() => {}); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/plain' })); a.download = d.name.replace(/[^\w -]+/g, '') + '.txt'; a.click(); }}>⤓ Export</button>
-              <button title="Delete" onClick={() => { if (window.confirm(`Delete "${d.name}"?`)) { setSaved(decks.deleteDeck(d.id)); if (deck === d.id) setDeck(DECKS[0].id); } }}>🗑</button>
-            </div>
-          </div>); })}
-        <button className="deckopt addnew" onClick={() => setModal('import')}><span className="plus">＋</span><b>Import deck</b><small>Paste a list or load a .txt / .dek file</small></button>
-      </div>
+      <section className="deckgroup official" data-section="official">
+        <h3 className="dsec">Official precons</h3>
+        <p className="dnote">Wizards of the Coast products from Marvel Super Heroes Commander. A deck that lists several commanders asks you to pick one before the game starts.</p>
+        <div className="deckpick precons">{OFFICIAL.map(d => <PreconTile key={d.id} d={d} on={deck === d.id} pick={() => { setCmdChoice(null); setDeck(d.id); }} dbl={() => newMatch(d.id)} />)}</div>
+      </section>
+      <section className="deckgroup custom" data-section="custom">
+        <h3 className="dsec">Custom decks <span className="muted">({CUSTOM_PRESETS.length + saved.length})</span></h3>
+        <p className="dnote">Your own lists, kept in this browser, including Namor the Sub-Mariner. These are not official products.</p>
+        <div className="deckpick mine">
+          {CUSTOM_PRESETS.map(d => <PreconTile key={d.id} d={d} on={deck === d.id} pick={() => { setCmdChoice(null); setDeck(d.id); }} dbl={() => newMatch(d.id)} />)}
+          {saved.map(d => { const c = CARDS[d.commander]; const lim = d.stats.limited; return (
+            <div key={d.id} className={`deckopt saved ${deck === d.id ? 'on' : ''}`} onClick={() => { setCmdChoice(null); setDeck(d.id); }} onDoubleClick={() => newMatch(d.id)} data-deck={d.id}>
+              <div className="dart" style={{ backgroundImage: d.art ? `url(${d.art})` : undefined }}><span className="dtag custom">Custom</span>{!d.legal && <span className="dtag casual" title="Not Commander-legal; saved for casual play">Casual</span>}</div>
+              <b title={d.name}>{d.name}</b><span>{c?.name}</span>
+              <small>{d.cards.length + 1} cards · {d.colors.join('') || 'C'}{lim ? <> · <span className="limtag" title="Cards whose rules text is simplified">{lim} limited</span></> : ' · fully supported'}{d.stats.swapped ? ` · ${d.stats.swapped} swapped` : ''}</small>
+              <div className="dacts" onClick={e => e.stopPropagation()}>
+                <button title="Rename" onClick={() => { const n = window.prompt("Rename deck", d.name); if (n?.trim()) setSaved(decks.renameDeck(d.id, n.trim())); }}>✎ Rename</button>
+                <button title="Export as text (copies to clipboard and downloads)" onClick={() => { const t = decks.exportText(d); navigator.clipboard?.writeText(t).catch(() => {}); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/plain' })); a.download = d.name.replace(/[^\w -]+/g, '') + '.txt'; a.click(); }}>⤓ Export</button>
+                <button title="Delete" onClick={() => { if (window.confirm(`Delete "${d.name}"?`)) { setSaved(decks.deleteDeck(d.id)); if (deck === d.id) setDeck(DECKS[0].id); } }}>🗑</button>
+              </div>
+            </div>); })}
+          <button className="deckopt addnew" onClick={() => setModal('import')}><span className="plus">＋</span><b>Import deck</b><small>Paste a list or load a .txt / .dek file. Saved here under Custom decks.</small></button>
+        </div>
+      </section>
       <div className="setopts"><label>AI opponents use <select value={aiDecks} onChange={e => { setAiDecks(e.target.value as 'precon' | 'mine' | 'official'); localStorage.setItem('ca_ai_decks', e.target.value); }}>
-        <option value="precon">the starter decks</option><option value="official">official precons (random)</option><option value="mine" disabled={saved.length < 1}>my imported decks (random), then starter decks</option></select></label></div>
-      <button className="big" onClick={newMatch}>Start game ▶</button>
+        <option value="precon">the starter decks</option><option value="official">official precons (random)</option><option value="mine">custom decks (random), then starter decks</option></select></label></div>
+      <button className="big" onClick={() => newMatch()}>Start game ▶</button>
+      {cmdChoice && <div className="modal choice" data-commander-choice={cmdChoice.deckId} onClick={() => setCmdChoice(null)}><div className="mbox cmdbox" onClick={e => e.stopPropagation()}>
+        <h2>Choose your commander</h2>
+        <p className="csub">{DECKS.find(d => d.id === cmdChoice.deckId)?.name} lists {cmdChoice.faces.length} possible commanders. One starts in the command zone. The others are shuffled into your library, so the deck stays 100 cards.</p>
+        <div className="cmdpick">{cmdChoice.faces.map(id => { const c = CARDS[id]; return (
+          <button key={id} data-pick-commander={id} onClick={() => beginMatch(cmdChoice.deckId, id)}>
+            <CardFace d={c} /><b>{c.name}</b><span>{c.typeLine?.replace(/^Legendary Creature — /, '')}</span>
+          </button>); })}</div>
+        <div className="cbtns"><button className="sec" onClick={() => setCmdChoice(null)}>Cancel</button></div>
+      </div></div>}
       {modal === 'import' && <ImportDialog close={() => setModal(null)} art={img => img ? <img className="cimg" src={img} alt="" /> : <div className="frame" />} saved={d => { setSaved(decks.saveDeck(d)); setDeck(d.id); setModal(null); }} />}
       <p className="credit">Card images &amp; data courtesy of Scryfall. Magic: The Gathering is © Wizards of the Coast. Unofficial fan project.</p>
     </div>
