@@ -74,9 +74,9 @@ export function DecisionDialog({ g, d, answer, Face, setHover, castNow }: { g: G
 }
 
 /** Kicker / X / modes, asked before choosing targets. */
-export function WarpDialog({ name, cost, normal, pick, cancel }: { name: string; cost: string; normal: string; pick: (w: boolean) => void; cancel: () => void }) {
-  return <Box title={name} sub={`Cast it for its warp cost ${cost}? It's exiled at the beginning of the next end step, and you may cast it from exile on a later turn.`}><div className="cbtns">
-    <button className="big" data-ans="warp" onClick={() => pick(true)}>Warp ({cost})</button><button className="sec" data-ans="nowarp" onClick={() => pick(false)}>Cast normally ({normal})</button><button className="sec" onClick={cancel}>Cancel</button></div></Box>;
+export function WarpDialog({ name, cost, normal, pick, cancel, yes = 'Warp', no = 'Cast normally', blurb }: { name: string; cost: string; normal: string; pick: (w: boolean) => void; cancel: () => void; yes?: string; no?: string; blurb?: string }) {
+  return <Box title={name} sub={blurb ?? `Cast it for its warp cost ${cost}? It's exiled at the beginning of the next end step, and you may cast it from exile on a later turn.`}><div className="cbtns">
+    <button className="big" data-ans="warp" onClick={() => pick(true)}>{yes} ({cost})</button><button className="sec" data-ans="nowarp" onClick={() => pick(false)}>{no} ({normal})</button><button className="sec" onClick={cancel}>Cancel</button></div></Box>;
 }
 export function AltCostDialog({ name, opts, pick, cancel }: { name: string; opts: { k: string; label: string }[]; pick: (k: string) => void; cancel: () => void }) {
   return <Box title={name} sub="Choose how to cast it."><div className="cbtns">

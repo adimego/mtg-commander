@@ -9,7 +9,7 @@ import type { DeckDef } from '../engine/types';
 
 export interface Precon extends DeckDef { set: string; setName: string; art?: string; supported: number; total: number; unsupported: string[] }
 /** Wizards preconstructed product. Other presets (Namor, Zurgo, filed under "Your decks") are the player's own lists. */
-export const isOfficialPrecon = (p: { set: string }) => p.set === 'MSC';
+export const isOfficialPrecon = (p: { set: string }) => p.set === 'MSC' || p.set === 'FRC';
 interface Raw { decks: { id: string; name: string; set: string; setName: string; commanders: string[]; cards: { q: number; name: string }[] }[]; cards: Record<string, ScryCard> }
 let cache: Precon[] | null = null;
 /** Compile + register every precon (idempotent). */
