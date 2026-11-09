@@ -77,7 +77,7 @@ export interface CardDef {
   /** layer-system result: timestamp of the latest 'loses all abilities' effect */ loseTs?: number;
   /** Names of the rules the compiler understood (for the in-game "Supported" note). */ compiled?: boolean;
 }
-export interface DeckDef { id: string; name: string; commander: string; cards: string[]; partner?: string; /** further commanders (e.g. a precon with four face commanders) */ extra?: string[] }
+export interface DeckDef { id: string; name: string; commander: string; cards: string[]; partner?: string; /** alternative face commanders (a precon that lets you pick one). Not a partner: the game starts with exactly one of these in the command zone. */ extra?: string[] }
 
 /** Fields of a continuous effect, by layer: 4 type/subtype, 5 color, 6 abilities, 7b base P/T. */
 export interface CEFx {

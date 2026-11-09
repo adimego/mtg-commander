@@ -176,16 +176,30 @@ export function setAutoTarget(f: typeof autoTarget) { autoTarget = f; }
 
 // ---------------- setup ----------------
 function inst(g: Game, id: string, owner: number): Card { const c: Card = { uid: g.nextUid++, id, owner, tapped: false, sick: false, damage: 0, pp: 0, pt: 0 }; offBfEff(c); return c; }
-export interface NewGameOpts { seed?: number; decks?: string[]; names?: string[]; humans?: number[]; skipAiMulligan?: boolean }
+export interface NewGameOpts { seed?: number; decks?: string[]; names?: string[]; humans?: number[]; skipAiMulligan?: boolean; /** commander id chosen for each seat. Blank seats use the deck's primary face commander. */ commanders?: (string | undefined)[] }
+/** Face commanders a deck offers. `extra` lists alternatives to `commander` (pick one). A legal partner is separate and is not an alternative. */
+export function faceCommanders(d: DeckDef): string[] {
+  const ids = [d.commander, ...(d.extra ?? [])];
+  return ids.filter((id, i) => !!id && ids.indexOf(id) === i);
+}
+/** One commander for the command zone, plus a partner when the deck has one. Every other face commander is a normal library card. */
+export function resolveCommanders(d: DeckDef, pick?: string): { commanders: string[]; library: string[] } {
+  const faces = faceCommanders(d);
+  const chosen = pick && faces.includes(pick) ? pick : faces[0];
+  const commanders = [chosen];
+  if (d.partner && !commanders.includes(d.partner)) commanders.push(d.partner);
+  return { commanders, library: faces.filter(id => !commanders.includes(id)) };
+}
 export function newGame(o: NewGameOpts = {}): Game {
   const g: Game = { players: [], active: 0, step: 'untap', turn: 0, log: [], seed: o.seed ?? (Date.now() | 0), nextUid: 1, winner: null, started: false, stack: [], priority: null, passes: 0, awaiting: null, blockersDone: [], pending: [], choice: null, res: null, decision: null, died: 0 };
   const deckIds = o.decks ?? DECKS.map(d => d.id); const humans = o.humans ?? [0];
   deckIds.forEach((did, i) => {
     const d = DECKS.find(x => x.id === did)!;
-    const cids = [d.commander, ...(d.partner ? [d.partner] : []), ...(d.extra ?? [])];
+    const { commanders: cids, library: extraLib } = resolveCommanders(d, o.commanders?.[i]);
     const ident = [...new Set(cids.flatMap(x => colorIdentity(CARDS[x])))];
-    const p: Player = { id: i, name: o.names?.[i] ?? (humans.includes(i) ? 'You' : `AI ${i}`), human: humans.includes(i), life: 40, deckName: d.name, commanderId: d.commander, commanderCasts: 0, commanderIds: cids, casts: {}, identity: COLORS.filter(k => ident.includes(k)), library: d.cards.map(id => inst(g, id, i)), hand: [], battlefield: [], graveyard: [], exile: [], command: cids.map(x => inst(g, x, i)), cmdDamage: {}, lost: false, landPlayed: false, mulligans: 0, pool: [], gained: 0, lostLife: 0 };
+    const p: Player = { id: i, name: o.names?.[i] ?? (humans.includes(i) ? 'You' : `AI ${i}`), human: humans.includes(i), life: 40, deckName: d.name, commanderId: cids[0], commanderCasts: 0, commanderIds: cids, casts: {}, identity: COLORS.filter(k => ident.includes(k)), library: [...d.cards, ...extraLib].map(id => inst(g, id, i)), hand: [], battlefield: [], graveyard: [], exile: [], command: cids.map(x => inst(g, x, i)), cmdDamage: {}, lost: false, landPlayed: false, mulligans: 0, pool: [], gained: 0, lostLife: 0 };
     g.players.push(p); shuffle(g, p.library); draw(g, i, 7);
+    if (extraLib.length) { const names = extraLib.map(id => CARDS[id].name); log(g, `${p.name} ${p.name === 'You' ? 'choose' : 'chooses'} ${CARDS[cids[0]].name} as commander. ${names.join(', ')} ${names.length === 1 ? 'is' : 'are'} shuffled into the library.`); }
   });
   if (!o.skipAiMulligan) for (const p of g.players) if (!p.human) { const l = p.hand.filter(c => isType(c, 'Land')).length; if (l < 2 || l > 5) mulligan(g, p.id); }
   log(g, 'Game created. Each player starts at 40 life.');
