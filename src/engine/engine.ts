@@ -38,7 +38,7 @@ export interface Card {
   /** copy effects: original card id, and 'until end of turn' marker */ origId?: string; copyEot?: number;
   /** cast for its morph cost; consumed as it enters face down */ morphCast?: boolean; /** cast for impending; consumed as it enters with time counters */ impendCast?: boolean; /** impending permanent: not a creature while it has a time counter */ impend?: boolean;
   /** Serra's Emissary: you and creatures you control have protection from this card type */ protType?: string; /** Windcrag Siege mode */ siege?: 'mardu' | 'jeskai'; /** Isshin-style extra attack trigger while chosen */ atkTwice?: boolean;
-  /** combat damage dealt to this player during the current damage step */ hitVs?: number; /** Tamiyo: damage step already handled */ stunTag?: string; /** Nissa: resolutions of her landfall this turn */ nissaR?: number;
+  /** combat damage dealt to this player during the current damage step */ hitVs?: number; /** Nissa: resolutions of her landfall this turn */ nissaR?: number;
   /** 'choose one that hasn't been chosen' (Kimoyo Beads) */ chosenModes?: number[];
   /** vow counter: can't attack this player */ vowVs?: number; /** must attack this player each combat until turn t */ mustAtk?: { pid: number; t: number };
   /** source uid -> turn it last dealt damage to this */ dmgBy?: Record<number, number>; /** turn this was last dealt damage */ dmgT?: number;
@@ -75,7 +75,7 @@ export interface StackItem {
   /** permanent spell with asEnters: resolving through its replacement steps */ aeDone?: boolean;
   id: number; kind: 'spell' | 'ability' | 'trigger'; controller: number; sourceId: string; sourceUid: number; card?: Card; effects: Effect[]; targetSpec?: TargetSpec; target?: Target; label: string; event?: GameEvent; uncounterable?: boolean;
   /** where a resolved spell goes instead of the graveyard */ awayTo?: 'bottom' | 'exile';
-  targets?: (Target | undefined)[]; tslots?: TSlot[]; modes?: number[]; modeDef?: Modes; x?: number; kicked?: boolean; teamwork?: boolean; flashback?: boolean; rebound?: boolean; evCard?: Card; ifc?: Cond; srcLki?: { p: number; t: number }; chapter?: boolean; /** links a trigger to the ability Aboleth Spawn may copy */ inst?: number;
+  targets?: (Target | undefined)[]; tslots?: TSlot[]; modes?: number[]; modeDef?: Modes; x?: number; kicked?: boolean; teamwork?: boolean; flashback?: boolean; rebound?: boolean; evCard?: Card; ifc?: Cond; srcLki?: { p: number; t: number }; chapter?: boolean; /** links a trigger to the ability Aboleth Spawn may copy */ inst?: number; /** morph: a 2/2 face-down spell. Opponents use the public face; the controller can look at the printed card. */ faceDown?: boolean;
 }
 export interface Pending { /** 'one or more' batch key */ bk?: string; controller: number; sourceId: string; sourceUid: number; trig: TriggerDef; event?: GameEvent; evCard?: Card; srcLki?: { p: number; t: number }; inst?: number }
 export type Decision = { key: string; pid: number; text: string; src?: string } & (
@@ -693,6 +693,17 @@ export function slotsFillable(g: Game, pid: number, slots: TSlot[] | undefined, 
   for (const s of slots) { if (s.opt) continue; const t = slotTargets(g, pid, s, { ...x, taken, takenSlots }); if (!t.length) return false; taken.push(t[0]); takenSlots.push(s); }
   return true;
 }
+/** Rules characteristics of a morph spell: no name, no mana cost, no abilities, colorless 2/2. */
+const FACE_DOWN_RULES: CardDef = { id: 'face-down-rules', name: '', types: ['Creature'], cost: { generic: 0 }, colors: [], power: 2, toughness: 2, text: '', typeLine: 'Creature' };
+/** What an opponent is allowed to see. */
+const FACE_DOWN_VIEW: CardDef = { id: 'face-down', name: 'Face-down creature', types: ['Creature'], cost: { generic: 0 }, colors: [], power: 2, toughness: 2, text: 'A 2/2 colorless creature with no name, no abilities, and no mana cost.', typeLine: 'Creature' };
+CARDS['face-down'] = FACE_DOWN_VIEW;
+function hideMorphSpell(c: Card) { c.faceDown = true; c.eff = FACE_DOWN_RULES; }
+/** The spell as `viewer` is allowed to see it. The controller of a morph spell sees the printed card; everyone else sees a nameless 2/2. */
+export function visibleSpell(it: StackItem, viewer: number): CardDef {
+  if (it.kind === 'spell' && it.faceDown && it.controller !== viewer) return FACE_DOWN_VIEW;
+  return CARDS[it.sourceId] ?? FACE_DOWN_VIEW;
+}
 export function describeTarget(g: Game, t?: Target): string {
   if (!t) return '';
   if (t.player !== undefined) return g.players[t.player].name;
@@ -897,16 +908,18 @@ export function castSpell(g: Game, pid: number, uid: number, opt?: Target | Cast
   if (fromCmd) { p.casts[c.id] = (p.casts[c.id] ?? 0) + 1; if (c.id === p.commanderId) p.commanderCasts = p.casts[c.id]; if ((plan.tags ?? []).includes('opal') && isCommander(g, c)) c.enterCtr = { kind: '+1/+1', n: p.casts[c.id] }; }
   const effects = repFx ?? (d.spell?.modes ? (modes ?? []).flatMap(i => d.spell!.modes!.list[i].effects) : d.spell?.effects ?? []);
   const targets = slots.map((_, i) => (active.includes(i) ? ts[i] : undefined));
-  const item: StackItem = { id: g.nextUid++, kind: 'spell', controller: pid, sourceId: c.id, sourceUid: c.uid, card: c, effects, targetSpec: d.spell?.target, target: targets.find(Boolean), targets, tslots: slots, modes, modeDef: d.spell?.modes, x: o.x ?? 0, kicked: !!o.kicked, flashback: fb, rebound: z === 'hand' && !!d.rebound && !prepSrc || undefined, label: d.name, uncounterable: d.uncounterable, evCard: extraSac };
+  if (o.morph) hideMorphSpell(c);
+  const pub = o.morph ? FACE_DOWN_RULES : d;
+  const item: StackItem = { id: g.nextUid++, kind: 'spell', controller: pid, sourceId: c.id, sourceUid: c.uid, card: c, effects, targetSpec: d.spell?.target, target: targets.find(Boolean), targets, tslots: slots, modes, modeDef: d.spell?.modes, x: o.x ?? 0, kicked: !!o.kicked, flashback: fb, rebound: z === 'hand' && !!d.rebound && !prepSrc || undefined, label: o.morph ? 'Face-down creature' : d.name, uncounterable: o.morph ? undefined : d.uncounterable, faceDown: o.morph || undefined, evCard: extraSac };
   delete c.onAdv; delete c.foretold; c.kicked = !!o.kicked; c.x = o.x ?? 0; c.teamwork = !!team; item.teamwork = !!team; item.event = { player: pid, spent };
   g.stack.push(item); emitTargeted(g, item);
   const tdesc = targets.filter(Boolean).map(t => describeTarget(g, t)).join(', ');
-  log(g, `${p.name} casts ${prepSrc ? 'a copy of ' : ''}${o.morph ? 'a face-down creature' : d.name}${o.warp ? ' for its warp cost' : ''}${o.morph ? ' face down' : ''}${o.impending ? ' for its impending cost' : ''}${o.x ? ` (X=${o.x})` : ''}${o.kicked ? ' (kicked)' : ''}${fb ? ' with flashback' : ''}${tdesc ? ` targeting ${tdesc}` : ''}${fromCmd ? ` from the command zone (tax ${2 * (p.casts[c.id] - 1)})` : ''}.`);
+  log(g, `${p.name} casts ${prepSrc ? 'a copy of ' : ''}${o.morph ? 'a face-down creature' : d.name}${o.warp ? ' for its warp cost' : ''}${o.impending ? ' for its impending cost' : ''}${o.x ? ` (X=${o.x})` : ''}${o.kicked ? ' (kicked)' : ''}${fb ? ' with flashback' : ''}${tdesc ? ` targeting ${tdesc}` : ''}${fromCmd ? ` from the command zone (tax ${2 * (p.casts[c.id] - 1)})` : ''}.`);
   if (p.spells?.turn !== g.turn) p.spells = { turn: g.turn, n: 0, nonc: 0, isv: 0, ins: 0 };
-  if (p.spellCols?.turn !== g.turn) p.spellCols = { turn: g.turn, cols: [] }; for (const k of def(c).colors) if (!p.spellCols.cols.includes(k)) p.spellCols.cols.push(k);
-  p.spells.n++; if (!d.types.includes('Creature')) p.spells.nonc++; if (d.types.includes('Instant') || d.types.includes('Sorcery') || isTypeOrSub(d, 'Villain')) p.spells.isv++; if (d.types.includes('Instant') || d.types.includes('Sorcery')) p.spells.ins++;
-  emit(g, 'cast', { player: pid, mv: cmc(d), spent, nth: { ...p.spells } }, c);
-  for (const t of d.triggers ?? []) if (t.on === 'x' && t.ev === 'castSelf') g.pending.push({ controller: pid, sourceId: c.id, sourceUid: c.uid, trig: t, event: { player: pid }, evCard: c });
+  if (p.spellCols?.turn !== g.turn) p.spellCols = { turn: g.turn, cols: [] }; for (const k of pub.colors) if (!p.spellCols.cols.includes(k)) p.spellCols.cols.push(k);
+  p.spells.n++; if (!pub.types.includes('Creature')) p.spells.nonc++; if (pub.types.includes('Instant') || pub.types.includes('Sorcery') || isTypeOrSub(pub, 'Villain')) p.spells.isv++; if (pub.types.includes('Instant') || pub.types.includes('Sorcery')) p.spells.ins++;
+  emit(g, 'cast', { player: pid, mv: cmc(pub), spent, nth: { ...p.spells } }, c);
+  if (!o.morph) for (const t of d.triggers ?? []) if (t.on === 'x' && t.ev === 'castSelf') g.pending.push({ controller: pid, sourceId: c.id, sourceUid: c.uid, trig: t, event: { player: pid }, evCard: c });
   if (now) { delete g.castNow; delete c.mayFree; if (g.decision?.kind === 'cast') answerDecision(g, true); return true; }
   acted(g); return true;
 }
@@ -1434,6 +1447,7 @@ function resolveTop(g: Game): boolean {
   return continueRes(g);
 }
 function spellAway(g: Game, it: StackItem, resolved = false) { if (!it.card) return; if (it.card.prepFor !== undefined || it.card.isCopy) return; // a copy ceases to exist
+  if (it.card.faceDown && it.card.morphCast) { delete it.card.faceDown; delete it.card.eff; delete it.card.morphCast; log(g, `${CARDS[it.card.id].name} is revealed.`); }
   if (resolved && it.rebound && !it.flashback) { const c = it.card; frontFace(c); g.players[c.owner].exile.push(c); c.reboundT = g.turn; (g.delayed ??= []).push({ at: 'upkeep', pid: it.controller, turnAfter: g.turn, controller: it.controller, sourceId: c.id, sourceUid: c.uid, label: `Rebound — you may cast ${nm(c)} from exile without paying its mana cost.`, effects: [{ op: 'rebound' }] }); log(g, `${nm(c)} is exiled (rebound).`); return; }
   if (resolved && !it.flashback && def(it.card).adventure) { const c = it.card; frontFace(c); g.players[c.owner].exile.push(c); c.onAdv = true; log(g, `${nm(c)} goes on an adventure (exiled; its creature may be cast later).`); return; }
   frontFace(it.card);

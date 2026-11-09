@@ -4,7 +4,7 @@ import { compileScry } from './import/classify';
 import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
 import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
-import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders } from './engine/engine';
+import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell } from './engine/engine';
 import { DecisionDialog, KickerDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
@@ -95,7 +95,7 @@ function Permanent({ ui, c }: { ui: UI; c: Card }) {
       onDragOver={e => { if (ui.isTarget(t) || pwTarget) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
       <div className={`perm ${walker ? 'walker' : ''} ${pwTarget ? 'atkpick' : ''} ${aimed ? 'atktarget' : ''} ${c.attacking !== undefined ? 'attacking' : ''} ${c.blocking !== undefined ? 'blocking' : ''} ${ui.permCls(c)}`}
         draggable={mine && ui.declaring && canAttack(g, c)} onDragStart={e => ui.dragStart(c, e)}
-        onMouseDown={e => ui.blockDown(c, e)} onContextMenu={e => ui.blockCtx(c, e)} onClick={e => { if (walker && mine && !ui.declaring) setOpen(o => !o); if (pwTarget) e.stopPropagation(); ui.clickPerm(c); }} onMouseEnter={() => ui.setHover({ id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)}>
+        onMouseDown={e => ui.blockDown(c, e)} onContextMenu={e => ui.blockCtx(c, e)} onClick={e => { if (walker && mine && !ui.declaring) setOpen(o => !o); if (pwTarget) e.stopPropagation(); ui.clickPerm(c); }} onMouseEnter={() => ui.setHover(c.faceDown && c.owner !== HUMAN ? { id: 'face-down' } : { id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)}>
         <CardFace d={d} />
         {cr && <span className={`pt ${c.damage ? 'hurt' : ''} ${c.pp || c.pt ? 'pumped' : ''}`} title={`Power/toughness${c.damage ? ` (${c.damage} damage marked)` : ''}`}>{power(g, c)}/{toughness(g, c) - c.damage}</span>}
         {sick && <span className="badge sick" title="Summoning sick: can't attack or use {T} abilities this turn">💤</span>}
@@ -209,14 +209,16 @@ function StackView({ g, ui }: { g: Game; ui: UI }) {
   return (
     <div className="stackview">
       <div className="stackhead">THE STACK <span>{items.length} item{items.length > 1 ? 's' : ''} · top resolves first</span></div>
-      <div className="sitems">{items.map((it: StackItem, i) => { const t = { stack: it.id }; const pick = ui.isTarget(t); return (
-        <div key={it.id} className={`sitem ${i === 0 ? 'top' : ''} ${pick ? 'targetable' : ''}`} data-stack={it.id} style={{ borderColor: PCOLORS[it.controller] }}
+      <div className="sitems">{items.map((it: StackItem, i) => { const t = { stack: it.id }; const pick = ui.isTarget(t); const shown = visibleSpell(it, HUMAN); const hidden = it.kind === 'spell' && !!it.faceDown && it.controller !== HUMAN; return (
+        <div key={it.id} className={`sitem ${i === 0 ? 'top' : ''} ${pick ? 'targetable' : ''} ${it.faceDown ? 'facedown' : ''}`} data-stack={it.id} data-facedown={it.faceDown ? '1' : undefined} data-hidden={hidden ? '1' : undefined}
+          style={{ borderColor: PCOLORS[it.controller] }}
           onClick={() => pick && ui.dropOn(t, null as unknown as DragEvent)} onDragOver={e => { if (pick) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}
-          onMouseEnter={() => ui.setHover({ id: it.sourceId })} onMouseLeave={() => ui.setHover(null)}>
-          <div className="scard"><CardFace d={CARDS[it.sourceId]} /></div>
+          onMouseEnter={() => { if (!hidden) ui.setHover({ id: it.sourceId }); }} onMouseLeave={() => ui.setHover(null)}>
+          <div className="scard"><CardFace d={shown} /></div>
           <div className="sinfo">
             <span className={`kind k-${it.kind}`}>{it.kind === 'spell' ? 'SPELL' : it.kind === 'trigger' ? '⚡ TRIGGER' : 'ABILITY'}</span>
-            <b>{it.label}</b>
+            <b>{it.faceDown ? 'Face-down creature' : it.label}</b>
+            {it.faceDown && it.controller === HUMAN && <span className="smeta" data-morph-private="1">Only you can see this: {CARDS[it.sourceId].name}</span>}
             <span className="smeta"><span style={{ color: PCOLORS[it.controller] }}>{g.players[it.controller].name}</span>{it.target && <> → {describeTarget(g, it.target)}</>}</span>
             {it.uncounterable && <span className="smeta">Can't be countered</span>}
           </div>
@@ -330,7 +332,7 @@ export default function App() {
   // a back face / Adventure chosen in hand turns face up again if the cast is cancelled
   useEffect(() => { const gg = gref.current; if (!gg || pending) return; const hs = gg.players[HUMAN].hand.filter(c => c.face); if (hs.length) act(() => hs.forEach(frontFace)); }, [pending, act]);
   // test/debug hook (only with ?debug in the URL): lets scripted screenshots stage a board
-  useEffect(() => { if (/[?&]debug\b/.test(location.search)) (window as unknown as Record<string, unknown>).__ca = { game: () => gref.current, act, CARDS, compile: (o: Record<string, unknown>) => { const d = compileScry({ colors: [], color_identity: [], keywords: [], mana_cost: '', ...o } as unknown as ScryCard).def; registerCards([d, ...(d.prepDef ? [d.prepDef] : [])]); return d.id; } }; }, [act]);
+  useEffect(() => { if (/[?&]debug\b/.test(location.search)) (window as unknown as Record<string, unknown>).__ca = { game: () => gref.current, act, CARDS, castSpell, visibleSpell, compile: (o: Record<string, unknown>) => { const d = compileScry({ colors: [], color_identity: [], keywords: [], mana_cost: '', ...o } as unknown as ScryCard).def; registerCards([d, ...(d.prepDef ? [d.prepDef] : [])]); return d.id; } }; }, [act]);
   function beginMatch(deckId: string, commanderId?: string) {
     setCmdChoice(null);
     localStorage.setItem('ca_deck', deckId);

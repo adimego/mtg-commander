@@ -308,7 +308,7 @@ export const SCRIPTS: Record<string, Record<string, Patch>> = {
     { label: 'Create two hasty token copies of target permanent an opponent controls', tslots: [{ who: 'perm', f: { ctrl: 'opp' } }], effects: [S('venserTok')] },
   ] } })) },
   'Niv-Mizzet, Ghost Counsel': { 'whenever you gain life, you may pay that much life. if you do, draw that many cards': d => trig(d, T('gainLife', [S('nivPay')], { pl: 'you', label: 'you may pay that much life to draw that many cards' })) },
-  'Tamiyo, Upriser Crowned': { "whenever one or more creatures deal combat damage to you while you're the monarch, tap those creatures and put a stun counter on each of them": d => trig(d, T('combatDamagePlayer', [S('tamiyoStun')], { pl: 'you', subj: 'any', f: { types: ['Creature'] }, ifc: { k: 'monarch' }, label: 'tap those creatures and stun them' })) },
+  'Tamiyo, Upriser Crowned': { "whenever one or more creatures deal combat damage to you while you're the monarch, tap those creatures and put a stun counter on each of them": d => trig(d, T('combatDamagePlayer', [S('tamiyoStun')], { pl: 'you', subj: 'any', f: { types: ['Creature'] }, ifc: { k: 'monarch' }, batch: true, label: 'tap those creatures and stun them' })) },
   'The Ur-Sphinx': {
     'eminence — as long as ~ is in the command zone or on the battlefield, other sphinx spells you cast cost {1} less to cast': d => { d.eminence = { n: 1, f: { types: ['Sphinx'], other: true } }; },
     'whenever one or more sphinxes you control attack, each player mills that many cards. for each player, you may cast a card that player milled this way without paying its mana cost': d => trig(d, T('youAttack', [S('urAttack')], { pl: 'you', label: 'each player mills that many; you may cast one of those cards free' })),

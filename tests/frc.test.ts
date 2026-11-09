@@ -5,7 +5,7 @@ import '../src/engine/ai';
 import {
   newGame, startGame, pass, answerDecision, alive, def, CARDS, DECKS, Game, Card, CardDef, layer, activate, castSpell,
   playLand, ctr, power, toughness, isType, hasKw, findCard, addCounters, checkState, destroy, declareAttackers, declareBlockers,
-  canBeAttackedPw, planPayment, tapForMana, offBfEff, chooseTriggerTargets,
+  canBeAttackedPw, planPayment, tapForMana, offBfEff, chooseTriggerTargets, visibleSpell, validSlot, cmc, becomeMonarch, createToken, flipFace, registerCards,
 } from '../src/engine/engine';
 
 loadPrecons();
@@ -184,18 +184,106 @@ describe('Multiverse Reforged interactions', () => {
 
   it('Sunfall exiles creatures and incubates that many; the token can transform', () => {
     const g = setup();
+    const watch: CardDef = { id: 'x-transform-watch', name: 'Transform Watch', types: ['Enchantment'], cost: { generic: 0 }, colors: [], text: 'Whenever a permanent you control transforms, draw a card.', triggers: [{ on: 'x', ev: 'transformed', subj: 'any', pl: 'you', label: 'draw a card', effects: [{ op: 'draw', n: 1, pl: 'you' }] }] };
+    registerCards([watch]);
+    put(g, 0, watch);
     put(g, 0, byName('Memnarch, the Warden')); put(g, 1, byName('Darksteel Angel'));
     const spell = mk(g, 0, byName('Sunfall')); g.players[0].hand.push(spell);
     g.players[0].pool.push('W', 'W', 'W', 'W', 'C');
     expect(castSpell(g, 0, spell.uid)).toBe(true); run(g);
     const inc = g.players[0].battlefield.find(c => def(c).name === 'Incubator')!;
+    expect(isType(inc, 'Creature')).toBe(false);
+    expect(CARDS[inc.id].back?.name).toBe('Phyrexian');
+    expect(CARDS[inc.id].back?.types).toEqual(['Artifact', 'Creature']);
     expect(ctr(inc, '+1/+1')).toBe(2);
+    const frontCopy = createToken(g, 0, inc.id);
+    expect(def(frontCopy).name).toBe('Incubator');
+    expect(CARDS[frontCopy.id].back?.name).toBe('Phyrexian');
     const idx = def(inc).abilities!.findIndex(a => /transform/i.test(a.label));
     g.players[0].pool.push('C', 'C');
+    const hand = g.players[0].hand.length;
     expect(activate(g, 0, inc.uid, idx)).toBe(true); run(g);
     expect(def(inc).name).toBe('Phyrexian');
     expect(isType(inc, 'Creature')).toBe(true);
+    expect(isType(inc, 'Artifact')).toBe(true);
     expect(power(g, inc)).toBe(2);
+    expect(ctr(inc, '+1/+1')).toBe(2);
+    expect(g.players[0].hand.length).toBe(hand + 1);
+    const backCopy = createToken(g, 0, inc.id);
+    expect(def(backCopy).name).toBe('Phyrexian');
+    expect(CARDS[backCopy.id].back?.name).toBe('Incubator');
+    expect(flipFace(backCopy)).toBe(true);
+    expect(def(backCopy).name).toBe('Incubator');
+  });
+
+  it('a morph spell on the stack is a nameless colorless 2/2 that only its controller can see', () => {
+    const g = setup();
+    const akroma = mk(g, 0, byName('Akroma, Angel of Fury')); g.players[0].hand.push(akroma);
+    expect(CARDS[akroma.id].uncounterable).toBe(true);
+    g.players[0].pool.push('C', 'C', 'C');
+    expect(castSpell(g, 0, akroma.uid, { morph: true })).toBe(true);
+    const it = g.stack[g.stack.length - 1];
+    expect(it.faceDown).toBe(true);
+    expect(it.label).toBe('Face-down creature');
+    expect(it.uncounterable).toBeFalsy();
+    expect(def(akroma).name).toBe('');
+    expect(def(akroma).colors).toEqual([]);
+    expect(def(akroma).types).toEqual(['Creature']);
+    expect(def(akroma).power).toBe(2);
+    expect(def(akroma).toughness).toBe(2);
+    expect(cmc(def(akroma))).toBe(0);
+    expect(visibleSpell(it, 1).name).toBe('Face-down creature');
+    expect(visibleSpell(it, 1).img).toBeUndefined();
+    expect(visibleSpell(it, 0).name).toBe('Akroma, Angel of Fury');
+    expect(g.log.join('\n')).not.toMatch(/Akroma/);
+    expect(validSlot(g, 1, { who: 'spell', f: { types: ['Creature'] }, harm: true }, { stack: it.id })).toBe(true);
+    expect(validSlot(g, 1, { who: 'spell', f: { colors: ['R'] }, harm: true }, { stack: it.id })).toBe(false);
+    expect(validSlot(g, 1, { who: 'spell', f: { name: 'Akroma, Angel of Fury' }, harm: true }, { stack: it.id })).toBe(false);
+    pass(g, 0);
+    const counter = mk(g, 1, CARDS['counterspell']); g.players[1].hand.push(counter);
+    g.players[1].pool.push('U', 'U');
+    expect(castSpell(g, 1, counter.uid, { targets: [{ stack: it.id }] })).toBe(true);
+    run(g);
+    expect(g.players[0].graveyard.includes(akroma)).toBe(true);
+    expect(akroma.faceDown).toBeFalsy();
+    expect(def(akroma).name).toBe('Akroma, Angel of Fury');
+    expect(g.log.join('\n')).toMatch(/Akroma, Angel of Fury is revealed/);
+  });
+
+  it("Tamiyo's combat-damage ability triggers once per damage step", () => {
+    const g = setup();
+    const a = put(g, 0, byName('Ginger, Queen of Sweets')); const b = put(g, 0, byName('Venser, Fervent Forger'));
+    a.sick = false; b.sick = false;
+    const tamiyo = put(g, 1, byName('Tamiyo, Upriser Crowned'));
+    becomeMonarch(g, 1);
+    let guard = 0;
+    while (guard++ < 80 && !g.stack.some(s => s.sourceUid === tamiyo.uid)) {
+      if (g.awaiting === 'attack') declareAttackers(g, g.active, [{ uid: a.uid, defender: 1 }, { uid: b.uid, defender: 1 }]);
+      else if (g.awaiting === 'block') declareBlockers(g, 1, []);
+      else if (g.decision) answerDecision(g, false);
+      else if (g.priority !== null) pass(g, g.priority);
+      else break;
+    }
+    const hits = g.stack.filter(s => s.sourceUid === tamiyo.uid);
+    expect(hits).toHaveLength(1);
+    run(g);
+    expect(a.tapped).toBe(true); expect(b.tapped).toBe(true);
+    expect(ctr(a, 'stun')).toBe(1); expect(ctr(b, 'stun')).toBe(1);
+  });
+
+  it('the AI splits Fact or Fiction and the caster takes the better pile', () => {
+    const g = setup();
+    for (const p of g.players) p.human = false;
+    for (let i = 0; i < 6; i++) put(g, 0, byName('Plains'));
+    const angel = mk(g, 0, byName('Darksteel Angel'));
+    const lands = [0, 1, 2, 3].map(() => mk(g, 0, byName('Plains')));
+    g.players[0].library.push(...lands, angel);
+    const spell = mk(g, 0, byName('Fact or Fiction')); g.players[0].hand.push(spell);
+    g.players[0].pool.push('U', 'C', 'C', 'C');
+    expect(castSpell(g, 0, spell.uid)).toBe(true);
+    run(g);
+    expect(g.players[0].hand).toEqual([angel]);
+    expect(lands.every(c => g.players[0].graveyard.includes(c))).toBe(true);
   });
 
   it('Secure the Wastes makes X Warriors and Lingering Souls flashes back into exile', () => {
