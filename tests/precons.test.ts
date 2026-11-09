@@ -8,7 +8,7 @@ const inDeck = (p: Player, id: string) => [...p.library, ...p.hand].filter(c => 
 
 /** Supported-card floors per official Marvel Super Heroes Commander precon. Target is 100/100;
  * these floors only stop regressions. The cards still missing are listed by scripts/precon-check.ts and docs/coverage.md. */
-const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100, 'Namor the Sub-Mariner': 100 };
+const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100, 'Namor the Sub-Mariner': 100, "Zurgo, Thunder's Decree": 100 };
 
 describe('official precons', () => {
   const ps = loadPrecons();
@@ -22,7 +22,7 @@ describe('official precons', () => {
   });
   it('Namor is a custom preset; the four Marvel decks are the official precons', () => {
     expect(ps.filter(isOfficialPrecon).map(p => p.name).sort()).toEqual(['Avengers Assemble', 'Doom Prevails', 'The Fantastic Four', 'Wakanda Forever']);
-    expect(ps.filter(p => !isOfficialPrecon(p)).map(p => p.name)).toEqual(['Namor the Sub-Mariner']);
+    expect(ps.filter(p => !isOfficialPrecon(p)).map(p => p.name)).toEqual(['Namor the Sub-Mariner', "Zurgo, Thunder's Decree"]);
   });
   it('only The Fantastic Four lists more than one face commander', () => {
     expect(ps.filter(p => faceCommanders(p).length > 1).map(p => p.name)).toEqual(['The Fantastic Four']);
