@@ -208,6 +208,94 @@ export const SCRIPTS: Record<string, Record<string, Patch>> = {
   "Progenitor's Icon": { '{t}: the next spell of the chosen type you cast this turn can be cast as though it had flash': d => { (d.abilities ??= []).push({ label: 'The next spell of the chosen type this turn has flash', tap: true, effects: [S('icon')] } as never); } },
   'Superior Foes of Spider-Man': { 'whenever you cast a spell with mana value 4 or greater, you may exile the top card of your library. if you do, you may play that card until you exile another card with ~': d => trig(d, T('cast', [S('sfoes')], { pl: 'you', f: { mvGE: 4 }, label: 'you may exile the top card of your library; you may play it' })) },
 
+  'Adeline, Resplendent Cathar': { "whenever you attack, for each opponent, create a 1/1 white human creature token that's tapped and attacking that player or a planeswalker they control": d => trig(d, T('youAttack', [S('perOppToken', { tok: { name: 'Human', p: 1, t: 1, colors: ['W'], types: ['Creature'], sub: ['Human'] } })], { pl: 'you', label: 'for each opponent, a tapped and attacking 1/1 Human' })) },
+  'All-Out Assault': { "when ~ enters, if it's your main phase, there is an additional combat phase after this phase followed by an additional main phase. when you next attack this turn, untap each creature you control": d => trig(d, T('etb', [S('assault')], { subj: 'self', ifc: { k: 'yourMain' }, label: 'additional combat; untap creatures the next time you attack' })) },
+  'Command Bridge': { 'when ~ enters, sacrifice it unless you tap an untapped permanent you control': d => trig(d, T('etb', [S('bridgeUnless')], { subj: 'self', label: 'sacrifice it unless you tap a permanent' })) },
+  'Crackling Doom': { '~ deals 2 damage to each opponent. each opponent sacrifices a creature with the greatest power among creatures that player controls': d => spell(d, [S('crackling')]) },
+  'Desperate Measures': { 'target creature gets +1/-1 until end of turn. when it dies under your control this turn, draw two cards': d => spell(d, [{ op: 'pump', who: 't0', n: 1, m: -1 }, { op: 'watch', who: 't0', kind: 'dies', until: 'eot', text: 'draw two cards', sub: [S('diesDraw', { n: 2 })] }], [{ who: 'perm', f: { types: ['Creature'] } }]) },
+  'Dragonfire Blade': {
+    'equipped creature gets +2/+2 and has hexproof from monocolored': d => { (d.statics ??= []).push({ k: 'pt', who: 'attached', p: 2, t: 2 }, { k: 'kw', who: 'attached', kws: ['hexproof from monocolored'] }); },
+    'equip {4}. this ability costs {1} less to activate for each color of the creature it targets': d => { d.equipColorLess = true; (d.abilities ??= []).push({ label: 'Equip {4}', mana: { generic: 4 }, sorcery: true, equip: true, tslots: [{ who: 'perm', f: YOUR_CREATURES }], effects: [{ op: 'attach', who: 'self', other: 't0' }] }); },
+  },
+  'Enter the Avatar State': { 'until end of turn, target creature you control becomes an avatar in addition to its other types and gains flying, first strike, lifelink, and hexproof': d => spell(d, [{ op: 'becomes', who: 't0', until: 'eot', ce: { addSub: ['Avatar'], addKw: ['flying', 'first strike', 'lifelink', 'hexproof'] } }], [{ who: 'perm', f: YOUR_CREATURES }]) },
+  'Fated Firepower': { 'if a source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus an amount of damage equal to the number of fire counters on ~ instead': d => { (d.statics ??= []).push({ k: 'dmgPlusCtr', who: 'self', ctrKind: 'fire' }); } },
+  'Fire Nation Palace': { '{1}{r}, {t}: target creature you control gains firebending 4 until end of turn': d => { (d.abilities ??= []).push({ label: 'Target creature gains firebending 4', mana: { generic: 1, R: 1 }, tap: true, tslots: [{ who: 'perm', f: YOUR_CREATURES }], effects: [{ op: 'grant', who: 't0', kw: ['firebending 4'] }] }); } },
+  'Gornog, the Red Reaper': {
+    "cowards can't block warriors": d => { (d.statics ??= []).push({ k: 'cowardBlock', who: 'self' }); },
+    'whenever one or more warriors you control attack a player, target creature that player controls becomes a coward': d => trig(d, T('attackPlayer', [S('gornog')], { f: { types: ['Warrior'], ctrl: 'you' }, label: 'target creature that player controls becomes a Coward' })),
+    'attacking warriors you control get +x/+0, where x is the number of cowards your opponents control': d => { (d.statics ??= []).push({ k: 'pt', who: 'all', f: { types: ['Warrior'], ctrl: 'you', attacking: true }, p: { oppCowards: true }, t: 0 }); },
+  },
+  'Hexing Squelcher': {
+    'ward—pay 2 life': d => { d.wardLife = 2; },
+    "spells you control can't be countered": d => { (d.statics ??= []).push({ k: 'spellsUncounterable', who: 'self' }); },
+    'other creatures you control have "ward—pay 2 life."': d => { (d.statics ??= []).push({ k: 'wardLifeN', who: 'others', f: { types: ['Creature'], ctrl: 'you' }, n: 2 }); },
+  },
+  'Infantry Shield': { 'equipped creature has menace and mobilize x, where x is its power': d => { (d.statics ??= []).push({ k: 'kw', who: 'attached', kws: ['menace'] }); const fx: Effect[] = [{ op: 'token', n: { pow: 'attached' }, tok: { name: 'Warrior', p: 1, t: 1, colors: ['R'], types: ['Creature'], sub: ['Warrior'] }, tapped: true, attacking: true }, { op: 'delaySac', who: 'created' }]; trig(d, T('attacks', fx, { subj: 'attached', label: 'mobilize X' })); } },
+  'Iroas, God of Victory': {
+    "as long as your devotion to red and white is less than seven, ~ isn't a creature": d => { (d.statics ??= []).push({ k: 'devotionNotCreature', who: 'self', n: 7, colors: ['R', 'W'] }); },
+    'prevent all damage that would be dealt to attacking creatures you control': d => { (d.statics ??= []).push({ k: 'preventAttackers', who: 'self' }); },
+  },
+  'Isshin, Two Heavens as One': { 'if a creature attacking causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time': d => { d.attackTrigTwice = true; } },
+  'Kinbinding': { 'creatures you control get +x/+x, where x is the number of creatures that entered the battlefield under your control this turn': d => { (d.statics ??= []).push({ k: 'pt', who: 'all', f: { types: ['Creature'], ctrl: 'you' }, p: { etbN: true }, t: { etbN: true } }); } },
+  'Mardu Siegebreaker': {
+    'when ~ enters, exile up to one other target creature you control until ~ leaves the battlefield': d => trig(d, T('etb', [S('ring')], { subj: 'self', label: 'exile up to one other creature you control until this leaves', tslots: [{ who: 'perm', f: { ...YOUR_CREATURES, other: true }, opt: true }] })),
+    "whenever ~ attacks, for each opponent, create a tapped token that's a copy of the exiled card attacking that opponent. at the beginning of your next end step, sacrifice those tokens": d => trig(d, T('attacks', [S('siegeAtk')], { subj: 'self', label: 'a tapped and attacking copy of the exiled card for each opponent' })),
+  },
+  'Mirkwood Bats': { 'whenever you create or sacrifice a token, each opponent loses 1 life': d => trig(d, T('tokenCreated', [{ op: 'lose', n: 1, pl: 'opps' }], { pl: 'you', subj: 'any', label: 'each opponent loses 1 life' }), T('sacrificed', [{ op: 'lose', n: 1, pl: 'opps' }], { pl: 'you', subj: 'any', f: { token: true }, label: 'each opponent loses 1 life' })) },
+  'Mirrormind Crown': { "as long as ~ is attached to a creature, the first time you would create one or more tokens each turn, you may instead create that many tokens that are copies of equipped creature": d => { d.crown = true; } },
+  'Mondrak, Glory Dominus': { '{1}{w/p}{w/p}, sacrifice two other artifacts and/or creatures: put an indestructible counter on ~': d => { (d.abilities ??= []).push({ label: 'Put an indestructible counter on Mondrak', mana: { generic: 1, phy: ['W', 'W'] }, sacF: { f: { anyType: ['Artifact', 'Creature'], other: true }, n: 2, other: true }, effects: [{ op: 'addC', who: 'self', kind: 'indestructible', n: 1 }] }); } },
+  "Morningtide's Light": {
+    "exile any number of target creatures. at the beginning of the next end step, return those cards to the battlefield tapped under their owners' control": d => spell(d, [S('morningtide')], Array.from({ length: 12 }, () => ({ who: 'perm' as const, f: { types: ['Creature'] }, opt: true, grp: 1 }))),
+    'until your next turn, prevent all damage that would be dealt to you': d => spell(d, []),
+  },
+  'Mutavault': { "{1}: ~ becomes a 2/2 creature with all creature types until end of turn. it's still a land": d => { (d.abilities ??= []).push({ label: 'Become a 2/2 with all creature types', mana: { generic: 1 }, effects: [{ op: 'animate', n: 2, m: 2, kw: ['changeling'] }] }); } },
+  'Opal Palace': { "{1}, {t}: add one mana of any color in your commander's color identity. if you spend this mana to cast your commander, it enters with a number of additional +1/+1 counters on it equal to the number of times it's been cast from the command zone this game": d => { (d.abilities ??= []).push({ label: "Add one mana in your commander's identity", mana: { generic: 1 }, tap: true, manaAb: true, effects: [{ op: 'addMana', mana: ['IDENTITY'], n: 1, kind: 'opal' }] }); } },
+  'Redirect Lightning': {
+    'as an additional cost to cast ~, pay 5 life or pay {2}': d => { d.costOrLife = { life: 5, pay: 2 }; },
+    'change the target of target spell or ability with a single target': d => spell(d, [S('retarget')], [{ who: 'stack', single: true }]),
+  },
+  'Redoubled Stormsinger': { "whenever ~ attacks, for each creature token you control that entered this turn, create a tapped and attacking token that's a copy of that token. at the beginning of the next end step, sacrifice those tokens": d => trig(d, T('attacks', [S('stormsinger')], { subj: 'self', label: 'copy each creature token that entered this turn, attacking' })) },
+  'Roaming Throne': { 'if a triggered ability of another creature you control of the chosen type triggers, it triggers an additional time': d => { d.typeTrigTwice = true; } },
+  'Secret Tunnel': { "{4}, {t}: two target creatures you control that share a creature type can't be blocked this turn": d => { (d.abilities ??= []).push({ label: "Two creatures that share a type can't be blocked", mana: { generic: 4 }, tap: true, tslots: [{ who: 'perm', f: YOUR_CREATURES, grp: 1 }, { who: 'perm', f: YOUR_CREATURES, grp: 1, shareType: 0 }], effects: [{ op: 'grant', who: 't0', kw: ['_unblockable'] }, { op: 'grant', who: 't1', kw: ['_unblockable'] }] }); } },
+  'Static Snare': { 'when ~ enters, exile target artifact or creature an opponent controls until ~ leaves the battlefield': d => trig(d, T('etb', [S('ring')], { subj: 'self', label: 'exile target artifact or creature an opponent controls until this leaves', tslots: [{ who: 'perm', f: { anyType: ['Artifact', 'Creature'], ctrl: 'opp' }, harm: true }] })) },
+  'Stormbeacon Blade': { 'whenever equipped creature attacks, draw a card if you control three or more attacking creatures': d => trig(d, T('attacks', [{ op: 'if', cond: { k: 'control', f: { types: ['Creature'], attacking: true }, n: 3 }, sub: [{ op: 'draw', n: 1 }] }], { subj: 'attached', label: 'draw a card if three or more creatures are attacking' })) },
+  "Teferi's Protection": { "until your next turn, your life total can't change and you gain protection from everything. all permanents you control phase out": d => spell(d, [S('teferi')]) },
+  'Thriving Bluff': {
+    '~ enters tapped. as it enters, choose a color other than red': d => { d.etbTapped = true; d.asEnters = [S('thriving', { kind: 'R' })]; d.colorMana = 'R'; },
+    '{t}: add {r} or one mana of the chosen color': d => { /* mana is granted once the color is chosen */ },
+  },
+  'Thriving Heath': {
+    '~ enters tapped. as it enters, choose a color other than white': d => { d.etbTapped = true; d.asEnters = [S('thriving', { kind: 'W' })]; d.colorMana = 'W'; },
+    '{t}: add {w} or one mana of the chosen color': d => { /* mana is granted once the color is chosen */ },
+  },
+  'Thriving Moor': {
+    '~ enters tapped. as it enters, choose a color other than black': d => { d.etbTapped = true; d.asEnters = [S('thriving', { kind: 'B' })]; d.colorMana = 'B'; },
+    '{t}: add {b} or one mana of the chosen color': d => { /* mana is granted once the color is chosen */ },
+  },
+  "Vincent's Limit Break": {
+    'tiered': d => { /* mode costs live on the spell built by the next line */ },
+    'until end of turn, target creature you control gains "when ~ dies, return it to the battlefield tapped under its owner\'s control" and has the chosen base power and toughness.\n• galian beast — {0} — 3/2.\n• death gigas — {1} — 5/2.\n• hellmasker — {3} — 7/2': d => { const mode = (label: string, p: number, t: number) => ({ label, tslots: [{ who: 'perm' as const, f: YOUR_CREATURES }], effects: [{ op: 'becomes', who: 't0', until: 'eot' as const, n: p, m: t, ce: {} }, { op: 'watch', who: 't0', kind: 'dies', until: 'eot' as const, text: 'return it tapped', sub: [S('dieReturn')] }] }); d.tierCosts = [{ generic: 0 }, { generic: 1 }, { generic: 3 }]; d.spell = { effects: [], modes: { min: 1, max: 1, list: [mode('Galian Beast — 3/2', 3, 2), mode('Death Gigas — 5/2', 5, 2), mode('Hellmasker — 7/2', 7, 2)] } }; },
+  },
+  'Voice of Victory': { "your opponents can't cast spells during your turn": d => { (d.statics ??= []).push({ k: 'oppsCantCast', who: 'self' }); } },
+  'War Effort': { "whenever you attack, create a 1/1 red warrior creature token that's tapped and attacking. sacrifice it at the beginning of the next end step": d => trig(d, T('youAttack', [S('warToken')], { pl: 'you', label: 'a tapped and attacking Warrior, sacrificed at the next end step' })) },
+  'White Lotus Tile': { '{t}: add x mana of any one color, where x is the greatest number of creatures you control that have a creature type in common': d => { (d.abilities ??= []).push({ label: 'Add X mana of any one color', tap: true, manaAb: true, effects: [S('lotus')] }); } },
+  'Within Range': { 'whenever you attack, each opponent loses life equal to the number of creatures attacking them': d => trig(d, T('youAttack', [S('withinRange')], { pl: 'you', label: 'each opponent loses life equal to the creatures attacking them' })) },
+  'Zurgo Stormrender': { 'whenever a creature token you control leaves the battlefield, draw a card if it was attacking. otherwise, each opponent loses 1 life': d => trig(d, T('ltb', [S('stormrender')], { subj: 'any', f: { types: ['Creature'], token: true, ctrl: 'you' }, label: 'draw if it was attacking; otherwise each opponent loses 1' })) },
+  "Zurgo, Thunder's Decree": { 'during your end step, warrior tokens you control have "~ can\'t be sacrificed."': d => { (d.statics ??= []).push({ k: 'noSacWarriors', who: 'self' }); } },
+  'Eirdu, Carrier of Dawn // Isilu, Carrier of Twilight': {
+    'creature spells you cast have convoke': d => { (d.statics ??= []).push({ k: 'convokeSpells', who: 'self' }); },
+    'at the beginning of your first main phase, you may pay {b}. if you do, transform ~': d => trig(d, T('firstMain', [{ op: 'may', text: 'pay {B}', ifPaid: { generic: 0, B: 1 }, sub: [{ op: 'transform', who: 'self' }] }], { pl: 'you', label: 'you may pay {B} to transform' })),
+  },
+  'Isilu, Carrier of Twilight': {
+    'each other nontoken creature you control has persist': d => { (d.statics ??= []).push({ k: 'kw', who: 'others', f: { types: ['Creature'], nontoken: true }, kws: ['persist'] }); },
+    'at the beginning of your first main phase, you may pay {w}. if you do, transform ~': d => trig(d, T('firstMain', [{ op: 'may', text: 'pay {W}', ifPaid: { generic: 0, W: 1 }, sub: [{ op: 'transform', who: 'self' }] }], { pl: 'you', label: 'you may pay {W} to transform' })),
+  },
+  'Ojer Taq, Deepest Foundation // Temple of Civilization': {
+    'if one or more creature tokens would be created under your control, three times that many of those tokens are created instead': d => { (d.statics ??= []).push({ k: 'tokenTriple', who: 'self' }); },
+    "when ~ dies, return it to the battlefield tapped and transformed under its owner's control": d => trig(d, T('dies', [S('ojerDies')], { subj: 'self', label: 'return tapped and transformed' })),
+  },
+  'Temple of Civilization': { '{2}{w}, {t}: transform ~. activate only if you attacked with three or more creatures this turn and only as a sorcery': d => { (d.abilities ??= []).push({ label: 'Transform', mana: { generic: 2, W: 1 }, tap: true, sorcery: true, cond: { k: 'atkGE', n: 3 }, effects: [{ op: 'transform', who: 'self' }] }); } },
+
 };
 
 /** Apply scripts for lines the compiler couldn't parse; covered lines are removed from `unparsed`. */

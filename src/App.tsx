@@ -601,7 +601,7 @@ export default function App() {
       </section>
       <section className="deckgroup custom" data-section="custom">
         <h3 className="dsec">Custom decks <span className="muted">({CUSTOM_PRESETS.length + saved.length})</span></h3>
-        <p className="dnote">Your own lists, kept in this browser, including Namor the Sub-Mariner. These are not official products.</p>
+        <p className="dnote">Your own lists, kept in this browser, including Namor the Sub-Mariner and Zurgo, Thunder's Decree. These are not official products.</p>
         <div className="deckpick mine">
           {CUSTOM_PRESETS.map(d => <PreconTile key={d.id} d={d} on={deck === d.id} pick={() => { setCmdChoice(null); setDeck(d.id); }} dbl={() => newMatch(d.id)} />)}
           {saved.map(d => { const c = CARDS[d.commander]; const lim = d.stats.limited; return (
