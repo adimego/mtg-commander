@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newGame, startGame, Game, Card, costOf, castSpell, destroy, findPayment, declareAttackers, declareBlockers, pass, DECKS, validateDeck, mulligan, CARDS, activate, canActivate, power, alive, playLand, blockReason, menaceShort } from '../src/engine/engine';
+import { newGame, startGame, Game, Card, costOf, castSpell, destroy, findPayment, declareAttackers, declareBlockers, pass, DECKS, validateDeck, mulligan, CARDS, activate, canActivate, power, alive, playLand, blockReason, menaceShort, answerDecision } from '../src/engine/engine';
 import '../src/engine/ai';
 import { tick, waitingForHuman } from '../src/engine/controller';
 
@@ -203,6 +203,7 @@ describe('commander damage & win', () => {
     const g = newGame({ seed: 11 }); startGame(g);
     for (let i = 0; i < 80000 && g.winner === null; i++) {
       if (waitingForHuman(g)) {
+        if (g.decision?.key === 'cleanupDiscard' && g.decision.kind === 'pick') { answerDecision(g, g.decision.cards.slice(0, g.decision.min).map(c => c.uid)); continue; }
         if (g.choice) { g.choice = null; continue; }
         if (g.awaiting === 'attack') declareAttackers(g, 0, []); else if (g.awaiting === 'block') declareBlockers(g, 0, []); else pass(g, 0);
       } else tick(g);

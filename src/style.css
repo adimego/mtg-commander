@@ -108,6 +108,14 @@ aside{display:flex;flex-direction:column;min-height:0;background:#060a09d9;borde
 .hcard:hover{z-index:200!important}.hcard:hover .hinner{transform:translateY(calc(var(--hw)*-.75)) scale(1.55) rotate(calc(var(--r) * -1));opacity:1;box-shadow:0 1rem 3rem #000e,0 0 0 .15rem #fff}
 .hcard.playable:hover .hinner{box-shadow:0 1rem 3rem #000e,0 0 0 .2rem var(--gold),0 0 1.4rem .4rem #f2c14e}
 .hcard.selected .hinner{transform:translateY(calc(var(--hw)*-.45));box-shadow:0 0 0 .25rem #00e5ff,0 0 1.4rem #00e5ff;opacity:1}
+.hcard.discarding .hinner{box-shadow:0 0 0 .28rem #ff5252,0 0 1.4rem #ff525288;opacity:1}
+.app.discarding .hcard:hover{z-index:auto!important}
+.app.discarding .hcard:hover .hinner,.app.discarding .hcard.discarding:hover .hinner{transform:none}
+.app.discarding .hand{height:auto;min-height:8rem;overflow-x:auto;align-items:flex-end;gap:.45rem;justify-content:flex-start;padding:0 .4rem .4rem;pointer-events:auto}
+.app.discarding .hcard{transform:none!important;margin:0!important;width:4.8rem;min-width:4.8rem;height:7.4rem;flex:0 0 auto}
+.app.discarding .hinner{position:relative!important;left:auto!important;bottom:auto!important;width:100%!important;transform:none!important}
+.discardmark{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);background:#c62828;color:#fff;font-weight:900;font-size:.8rem;padding:.2rem .55rem;border-radius:.45rem;pointer-events:none;z-index:4}
+.app.discarding .hand,.app.discarding .actionbar,.app.discarding .prompt{z-index:360}
 
 /* stack */
 .stackview{position:absolute;left:calc(50% + var(--meside)/2 - 8vw);top:30vh;transform:translateX(-50%);width:30vw;z-index:60;background:#08110ef2;border:2px solid #ce93d8;border-radius:1rem;box-shadow:0 1.2rem 3rem #000d,0 0 2rem #ce93d855;padding:.6vh .6vw}
