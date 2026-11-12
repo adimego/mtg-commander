@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell, log } from './engine/engine';
 import { AI_RANDOM, normalizeAiPicks, resolveAiDecks } from './setup/aiDecks';
+import { backToBoard, needsBack, type BoardViews } from './setup/views';
 import { DecisionDialog, KickerDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
@@ -88,7 +89,7 @@ interface UI {
   g: Game; setHover: (h: Hover) => void; clickPerm: (c: Card) => void; permCls: (c: Card) => string; activateAb: (c: Card, i: number) => void;
   isTarget: (t: Target) => boolean; cardDown: (c: Card, e: React.PointerEvent) => void; blockCtx: (c: Card, e: React.MouseEvent) => void; why: (c: Card) => string | null; dropOn: (t: Target, e: DragEvent) => void; dragStart: (c: Card, e: DragEvent) => void;
   clickPlayer: (pid: number) => void; atkPlan: Record<number, number>; atkPw: Record<number, number>; atkWalker: number | null; atkTarget?: number; declaring: boolean; openZone: (pid: number, zone: 'graveyard' | 'exile') => void; clickCommand: (c: Card) => void; canTapMana: (cs: Card[]) => boolean; tapMana: (cs: Card[]) => void;
-  compact: boolean; targeting: boolean; boardOn: (pid: number) => boolean; toggleBoard: (pid: number) => void;
+  compact: boolean; targeting: boolean; boardsDismissed: boolean; boardOn: (pid: number) => boolean; toggleBoard: (pid: number) => void;
   pressStart: (h: Hover, e: React.PointerEvent) => void; eat: () => boolean; peek: (h: Hover) => void;
   stackOpen: boolean; toggleStack: () => void;
 }
@@ -208,7 +209,7 @@ function OppPanel({ ui, pid }: { ui: UI; pid: number }) {
   const { g } = ui; const p = g.players[pid]; const t = { player: pid };
   const tgt = ui.isTarget(t); const atkSel = ui.declaring && ui.atkTarget === pid;
   const incoming = attackers(g).some(a => a.owner === pid && a.attacking === HUMAN);
-  const open = incoming || ui.targeting || ui.boardOn(pid);
+  const open = !ui.boardsDismissed && (incoming || ui.targeting || ui.boardOn(pid));
   return (
     <section className={`player opp ${g.active === pid ? 'active' : ''} ${p.lost ? 'lost' : ''} ${tgt ? 'targetable' : ''} ${atkSel ? 'atktarget' : ''} ${ui.declaring && !p.lost ? 'atkpick' : ''} ${open ? 'showboard' : ''}`} style={{ ['--pc' as string]: PCOLORS[pid] }} data-player={pid} data-board={open ? 'open' : 'shut'} data-deckname={p.deckName}
       onClick={() => ui.clickPlayer(pid)} onDragOver={e => { if (tgt || (ui.declaring && !p.lost)) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
@@ -311,6 +312,9 @@ function ZoneViewer({ g, pid, zone, close, setHover, onPeek }: { g: Game; pid: n
     </div></div>
   );
 }
+function BackButton({ onClick }: { onClick: () => void }) {
+  return createPortal(<button type="button" className="backbtn" data-back onClick={e => { e.stopPropagation(); onClick(); }}>← Back</button>, document.body);
+}
 function CardZoom({ g, h, close, onActivate }: { g: Game; h: NonNullable<Hover>; close: () => void; onActivate: (c: Card, i: number) => void }) {
   const d = CARDS[h.id]; if (!d) return null;
   const c = h.uid !== undefined ? findCard(g, h.uid) : undefined;
@@ -378,6 +382,7 @@ export default function App() {
   const [layout, setLayout] = useState(readLayout);
   const compact = layout.compact;
   const [boards, setBoards] = useState<Record<number, boolean>>({});
+  const [boardsDismissed, setBoardsDismissed] = useState(false);
   const [stackOpen, setStackOpen] = useState(true);
   const pressRef = useRef<{ timer: number; x: number; y: number } | null>(null);
   const eatenRef = useRef(false);
@@ -411,6 +416,8 @@ export default function App() {
     beginMatch(deckId);
   }
   useEffect(() => { const f = () => setFs(!!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f); }, []);
+  const combatBoards = !!g && (g.awaiting === 'attack' || g.awaiting === 'block' || !!g.choice);
+  useEffect(() => { if (!combatBoards) setBoardsDismissed(false); }, [combatBoards]);
   useEffect(() => {
     const valid = new Set(aiPool(saved).map(d => d.id));
     setAiPicks(prev => {
@@ -694,7 +701,15 @@ export default function App() {
     const k = e.key.toLowerCase();
     if (k === 'f') { toggleFs(); return; }
     if (k === '?' || k === 'h') { setModal(modal === 'help' ? null : 'help'); return; }
-    if (k === 'escape') { if (cmdChoice) setCmdChoice(null); else if (modal) setModal(null); else { clearSel(); setAtkPlan({}); setBlkPlan({}); } return; }
+    if (k === 'escape') {
+      if (zoom) { setZoom(null); return; }
+      if (cmdChoice) { setCmdChoice(null); return; }
+      if (modal) { setModal(null); return; }
+      if (compact && logOpen) { setLogOpen(false); return; }
+      if (compact && stackOpen && g?.stack.length) { setStackOpen(false); return; }
+      if (compact && (Object.values(boards).some(Boolean) || !boardsDismissed && (g?.players.some(p => p.battlefield.some(c => c.attacking === HUMAN)) || !!spec))) { setBoards({}); setBoardsDismissed(true); return; }
+      clearSel(); setAtkPlan({}); setBlkPlan({}); return;
+    }
     if (modal || !g) return;
     if (k === 'l') setLogOpen(o => !o);
     if (k === ' ' ) { e.preventDefault(); primary?.run(); }
@@ -762,6 +777,7 @@ export default function App() {
         <div className="cbtns"><button className="sec" onClick={() => setCmdChoice(null)}>Cancel</button></div>
       </div></div>}
       {modal === 'import' && <ImportDialog close={() => setModal(null)} art={img => img ? <img className="cimg" src={img} alt="" /> : <div className="frame" />} saved={d => { setSaved(decks.saveDeck(d)); setDeck(d.id); setModal(null); }} />}
+      {compact && (!!cmdChoice || modal === 'import') && <BackButton onClick={() => { setCmdChoice(null); if (modal === 'import') setModal(null); }} />}
     </div>
   );
 
@@ -787,7 +803,22 @@ export default function App() {
     if (bdrag?.uid === c.uid && bdrag.moved) out.push('dragging');
     return out.join(' ');
   };
-  const ui: UI = { canTapMana, tapMana, g, cardDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand, compact, targeting: !!spec, boardOn: pid => !!boards[pid], toggleBoard: pid => setBoards(b => ({ ...b, [pid]: !b[pid] })), pressStart, eat, peek, stackOpen, toggleStack: () => setStackOpen(o => !o) };
+  const forcedBoard = !!spec || g.players.some(p => p.battlefield.some(c => c.attacking === HUMAN));
+  const views: BoardViews = {
+    zoom: !!zoom,
+    zone: !!(modal && typeof modal === 'object'),
+    menu: modal === 'settings' || modal === 'help' || modal === 'tips',
+    log: compact && logOpen,
+    stack: compact && stackOpen && g.stack.length > 0,
+    board: compact && !boardsDismissed && (Object.values(boards).some(Boolean) || forcedBoard),
+  };
+  function goBack() {
+    const next = backToBoard(views);
+    if (!next.zoom) setZoom(null);
+    if (!next.zone && !next.menu) setModal(m => (m && typeof m === 'object') || m === 'settings' || m === 'help' || m === 'tips' || m === 'import' ? null : m);
+    if (compact) { setLogOpen(false); setStackOpen(false); setBoards({}); setBoardsDismissed(true); }
+  }
+  const ui: UI = { canTapMana, tapMana, g, cardDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand, compact, targeting: !!spec, boardsDismissed, boardOn: pid => !!boards[pid], toggleBoard: pid => { if (boardsDismissed) { setBoardsDismissed(false); setBoards({ [pid]: true }); return; } setBoards(b => ({ ...b, [pid]: !b[pid] })); }, pressStart, eat, peek, stackOpen, toggleStack: () => setStackOpen(o => !o) };
   const hand = me.hand; const n = hand.length;
 
   return (
@@ -857,6 +888,7 @@ export default function App() {
 
       {compact && logOpen && <button type="button" className="sheetback" aria-label="Close log" onClick={() => setLogOpen(false)} />}
       {zoom && <CardZoom g={g} h={zoom} close={() => setZoom(null)} onActivate={activateAb} />}
+      {compact && needsBack(views) && <BackButton onClick={goBack} />}
       <Arrows g={g} plan={atkPlan} blk={blkPlan} pw={atkPwPlan} />
       {bdrag?.moved && <DragLine uid={bdrag.uid} x={bdrag.x} y={bdrag.y} color={bdrag.over === null ? '#9ec3ff' : blockReason(g, findCard(g, bdrag.uid)!, findCard(g, bdrag.over)!) ? '#ef5350' : '#42a5f5'} />}
       {toast && <div className="toast">{toast}</div>}
