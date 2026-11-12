@@ -418,7 +418,7 @@ html.compact .player.opp .life{font-size:1.15rem;min-width:2.2rem}
 html.compact .player.opp .cmdzone{display:none}
 html.compact .player.opp .phead{flex-wrap:nowrap}
 html.compact .player.opp .pname{font-size:.85rem;overflow:hidden;text-overflow:ellipsis}
-html.compact .player.opp .pdeck{display:none}
+html.compact .player.opp .pdeck{display:block;font-size:.75rem;color:#d5e4dc}
 html.compact .player.opp .counts{font-size:.75rem;gap:.25rem}
 html.compact.short .cdmg,html.compact.short .me .emblems{display:none}
 html.compact.short .player.opp .counts > span{display:none}
@@ -495,3 +495,20 @@ html.compact .pickgrid{max-height:48dvh}
 html.compact .tiplist li{font-size:1rem;align-items:flex-start}
 html.compact .stats{flex-wrap:wrap}
 html.compact .swap{flex-direction:column;gap:.4rem}
+
+/* per-opponent AI deck: Random, or one list from official precons and custom decks */
+.aiset{display:flex;flex-wrap:wrap;gap:.5rem .8rem;justify-content:center;align-items:center;width:min(96vw,1100px)}
+.airow{display:flex;align-items:center;gap:.4rem;color:var(--muted);font-size:.95rem}
+.airow span{font-weight:800;color:var(--gold);min-width:2.6rem}
+.airow select{min-height:44px;min-width:12rem;max-width:18rem;background:#0008;color:#fff;border:1px solid var(--line);border-radius:.4rem;padding:.35rem .5rem;font:inherit}
+html.compact .aiset{flex-direction:column;align-items:stretch;width:100%}
+html.compact .airow{width:100%}
+html.compact .airow select{flex:1;min-width:0;max-width:none;width:100%}
+html.compact.short .setup h1{font-size:1.45rem}
+html.compact.short .sub{display:none}
+html.compact.short .deckpick .dimg{height:16vh;min-height:0;max-height:64px}
+html.compact.short .deckopt small,html.compact.short .deckopt span{display:none}
+html.compact.short .deckopt b{font-size:.8rem}
+html.compact.short .aiset{flex-direction:row}
+html.compact.short .airow{flex:1;min-width:0;flex-direction:column;align-items:stretch;gap:.15rem}
+html.compact.short .airow span{min-width:0}

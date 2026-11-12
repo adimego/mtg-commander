@@ -5,7 +5,8 @@ import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
 import { createPortal } from 'react-dom';
 import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
-import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell } from './engine/engine';
+import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell, log } from './engine/engine';
+import { AI_RANDOM, normalizeAiPicks, resolveAiDecks } from './setup/aiDecks';
 import { DecisionDialog, KickerDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
@@ -33,6 +34,14 @@ const SAVED0 = decks.activateAll();
 const PRECONS = loadPrecons();
 const OFFICIAL = PRECONS.filter(isOfficialPrecon);
 const CUSTOM_PRESETS = PRECONS.filter(d => !isOfficialPrecon(d));
+const AI_SEATS = 3;
+/** Official precons and custom lists (presets plus decks saved in this browser). Starter decks stay a human choice. */
+function aiPool(savedDecks: { id: string }[]) { return [...OFFICIAL, ...CUSTOM_PRESETS, ...savedDecks]; }
+function loadAiPicks(savedDecks: { id: string }[]) {
+  const valid = new Set(aiPool(savedDecks).map(d => d.id));
+  try { return normalizeAiPicks(JSON.parse(localStorage.getItem('ca_ai_picks') || 'null'), valid, AI_SEATS); }
+  catch { return normalizeAiPicks(null, valid, AI_SEATS); }
+}
 type Hover = { id: string; uid?: number } | null;
 type Modal = null | 'settings' | 'help' | 'tips' | 'import' | { pid: number; zone: 'graveyard' | 'exile' };
 
@@ -201,7 +210,7 @@ function OppPanel({ ui, pid }: { ui: UI; pid: number }) {
   const incoming = attackers(g).some(a => a.owner === pid && a.attacking === HUMAN);
   const open = incoming || ui.targeting || ui.boardOn(pid);
   return (
-    <section className={`player opp ${g.active === pid ? 'active' : ''} ${p.lost ? 'lost' : ''} ${tgt ? 'targetable' : ''} ${atkSel ? 'atktarget' : ''} ${ui.declaring && !p.lost ? 'atkpick' : ''} ${open ? 'showboard' : ''}`} style={{ ['--pc' as string]: PCOLORS[pid] }} data-player={pid} data-board={open ? 'open' : 'shut'}
+    <section className={`player opp ${g.active === pid ? 'active' : ''} ${p.lost ? 'lost' : ''} ${tgt ? 'targetable' : ''} ${atkSel ? 'atktarget' : ''} ${ui.declaring && !p.lost ? 'atkpick' : ''} ${open ? 'showboard' : ''}`} style={{ ['--pc' as string]: PCOLORS[pid] }} data-player={pid} data-board={open ? 'open' : 'shut'} data-deckname={p.deckName}
       onClick={() => ui.clickPlayer(pid)} onDragOver={e => { if (tgt || (ui.declaring && !p.lost)) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
       <PlayerHeader ui={ui} pid={pid} trail={ui.compact ? <button type="button" className="boardtoggle" aria-expanded={open} onClick={e => { e.stopPropagation(); ui.toggleBoard(pid); }}>{open ? 'Hide' : 'Board'}</button> : undefined} />
       <CmdDamage g={g} pid={pid} />
@@ -348,7 +357,7 @@ export default function App() {
   const [, bump] = useReducer((x: number) => x + 1, 0);
   const [deck, setDeck] = useState(() => localStorage.getItem('ca_deck') && DECKS.some(d => d.id === localStorage.getItem('ca_deck')) ? localStorage.getItem('ca_deck')! : DECKS[0].id);
   const [saved, setSaved] = useState<decks.SavedDeck[]>(SAVED0);
-  const [aiDecks, setAiDecks] = useState<'precon' | 'mine' | 'official'>(() => (localStorage.getItem('ca_ai_decks') as 'precon' | 'mine' | 'official') || 'precon');
+  const [aiPicks, setAiPicks] = useState<string[]>(() => loadAiPicks(SAVED0));
   const [cmdChoice, setCmdChoice] = useState<{ deckId: string; faces: string[] } | null>(null);
   const [speed, setSpeed] = useState(() => /[?&]fast\b/.test(location.search) ? 40 : 600);
   const [stopAll, setStopAll] = useState(false);
@@ -387,11 +396,11 @@ export default function App() {
   function beginMatch(deckId: string, commanderId?: string) {
     setCmdChoice(null); setZoom(null);
     localStorage.setItem('ca_deck', deckId);
-    const pre = DECKS.slice(0, 4).map(d => d.id).filter(x => x !== deckId);
-    const mine = [...CUSTOM_PRESETS.map(d => d.id), ...saved.map(d => d.id)].filter(x => x !== deckId).sort(() => Math.random() - 0.5);
-    const off = OFFICIAL.map(d => d.id).filter(x => x !== deckId).sort(() => Math.random() - 0.5);
-    const others = (aiDecks === 'mine' ? [...mine, ...pre] : aiDecks === 'official' ? off : pre).slice(0, 3);
-    gref.current = newGame({ decks: [deckId, ...others], commanders: commanderId ? [commanderId] : undefined }); setAtkPlan({}); setBlkPlan({}); setPending(null); setPassUntil(null); bump();
+    const pool = aiPool(saved).map(d => d.id);
+    const others = resolveAiDecks(aiPicks, pool);
+    gref.current = newGame({ decks: [deckId, ...others], commanders: commanderId ? [commanderId] : undefined });
+    for (const p of gref.current.players) if (!p.human) log(gref.current, `${p.name} is playing ${p.deckName}.`);
+    setAtkPlan({}); setBlkPlan({}); setPending(null); setPassUntil(null); bump();
     if (!localStorage.getItem('ca_tips_seen')) setModal('tips');
   }
   function newMatch(deckId = deck) {
@@ -402,6 +411,15 @@ export default function App() {
     beginMatch(deckId);
   }
   useEffect(() => { const f = () => setFs(!!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f); }, []);
+  useEffect(() => {
+    const valid = new Set(aiPool(saved).map(d => d.id));
+    setAiPicks(prev => {
+      const next = normalizeAiPicks(prev, valid, AI_SEATS);
+      if (next.every((p, i) => p === prev[i])) return prev;
+      localStorage.setItem('ca_ai_picks', JSON.stringify(next));
+      return next;
+    });
+  }, [saved]);
   useEffect(() => {
     const apply = () => setLayout(applyLayout());
     apply();
@@ -724,8 +742,14 @@ export default function App() {
       <p className="credit">Card images &amp; data courtesy of Scryfall. Magic: The Gathering is © Wizards of the Coast. Unofficial fan project.</p>
       </div>
       <div className="startbar">
-        <div className="setopts"><label>AI opponents use <select value={aiDecks} onChange={e => { setAiDecks(e.target.value as 'precon' | 'mine' | 'official'); localStorage.setItem('ca_ai_decks', e.target.value); }}>
-          <option value="precon">the starter decks</option><option value="official">official precons (random)</option><option value="mine">custom decks (random), then starter decks</option></select></label></div>
+        <div className="aiset" data-ai-picks>
+          {aiPicks.map((pick, i) => <label key={i} className="airow"><span>AI {i + 1}</span>
+            <select data-ai={i + 1} aria-label={`AI ${i + 1} deck`} value={pick} onChange={e => setAiPicks(prev => { const next = prev.map((p, j) => j === i ? e.target.value : p); localStorage.setItem('ca_ai_picks', JSON.stringify(next)); return next; })}>
+              <option value={AI_RANDOM}>Random</option>
+              <optgroup label="Official precons">{OFFICIAL.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</optgroup>
+              <optgroup label="Custom decks">{[...CUSTOM_PRESETS, ...saved].map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</optgroup>
+            </select></label>)}
+        </div>
         <button className="big" onClick={() => newMatch()}>Start game ▶</button>
       </div>
       {cmdChoice && <div className="modal choice" data-commander-choice={cmdChoice.deckId} onClick={() => setCmdChoice(null)}><div className="mbox cmdbox" onClick={e => e.stopPropagation()}>
