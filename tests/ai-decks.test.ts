@@ -25,7 +25,47 @@ describe('resolveAiDecks', () => {
   it('refuses to start when the pool is empty', () => {
     expect(() => resolveAiDecks([AI_RANDOM], [], () => 0)).toThrow(/No decks/);
   });
+
+  it('never gives a Random seat the deck the human selected', () => {
+    const rng = mulberry32(0xC0FFEE);
+    const seen = new Set<string>();
+    for (let n = 0; n < 400; n++) {
+      const drawn = resolveAiDecks([AI_RANDOM, AI_RANDOM, AI_RANDOM], pool, rng, 'wakanda');
+      for (const id of drawn) {
+        expect(id).not.toBe('wakanda');
+        seen.add(id);
+      }
+    }
+    expect([...seen].sort()).toEqual(['avengers', 'namor', 'zurgo']);
+  });
+
+  it('still draws a precon when the human\'s saved deck only shares its name', () => {
+    const ids = ['precon-wakanda', 'custom-wakanda', 'avengers'];
+    const rng = mulberry32(7);
+    const seen = new Set<string>();
+    for (let n = 0; n < 200; n++) seen.add(resolveAiDecks([AI_RANDOM], ids, rng, 'custom-wakanda')[0]!);
+    expect(seen.has('custom-wakanda')).toBe(false);
+    expect([...seen].sort()).toEqual(['avengers', 'precon-wakanda']);
+  });
+
+  it('keeps an explicit pick of the human\'s deck', () => {
+    expect(resolveAiDecks(['wakanda', AI_RANDOM], pool, () => 0, 'wakanda')).toEqual(['wakanda', 'avengers']);
+  });
+
+  it('falls back to the only deck when that is the one the human selected', () => {
+    expect(resolveAiDecks([AI_RANDOM, AI_RANDOM, AI_RANDOM], ['only'], () => 0.9, 'only')).toEqual(['only', 'only', 'only']);
+  });
 });
+
+/** Deterministic [0, 1) source so a long Random sample is repeatable. */
+function mulberry32(seed: number) {
+  return () => {
+    seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
 
 describe('normalizeAiPicks', () => {
   const valid = new Set(['avengers', 'namor']);

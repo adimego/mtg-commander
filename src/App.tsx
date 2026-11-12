@@ -446,7 +446,7 @@ export default function App() {
     setCmdChoice(null); setZoom(null);
     localStorage.setItem('ca_deck', deckId);
     const pool = aiPool(saved).map(d => d.id);
-    const others = resolveAiDecks(aiPicks, pool);
+    const others = resolveAiDecks(aiPicks, pool, Math.random, deckId);
     gref.current = newGame({ decks: [deckId, ...others], commanders: commanderId ? [commanderId] : undefined });
     for (const p of gref.current.players) if (!p.human) log(gref.current, `${p.name} is playing ${p.deckName}.`);
     setAtkPlan({}); setBlkPlan({}); setPending(null); setPassUntil(null); setViewOpp(null); bump();
