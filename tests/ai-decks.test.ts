@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { AI_RANDOM, normalizeAiPicks, resolveAiDecks } from '../src/setup/aiDecks';
-import { resolveCommanders, type DeckDef } from '../src/engine/engine';
+import { AI_RANDOM, buildAiPool, normalizeAiPicks, resolveAiDecks } from '../src/setup/aiDecks';
+import { DECKS, newGame, resolveCommanders, type DeckDef } from '../src/engine/engine';
 
 const pool = ['avengers', 'wakanda', 'namor', 'zurgo'];
 
@@ -66,6 +66,31 @@ function mulberry32(seed: number) {
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
 }
+
+describe('starter decks in the AI pool', () => {
+  const starters = DECKS.slice(0, 4);
+  const pool = buildAiPool([starters, [{ id: 'precon-demo' }]]);
+
+  it('puts every starter deck in the random pool and still skips the player deck', () => {
+    expect(pool.slice(0, 4)).toEqual(['isperia', 'judith', 'ruric', 'benton']);
+    const rng = mulberry32(99);
+    const seen = new Set<string>();
+    for (let n = 0; n < 600; n++) seen.add(resolveAiDecks([AI_RANDOM], pool, rng, 'isperia')[0]!);
+    expect(seen.has('isperia')).toBe(false);
+    for (const id of ['judith', 'ruric', 'benton', 'precon-demo']) expect(seen.has(id)).toBe(true);
+  });
+
+  it('keeps an explicit starter pick and remembers it', () => {
+    expect(resolveAiDecks(['judith', AI_RANDOM], pool, () => 0, 'isperia')).toEqual(['judith', 'judith']);
+    expect(normalizeAiPicks(['benton', 'deleted'], new Set(pool), 2)).toEqual(['benton', AI_RANDOM]);
+  });
+
+  it('names the starter deck on that AI seat', () => {
+    const g = newGame({ seed: 1, humans: [0], decks: ['isperia', 'judith', 'ruric', 'benton'], skipAiMulligan: true });
+    expect(g.players[1].human).toBe(false);
+    expect(g.players[1].deckName).toBe('Rakdos Scourge (BR)');
+  });
+});
 
 describe('normalizeAiPicks', () => {
   const valid = new Set(['avengers', 'namor']);
