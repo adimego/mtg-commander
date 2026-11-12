@@ -276,13 +276,14 @@ function enterStep(g: Game, s: Step) {
     case 'damage': dealCombat(g, false, combatants(g).some(strikesFirst)); break;
     case 'main2': clearCombat(g); break;
     case 'end': fireDelayed(g, 'endStep'); emit(g, 'endStep', { player: g.active }); if (g.monarch === g.active) monarchTrig(g, g.active, 'the monarch draws a card', [{ op: 'draw', n: 1, pl: 'you' }]); break;
-    case 'cleanup': cleanup(g); delete g.extraCombats; delete g.combatAfter; return beginTurn(g, nextTurn(g));
+    case 'cleanup': cleanupBoard(g); leaveCleanup(g); return;
   }
   if (g.winner === null) givePriority(g);
 }
 function nextTurn(g: Game) { const p = g.players[g.active]; if (!p.lost && p.extraTurns) { p.extraTurns--; log(g, `${p.name} takes an extra turn.`); return g.active; } return nextAlive(g, g.active); }
 function advanceStep(g: Game) {
-  if (g.players[g.active].lost) { cleanup(g); return beginTurn(g, nextTurn(g)); }
+  if (g.players[g.active].lost) { cleanupBoard(g); leaveCleanup(g); return; }
+  if (g.step === 'cleanup') { leaveCleanup(g); return; }
   if ((g.step === 'main1' || g.step === 'main2') && g.extraCombats) { g.extraCombats--; if (g.step === 'main1') g.combatAfter = true; log(g, 'Additional combat phase.'); return enterStep(g, 'beginCombat'); }
   if (g.step === 'main2' && g.combatAfter) { delete g.combatAfter; return enterStep(g, 'beginCombat'); }
   enterStep(g, STEPS[STEPS.indexOf(g.step) + 1]);
@@ -300,7 +301,12 @@ export function pass(g: Game, pid: number) {
 }
 function acted(g: Game) { g.passes = 0; checkState(g); flushTriggers(g); }
 function clearCombat(g: Game) { if (g.watch) g.watch = g.watch.filter(w => w.until !== 'combat'); for (const p of g.players) for (const c of p.battlefield) { delete c.attacking; delete c.blockedBy; delete c.blocking; delete c.atkPw; } }
-function cleanup(g: Game) {
+/** Maximum hand size. A noMaxHand static (Reliquary Tower, Thought Vessel, Spellbook, or that emblem) removes the limit. n === -1 is the "extra land" static, not hand size. */
+export function maxHandSize(p: Player): number {
+  const srcs = [...p.battlefield, ...(p.emblems ?? [])];
+  return srcs.some(c => (def(c).statics ?? []).some(s => s.k === 'noMaxHand' && s.n !== -1)) ? 99 : 7;
+}
+function cleanupBoard(g: Game) {
   clearCombat(g);
   for (const p of g.players) for (const c of p.battlefield) if (c.copyEot !== undefined && c.origId) { log(g, `${nm(c)} is no longer a copy.`); c.id = c.origId; delete c.origId; delete c.copyEot; }
   for (const p of g.players) for (const c of p.battlefield) { c.damage = 0; c.pp = 0; c.pt = 0; c.deathtouched = false; c.kw = undefined; c.regen = 0; if (!c.anim?.perm) delete c.anim; }
@@ -312,10 +318,27 @@ function cleanup(g: Game) {
   for (const p of g.players) for (const z of ['exile', 'graveyard', 'hand', 'library'] as const) for (const c of p[z]) if (c.mayPlay && c.mayPlay <= g.turn) delete c.mayPlay;
   // delayed "return at end of turn" flickers
   for (const p of g.players) for (const c of [...p.exile]) if (c.flicker === g.turn) { delete c.flicker; p.exile = p.exile.filter(x => x !== c); enter(g, c, c.owner, {}); }
+}
+/** Discard down to max hand size. The active human chooses; everyone else discards the highest mana value. Returns false while that choice, or a discard trigger, is still pending. */
+function leaveCleanup(g: Game) {
+  if (g.winner !== null) return;
+  if (g.decision?.key === 'cleanupDiscard') return;
   const p = g.players[g.active];
-  const max = p.battlefield.some(c => def(c).statics?.some(s => s.k === 'noMaxHand')) ? 99 : 7;
-  while (p.hand.length > max) { const c = [...p.hand].sort((a, b) => cmc(def(b)) - cmc(def(a)))[0]; p.hand = p.hand.filter(x => x !== c); p.graveyard.push(c); log(g, `${p.name} discards ${nm(c)}.`); }
-  layer(g);
+  const max = maxHandSize(p);
+  const extra = p.hand.length - max;
+  if (extra > 0 && p.human && !p.lost && g.started) {
+    g.decision = { key: 'cleanupDiscard', pid: p.id, kind: 'pick', cards: [...p.hand], min: extra, max: extra, zone: 'hand', text: `Discard ${extra} card${extra === 1 ? '' : 's'} (hand size ${max}).` };
+    return;
+  }
+  while (p.hand.length > max) { const c = [...p.hand].sort((a, b) => cmc(def(b)) - cmc(def(a)))[0]; discardCard(g, c); }
+  layer(g); checkState(g);
+  if (g.winner !== null) return;
+  if (g.pending.length) {
+    flushTriggers(g);
+    if (g.stack.length || g.choice || g.decision || g.pending.length) { if (!g.choice && g.decision?.key !== 'cleanupDiscard') givePriority(g); return; }
+  }
+  delete g.extraCombats; delete g.combatAfter;
+  beginTurn(g, nextTurn(g));
 }
 
 // ---------------- characteristics & static abilities ----------------
@@ -1478,6 +1501,15 @@ export function answerDecision(g: Game, a: unknown) {
   if (d.key.startsWith('ctype:')) { const c = findCard(g, +d.key.slice(6)); if (c) { setChosen(g, c, String(a)); log(g, `${g.players[d.pid].name} chooses ${c.chosenType} for ${nm(c)}.`); layer(g); } checkState(g); if (!g.res && g.priority !== null) flushTriggers(g); return true; }
   if (d.key.startsWith('ccol:')) { const c = findCard(g, +d.key.slice(5)); if (c) { c.chosenColor = String(a) as Color; log(g, `${g.players[d.pid].name} chooses ${c.chosenColor} for ${nm(c)}.`); layer(g); } checkState(g); if (!g.res && g.priority !== null) flushTriggers(g); return true; }
   if (d.key.startsWith('shock:')) { const c = findCard(g, +d.key.slice(6)); if (c && a) { loseLife(g, d.pid, def(c).shock ?? 2); c.tapped = false; log(g, `${g.players[d.pid].name} pays ${def(c).shock} life; ${nm(c)} is untapped.`); } checkState(g); if (!g.res && g.priority !== null) flushTriggers(g); return true; }
+  if (d.key === 'cleanupDiscard' && d.kind === 'pick') {
+    const p = g.players[d.pid];
+    const uids = Array.isArray(a) ? [...new Set(a as number[])] : [];
+    const chosen = uids.map(u => p.hand.find(c => c.uid === u)).filter((c): c is Card => !!c);
+    if (chosen.length !== d.min) { g.decision = d; return false; }
+    for (const c of chosen) discardCard(g, c);
+    leaveCleanup(g);
+    return true;
+  }
   const ctx = g.res; if (!ctx) return false;
   ctx.ans[d.key] = a;
   const mana = ctx.mana;

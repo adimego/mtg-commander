@@ -427,6 +427,7 @@ export default function App() {
   const [layout, setLayout] = useState(readLayout);
   const compact = layout.compact;
   const [viewOpp, setViewOpp] = useState<number | null>(null);
+  const [discardSel, setDiscardSel] = useState<number[]>([]);
   const [stackOpen, setStackOpen] = useState(true);
   const pressRef = useRef<{ timer: number; x: number; y: number } | null>(null);
   const eatenRef = useRef(false);
@@ -469,6 +470,9 @@ export default function App() {
       return next;
     });
   }, [saved]);
+  const blockingNow = !!g && g.awaiting === 'block' && defenders(g).includes(HUMAN) && !g.blockersDone.includes(HUMAN) && !g.players[HUMAN].lost;
+  useEffect(() => { if (blockingNow) setZoom(null); }, [blockingNow]);
+  useEffect(() => { if (gref.current?.decision?.key !== 'cleanupDiscard') setDiscardSel(s => (s.length ? [] : s)); });
   useEffect(() => {
     const apply = () => setLayout(applyLayout());
     apply();
@@ -490,8 +494,9 @@ export default function App() {
   const myTurn = !!g && g.active === HUMAN && !me!.lost;
   const humanChoice = g?.choice && g.players[g.choice.controller].human ? g.choice : null;
   const humanDecision = g?.decision && g.players[g.decision.pid].human ? g.decision : null;
+  const cleanupDiscard = humanDecision?.key === 'cleanupDiscard' && humanDecision.kind === 'pick' ? humanDecision : null;
   /** a 'you may cast that card now' decision steps aside while the human runs the normal cast flow for that card */
-  const blockDec = humanDecision && !(humanDecision.kind === 'cast' && pending?.kind === 'cast' && pending.uid === humanDecision.uid) ? humanDecision : null;
+  const blockDec = humanDecision && humanDecision.key !== 'cleanupDiscard' && !(humanDecision.kind === 'cast' && pending?.kind === 'cast' && pending.uid === humanDecision.uid) ? humanDecision : null;
   // the active flow: a human trigger needing targets/modes takes over from any half-built cast
   const flow: Flow | null = g && humanChoice ? (pending?.kind === 'trigger' && pending.uid === humanChoice.sourceUid ? pending : { kind: 'trigger', uid: humanChoice.sourceUid, ts: [] }) : pending;
   const flowCard = g && flow && flow.kind !== 'trigger' ? [...me!.hand, ...me!.command, ...me!.battlefield, ...me!.graveyard, ...me!.exile, ...(me!.library.length ? [me!.library[me!.library.length - 1]] : [])].find(c => c.uid === flow.uid) : undefined;
@@ -597,6 +602,10 @@ export default function App() {
   function clickHand(c: Card) {
     if (eat()) return;
     if (!g) return;
+    if (g.decision?.key === 'cleanupDiscard' && g.decision.kind === 'pick' && g.decision.cards.some(x => x.uid === c.uid)) {
+      setDiscardSel(s => s.includes(c.uid) ? s.filter(u => u !== c.uid) : [...s, c.uid]);
+      return;
+    }
     const hov = { id: c.id, uid: c.uid };
     setHover(hov);
     if (canPlayLand(g, HUMAN, c)) return act(g => playLand(g, HUMAN, c.uid));
@@ -630,7 +639,8 @@ export default function App() {
     if (declaring && c.owner === HUMAN) return toggleAttacker(c);
     if (blocking) {
       if (c.owner === HUMAN && isType(c, 'Creature') && !c.tapped) { toggleBlocker(c); return; }
-      if (c.attacking === HUMAN && selBlocker !== null) { const b = findCard(g, selBlocker)!; const r = blockReason(g, b, c); if (r) flash(r); else setBlkPlan({ ...blkPlan, [selBlocker]: c.uid }); setSelBlocker(null); return; }
+      if (c.attacking === HUMAN && selBlocker !== null) { const b = findCard(g, selBlocker)!; const r = blockReason(g, b, c); if (r) flash(r); else setBlkPlan({ ...blkPlan, [selBlocker]: c.uid }); setSelBlocker(null); }
+      return;
     }
     if (compact) setZoom(hov);
   }
@@ -715,6 +725,12 @@ export default function App() {
     const topDesc = top ? `${top.label} (${g.players[top.controller].name}${top.target ? ` → ${describeTarget(g, top.target)}` : ''})` : '';
     if (!g.started) { prompt = `Opening hand: keep it, or mulligan for a fresh 7 (${me.mulligans === 0 ? 'the first mulligan is free' : `next one bottoms ${me.mulligans}`}).`; primary = { label: 'Keep hand', run: () => act(g => startGame(g)), key: 'Enter' }; if (me.mulligans < 6) secondary.push({ label: 'Mulligan', run: () => act(g => mulligan(g, HUMAN)) }); }
     else if (g.winner !== null) { prompt = g.winner === HUMAN ? '🏆 Victory! Every opponent is out.' : `${g.players[g.winner].name} wins the game.`; tone = 'end'; primary = { label: 'Play again', run: newMatch }; }
+    else if (cleanupDiscard) {
+      const need = cleanupDiscard.min;
+      prompt = `${cleanupDiscard.text} ${discardSel.length}/${need} selected.`;
+      tone = 'target';
+      primary = { label: `Confirm (${discardSel.length}/${need})`, run: () => { if (discardSel.length !== need) return; const pick = [...discardSel]; setDiscardSel([]); act(g => { answerDecision(g, pick); }); } };
+    }
     else if (humanDecision) { prompt = `❓ ${humanDecision.src ? `${CARDS[humanDecision.src]?.name}: ` : ''}${humanDecision.text}`; tone = 'target'; }
     else if (flow && flowStage && flowStage !== 'targets') { prompt = `${flowName}: ${flowStage === 'alt' ? 'choose how to cast it' : flowStage === 'warp' ? 'warp it?' : flowStage === 'morph' ? 'cast it face down?' : flowStage === 'impending' ? 'cast it for impending?' : flowStage === 'teamwork' ? 'use teamwork?' : flowStage === 'kicker' ? 'kick it?' : flowStage === 'x' ? 'choose X' : 'choose mode(s)'}`; tone = 'target'; }
     else if (flow && curSlot) {
@@ -865,7 +881,7 @@ export default function App() {
   const hand = me.hand; const n = hand.length;
 
   return (
-    <div className={`app ${anim ? 'anim' : 'noanim'} ${logOpen ? 'logopen' : 'logclosed'} ${blocking ? 'isblocking' : ''} ${compact && viewOpp !== null ? 'oppopen' : ''}`} data-compact={compact ? '1' : '0'}>
+    <div className={`app ${anim ? 'anim' : 'noanim'} ${logOpen ? 'logopen' : 'logclosed'} ${blocking ? 'isblocking' : ''} ${compact && viewOpp !== null ? 'oppopen' : ''} ${cleanupDiscard ? 'discarding' : ''}`} data-compact={compact ? '1' : '0'} data-discard-need={cleanupDiscard?.min} data-discard-sel={cleanupDiscard ? discardSel.length : undefined}>
       <header>
         <b className="logo">Commander Arena</b>
         <div className="turninfo" style={{ borderColor: PCOLORS[g.active] }}>Turn {Math.ceil(g.turn / 4) || 1}<small> ({g.turn})</small> · <b style={{ color: PCOLORS[g.active] }}>{g.active === HUMAN ? 'Your turn' : `${g.players[g.active].name}'s turn`}</b></div>
@@ -893,11 +909,11 @@ export default function App() {
             <div key={top.uid} data-hand={top.uid} className={`hcard ${ok ? 'playable' : ''}`} title="Top of your library" onPointerDown={e => pressStart({ id: top.id, uid: top.uid }, e)} onContextMenu={e => e.preventDefault()} onClick={() => { if (eat()) return; if (ok) startCast(top); else peek({ id: top.id, uid: top.uid }); }} onMouseEnter={() => setHover({ id: top.id })} onMouseLeave={() => setHover(null)}>
               <div className="hinner"><CardFace d={def(top)} /></div><div className="handab"><span>Top of library</span></div></div>); })()}
           {hand.map((c, i) => { const ok = canPlayLand(g, HUMAN, c) || canCast(g, HUMAN, c) || canCast(g, HUMAN, c, { warp: true }) || canCast(g, HUMAN, c, { sneak: true }) || canCast(g, HUMAN, c, { back: true }) || canPlayLand(g, HUMAN, c, true) || canForetell(g, HUMAN, c) || canCast(g, HUMAN, c, { evoke: true }) || canCast(g, HUMAN, c, { free: true }) || canCast(g, HUMAN, c, { webSling: true }) || canCast(g, HUMAN, c, { overload: true }); const off = i - (n - 1) / 2; return (
-            <div key={c.uid} data-hand={c.uid} className={`hcard ${ok ? 'playable' : ''} ${pending?.uid === c.uid ? 'selected' : ''}`} style={{ ['--r' as string]: `${off * Math.min(4, 24 / Math.max(n, 1))}deg`, ['--y' as string]: `${Math.abs(off) * Math.abs(off) * 0.25}vh`, zIndex: i + 1 }}
+            <div key={c.uid} data-hand={c.uid} data-discarding={discardSel.includes(c.uid) ? '1' : undefined} className={`hcard ${ok && !cleanupDiscard ? 'playable' : ''} ${pending?.uid === c.uid ? 'selected' : ''} ${discardSel.includes(c.uid) ? 'discarding' : ''}`} style={{ ['--r' as string]: `${off * Math.min(4, 24 / Math.max(n, 1))}deg`, ['--y' as string]: `${Math.abs(off) * Math.abs(off) * 0.25}vh`, zIndex: i + 1 }}
               draggable={!compact && ok && spellSlots(def(c)).length > 0} onDragStart={e => dragStart(c, e)} onDragEnd={() => { /* keep pending if not dropped on target */ }}
               onPointerDown={e => pressStart({ id: c.id, uid: c.uid }, e)} onContextMenu={e => e.preventDefault()}
               onClick={() => clickHand(c)} onMouseEnter={() => setHover({ id: c.id, uid: c.uid })} onMouseLeave={() => setHover(null)}>
-              <div className="hinner"><CardFace d={def(c)} /></div>
+              <div className="hinner"><CardFace d={def(c)} />{discardSel.includes(c.uid) && <span className="discardmark">Discard</span>}</div>
               {(() => { const b = def(c).back; const bs: ReactElement[] = [];
                 if (b && backCastable(g, HUMAN, c) && canCast(g, HUMAN, c, { back: true })) bs.push(<button key="b" data-back={c.uid} title={b.name} onMouseEnter={e => { e.stopPropagation(); setHover({ id: b.id }); }} onClick={e => { e.stopPropagation(); flipFace(c); startCast(c); }}>▶ {b.adventure ? 'Adventure' : 'Back'}: {b.name.length > 18 ? b.name.slice(0, 16) + '…' : b.name}</button>);
                 if (b && canPlayLand(g, HUMAN, c, true)) bs.push(<button key="l" data-backland={c.uid} title={b.name} onMouseEnter={e => { e.stopPropagation(); setHover({ id: b.id }); }} onClick={e => { e.stopPropagation(); act(g => playLand(g, HUMAN, c.uid, true)); }}>⛰ Play {b.name.length > 18 ? b.name.slice(0, 16) + '…' : b.name}</button>);
@@ -913,7 +929,7 @@ export default function App() {
         <StackView g={g} ui={ui} />
         <div className="actionbar">
           {secondary.map(b => <button key={b.label} className="sec" onClick={b.run}>{b.label}{b.key && <kbd>{b.key}</kbd>}</button>)}
-          <button className={`primary ${primary ? '' : 'waiting'} ${primary?.tone ?? tone}`} disabled={!primary} onClick={() => primary?.run()}>
+          <button className={`primary ${primary ? '' : 'waiting'} ${primary?.tone ?? tone}`} data-discard-confirm={cleanupDiscard ? '1' : undefined} disabled={!primary || (!!cleanupDiscard && discardSel.length !== cleanupDiscard.min)} onClick={() => primary?.run()}>
             {primary ? <>{primary.label}<kbd>Space</kbd></> : <span className="spin">Waiting…</span>}
           </button>
         </div>
