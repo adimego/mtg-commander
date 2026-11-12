@@ -3,6 +3,7 @@ import { loadPrecons, isOfficialPrecon, type Precon } from './import/precons';
 import { compileScry } from './import/classify';
 import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
+import { createPortal } from 'react-dom';
 import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell } from './engine/engine';
 import { DecisionDialog, KickerDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog } from './Dialogs';
@@ -13,6 +14,7 @@ const HUMAN = 0;
 const PCOLORS = ['#4fc3f7', '#ef5350', '#ffb300', '#66bb6a'];
 export const costStr = (c: Cost) => `${c.generic ? `{${c.generic}}` : ''}${COLORS.map(k => `{${k}}`.repeat(c[k] || 0)).join('')}` || '{0}';
 const STEP_LABEL: Record<string, string> = { untap: 'Untap', upkeep: 'Upkeep', draw: 'Draw', main1: 'Main 1', beginCombat: 'Begin combat', attackers: 'Attack', blockers: 'Block', firstStrike: 'First strike', damage: 'Damage', main2: 'Main 2', end: 'End', cleanup: 'Cleanup' };
+const PHASE_SHORT: Record<string, string> = { upkeep: 'Upkeep', draw: 'Draw', main1: 'Main', beginCombat: 'Combat', attackers: 'Attack', blockers: 'Block', damage: 'Damage', main2: 'Main 2', end: 'End' };
 const SHOWN_STEPS = STEPS.filter(s => s !== 'untap' && s !== 'cleanup' && s !== 'firstStrike');
 const youGrammar = (t: string) => t.replace(/^You's/, 'Your').replace(/You's/g, 'your').replace(/^You (plays|casts|mulligans|loses|gains|discards|wins|activates|sacrifices)/, (_, v: string) => 'You ' + (v === 'mulligans' ? 'mulligan' : v.endsWith('es') && v !== 'loses' && v !== 'sacrifices' && v !== 'activates' ? v.slice(0, -2) : v.slice(0, -1))).replace(/to You\./g, 'to you.').replace(/attacks You\./g, 'attacks you.').replace(/under You's/g, 'under your');
 const poss = (g: Game, pid: number) => (pid === HUMAN ? 'your' : `${g.players[pid].name}'s`);
@@ -75,8 +77,11 @@ function LifeTotal({ v, big }: { v: number; big?: boolean }) {
 
 interface UI {
   g: Game; setHover: (h: Hover) => void; clickPerm: (c: Card) => void; permCls: (c: Card) => string; activateAb: (c: Card, i: number) => void;
-  isTarget: (t: Target) => boolean; blockDown: (c: Card, e: React.MouseEvent) => void; blockCtx: (c: Card, e: React.MouseEvent) => void; why: (c: Card) => string | null; dropOn: (t: Target, e: DragEvent) => void; dragStart: (c: Card, e: DragEvent) => void;
+  isTarget: (t: Target) => boolean; cardDown: (c: Card, e: React.PointerEvent) => void; blockCtx: (c: Card, e: React.MouseEvent) => void; why: (c: Card) => string | null; dropOn: (t: Target, e: DragEvent) => void; dragStart: (c: Card, e: DragEvent) => void;
   clickPlayer: (pid: number) => void; atkPlan: Record<number, number>; atkPw: Record<number, number>; atkWalker: number | null; atkTarget?: number; declaring: boolean; openZone: (pid: number, zone: 'graveyard' | 'exile') => void; clickCommand: (c: Card) => void; canTapMana: (cs: Card[]) => boolean; tapMana: (cs: Card[]) => void;
+  compact: boolean; targeting: boolean; boardOn: (pid: number) => boolean; toggleBoard: (pid: number) => void;
+  pressStart: (h: Hover, e: React.PointerEvent) => void; eat: () => boolean; peek: (h: Hover) => void;
+  stackOpen: boolean; toggleStack: () => void;
 }
 
 function Permanent({ ui, c }: { ui: UI; c: Card }) {
@@ -94,8 +99,8 @@ function Permanent({ ui, c }: { ui: UI; c: Card }) {
     <div className={`slot ${c.tapped ? 'tapped' : ''}`} data-uid={c.uid}
       onDragOver={e => { if (ui.isTarget(t) || pwTarget) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
       <div className={`perm ${walker ? 'walker' : ''} ${pwTarget ? 'atkpick' : ''} ${aimed ? 'atktarget' : ''} ${c.attacking !== undefined ? 'attacking' : ''} ${c.blocking !== undefined ? 'blocking' : ''} ${ui.permCls(c)}`}
-        draggable={mine && ui.declaring && canAttack(g, c)} onDragStart={e => ui.dragStart(c, e)}
-        onMouseDown={e => ui.blockDown(c, e)} onContextMenu={e => ui.blockCtx(c, e)} onClick={e => { if (walker && mine && !ui.declaring) setOpen(o => !o); if (pwTarget) e.stopPropagation(); ui.clickPerm(c); }} onMouseEnter={() => ui.setHover(c.faceDown && c.owner !== HUMAN ? { id: 'face-down' } : { id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)}>
+        draggable={!ui.compact && mine && ui.declaring && canAttack(g, c)} onDragStart={e => ui.dragStart(c, e)}
+        onPointerDown={e => ui.cardDown(c, e)} onContextMenu={e => ui.blockCtx(c, e)} onClick={e => { if (ui.eat()) return; if (walker && mine && !ui.declaring) setOpen(o => !o); if (pwTarget) e.stopPropagation(); ui.clickPerm(c); }} onMouseEnter={() => ui.setHover(c.faceDown && c.owner !== HUMAN ? { id: 'face-down' } : { id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)}>
         <CardFace d={d} />
         {cr && <span className={`pt ${c.damage ? 'hurt' : ''} ${c.pp || c.pt ? 'pumped' : ''}`} title={`Power/toughness${c.damage ? ` (${c.damage} damage marked)` : ''}`}>{power(g, c)}/{toughness(g, c) - c.damage}</span>}
         {sick && <span className="badge sick" title="Summoning sick: can't attack or use {T} abilities this turn">💤</span>}
@@ -123,7 +128,7 @@ function Permanent({ ui, c }: { ui: UI; c: Card }) {
 function LandRow({ ui, cards }: { ui: UI; cards: Card[] }) {
   const groups = Object.values(cards.reduce((m, c) => ((m[c.id] ??= []).push(c), m), {} as Record<string, Card[]>));
   return <div className="lands">{groups.map(gr => { const d = def(gr[0]); const un = gr.filter(c => !c.tapped).length; return (
-    <div key={d.id} className={`landchip ${un ? '' : 'alltapped'} ${ui.canTapMana(gr) ? 'tappable' : ''}`} data-land={d.id} onClick={() => ui.tapMana(gr)} onMouseEnter={() => ui.setHover({ id: d.id })} onMouseLeave={() => ui.setHover(null)} title={`${d.name}: ${un} untapped of ${gr.length}${ui.canTapMana(gr) ? ' · click to tap one for mana (it floats in your pool)' : ''}`}>
+    <div key={d.id} className={`landchip ${un ? '' : 'alltapped'} ${ui.canTapMana(gr) ? 'tappable' : ''}`} data-land={d.id} onPointerDown={e => ui.pressStart({ id: d.id }, e)} onClick={() => { if (ui.eat()) return; if (ui.canTapMana(gr)) ui.tapMana(gr); else ui.peek({ id: d.id }); }} onMouseEnter={() => ui.setHover({ id: d.id })} onMouseLeave={() => ui.setHover(null)} title={`${d.name}: ${un} untapped of ${gr.length}${ui.canTapMana(gr) ? ' · tap to tap one for mana (it floats in your pool)' : ''}`}>
       <div className="landart" style={{ backgroundImage: `url(${d.art})` }} /><span className="landname">{d.name}</span><span className="landcount"><b>{un}</b>/{gr.length}</span>
     </div>); })}</div>;
 }
@@ -144,7 +149,7 @@ function CommandZone({ ui, pid }: { ui: UI; pid: number }) {
     const cmd = CARDS[id]; const inZone = p.command.find(c => c.id === id); const tax = 2 * (p.casts[id] ?? 0);
     const castable = pid === HUMAN && inZone && canCast(g, HUMAN, inZone);
     return (
-      <div key={id} data-cmd={id} className={`cmdzone ${castable ? 'playable' : ''} ${inZone ? '' : 'away'} ${p.commanderIds.length > 1 ? 'partner' : ''}`} onClick={() => inZone && pid === HUMAN && ui.clickCommand(inZone)}
+      <div key={id} data-cmd={id} className={`cmdzone ${castable ? 'playable' : ''} ${inZone ? '' : 'away'} ${p.commanderIds.length > 1 ? 'partner' : ''}`} onPointerDown={e => ui.pressStart({ id: cmd.id }, e)} onClick={() => { if (ui.eat()) return; if (inZone && pid === HUMAN) ui.clickCommand(inZone); else ui.peek({ id: cmd.id }); }}
         onMouseEnter={() => ui.setHover({ id: cmd.id })} onMouseLeave={() => ui.setHover(null)} title={`${cmd.name} (command zone). Commander tax: +${tax} (each recast costs {2} more)`}>
         <CardFace d={cmd} />
         <span className="tax">TAX +{tax}</span>
@@ -152,12 +157,12 @@ function CommandZone({ ui, pid }: { ui: UI; pid: number }) {
       </div>);
   })}{p.command.filter(c => c.prepFor !== undefined).map(c => {
     const d = CARDS[c.id]; const castable = pid === HUMAN && canCast(g, HUMAN, c);
-    return <div key={c.uid} data-prep={c.uid} className={`cmdzone prepcopy ${castable ? 'playable' : ''}`} onClick={() => pid === HUMAN && ui.clickCommand(c)}
+    return <div key={c.uid} data-prep={c.uid} className={`cmdzone prepcopy ${castable ? 'playable' : ''}`} onPointerDown={e => ui.pressStart({ id: c.id, uid: c.uid }, e)} onClick={() => { if (ui.eat()) return; if (pid === HUMAN) ui.clickCommand(c); else ui.peek({ id: c.id, uid: c.uid }); }}
       onMouseEnter={() => ui.setHover({ id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)} title={`Prepared spell: cast a copy of ${d.name} (unprepares its permanent)`}>
       <CardFace d={d} /><span className="tax">PREPARED</span><span className="czcost"><ManaCost c={costOf(g, c)} /></span></div>;
   })}</>;
 }
-function PlayerHeader({ ui, pid, big }: { ui: UI; pid: number; big?: boolean }) {
+function PlayerHeader({ ui, pid, big, trail }: { ui: UI; pid: number; big?: boolean; trail?: React.ReactNode }) {
   const { g } = ui; const p = g.players[pid];
   return (
     <div className="phead">
@@ -174,6 +179,7 @@ function PlayerHeader({ ui, pid, big }: { ui: UI; pid: number; big?: boolean }) 
         </div>
       </div>
       <LifeTotal v={p.life} big={big} />{p.poison ? <span className="poison" data-poison={p.poison} title="poison counters (10 loses)">☠ {p.poison}</span> : null}
+      {trail}
       <CommandZone ui={ui} pid={pid} />
     </div>
   );
@@ -192,10 +198,12 @@ function Emblems({ g, pid }: { g: Game; pid: number }) {
 function OppPanel({ ui, pid }: { ui: UI; pid: number }) {
   const { g } = ui; const p = g.players[pid]; const t = { player: pid };
   const tgt = ui.isTarget(t); const atkSel = ui.declaring && ui.atkTarget === pid;
+  const incoming = attackers(g).some(a => a.owner === pid && a.attacking === HUMAN);
+  const open = incoming || ui.targeting || ui.boardOn(pid);
   return (
-    <section className={`player opp ${g.active === pid ? 'active' : ''} ${p.lost ? 'lost' : ''} ${tgt ? 'targetable' : ''} ${atkSel ? 'atktarget' : ''} ${ui.declaring && !p.lost ? 'atkpick' : ''}`} style={{ ['--pc' as string]: PCOLORS[pid] }} data-player={pid}
+    <section className={`player opp ${g.active === pid ? 'active' : ''} ${p.lost ? 'lost' : ''} ${tgt ? 'targetable' : ''} ${atkSel ? 'atktarget' : ''} ${ui.declaring && !p.lost ? 'atkpick' : ''} ${open ? 'showboard' : ''}`} style={{ ['--pc' as string]: PCOLORS[pid] }} data-player={pid} data-board={open ? 'open' : 'shut'}
       onClick={() => ui.clickPlayer(pid)} onDragOver={e => { if (tgt || (ui.declaring && !p.lost)) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
-      <PlayerHeader ui={ui} pid={pid} />
+      <PlayerHeader ui={ui} pid={pid} trail={ui.compact ? <button type="button" className="boardtoggle" aria-expanded={open} onClick={e => { e.stopPropagation(); ui.toggleBoard(pid); }}>{open ? 'Hide' : 'Board'}</button> : undefined} />
       <CmdDamage g={g} pid={pid} />
       <Emblems g={g} pid={pid} />
       {atkSel && <div className="atkflag">🎯 Attack target</div>}
@@ -206,13 +214,17 @@ function OppPanel({ ui, pid }: { ui: UI; pid: number }) {
 function StackView({ g, ui }: { g: Game; ui: UI }) {
   if (!g.stack.length) return null;
   const items = [...g.stack].reverse();
+  const shown = !ui.compact || ui.stackOpen;
   return (
-    <div className="stackview">
-      <div className="stackhead">THE STACK <span>{items.length} item{items.length > 1 ? 's' : ''} · top resolves first</span></div>
+    <div className={`stackview ${shown ? 'open' : 'shut'}`} data-stack-open={shown ? '1' : '0'}>
+      {ui.compact
+        ? <button type="button" className="stackhead" aria-expanded={shown} onClick={() => ui.toggleStack()}>THE STACK <span>{items.length} item{items.length > 1 ? 's' : ''} · {shown ? '▾ hide' : '▸ show'}</span></button>
+        : <div className="stackhead">THE STACK <span>{items.length} item{items.length > 1 ? 's' : ''} · top resolves first</span></div>}
       <div className="sitems">{items.map((it: StackItem, i) => { const t = { stack: it.id }; const pick = ui.isTarget(t); const shown = visibleSpell(it, HUMAN); const hidden = it.kind === 'spell' && !!it.faceDown && it.controller !== HUMAN; return (
         <div key={it.id} className={`sitem ${i === 0 ? 'top' : ''} ${pick ? 'targetable' : ''} ${it.faceDown ? 'facedown' : ''}`} data-stack={it.id} data-facedown={it.faceDown ? '1' : undefined} data-hidden={hidden ? '1' : undefined}
           style={{ borderColor: PCOLORS[it.controller] }}
-          onClick={() => pick && ui.dropOn(t, null as unknown as DragEvent)} onDragOver={e => { if (pick) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}
+          onPointerDown={e => { if (!hidden) ui.pressStart({ id: it.sourceId }, e); }}
+          onClick={() => { if (ui.eat()) return; if (pick) ui.dropOn(t, null as unknown as DragEvent); else if (!hidden) ui.peek({ id: it.sourceId }); }} onDragOver={e => { if (pick) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}
           onMouseEnter={() => { if (!hidden) ui.setHover({ id: it.sourceId }); }} onMouseLeave={() => ui.setHover(null)}>
           <div className="scard"><CardFace d={shown} /></div>
           <div className="sinfo">
@@ -262,8 +274,8 @@ function DragLine({ uid, x, y, color }: { uid: number; x: number; y: number; col
   return <svg className="arrows dragline"><defs><marker id="dl-ah" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill={color} /></marker></defs>
     <path d={`M${ax},${ay} Q${(ax + x) / 2},${(ay + y) / 2 - Math.abs(ax - x) * 0.15} ${x},${y}`} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" markerEnd="url(#dl-ah)" opacity="0.95" /></svg>;
 }
-function Preview({ g, h }: { g: Game | null; h: Hover }) {
-  if (!h) return <div className="preview empty"><div className="hint">Hover any card to see it here.<br /><br /><kbd>?</kbd> shows keyboard shortcuts</div></div>;
+function Preview({ g, h, compact }: { g: Game | null; h: Hover; compact?: boolean }) {
+  if (!h) return <div className="preview empty"><div className="hint">{compact ? <>Long-press a card to preview it.<br />Tap a glowing card to play it.</> : <>Hover any card to see it here.<br /><br /><kbd>?</kbd> shows keyboard shortcuts</>}</div></div>;
   const d = CARDS[h.id]; const c = g && h.uid !== undefined ? findCard(g, h.uid) : undefined;
   const kws = (d.keywords ?? []).filter(k => KW_HELP[k]);
   return (
@@ -281,24 +293,55 @@ function Preview({ g, h }: { g: Game | null; h: Hover }) {
     </div>
   );
 }
-function ZoneViewer({ g, pid, zone, close, setHover }: { g: Game; pid: number; zone: 'graveyard' | 'exile'; close: () => void; setHover: (h: Hover) => void }) {
+function ZoneViewer({ g, pid, zone, close, setHover, onPeek }: { g: Game; pid: number; zone: 'graveyard' | 'exile'; close: () => void; setHover: (h: Hover) => void; onPeek: (h: Hover) => void }) {
   const cards = [...g.players[pid][zone]].reverse();
   return (
     <div className="modal" onClick={close}><div className="mbox wide" onClick={e => e.stopPropagation()}>
       <h2>{g.players[pid].name}: {zone === 'graveyard' ? 'Graveyard' : 'Exile'} <span>({cards.length})</span><button className="x" onClick={close}>✕</button></h2>
-      <div className="zgrid">{cards.length ? cards.map(c => <div key={c.uid} className="zcard" onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}><CardFace d={def(c)} /></div>) : <p className="muted">Empty.</p>}</div>
+      <div className="zgrid">{cards.length ? cards.map(c => <div key={c.uid} className="zcard" onClick={() => onPeek({ id: c.id })} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}><CardFace d={def(c)} /></div>) : <p className="muted">Empty.</p>}</div>
     </div></div>
   );
+}
+function CardZoom({ g, h, close, onActivate }: { g: Game; h: NonNullable<Hover>; close: () => void; onActivate: (c: Card, i: number) => void }) {
+  const d = CARDS[h.id]; if (!d) return null;
+  const c = h.uid !== undefined ? findCard(g, h.uid) : undefined;
+  const abs = c && c.owner === HUMAN ? (def(c).abilities ?? []).map((a, i) => ({ a, i })) : [];
+  return createPortal(
+    <div className="zoomov" data-zoom role="dialog" aria-label={`Preview ${d.name}`} onClick={close}>
+      <div className="zoombox" onClick={e => e.stopPropagation()}>
+        <button type="button" className="zoomx" onClick={close}>Close</button>
+        <Preview g={g} h={h} compact />
+        {d.text && <div className="zoomoracle">{d.text}</div>}
+        {abs.length > 0 && <div className="zoomabs">{abs.map(({ a, i }) => {
+          const ok = canActivate(g, HUMAN, c!, i);
+          return <button type="button" key={i} disabled={!ok} onClick={() => { onActivate(c!, i); close(); }}><b>{abCost(a)}</b> {a.label}</button>;
+        })}</div>}
+      </div>
+    </div>, document.body);
 }
 const SHORTCUTS: [string, string][] = [['Space', 'Main action button: Pass / Next / Confirm'], ['Enter', 'Confirm (keep hand, attackers, blocks)'], ['Esc', 'Cancel targeting, clear selections, close windows'], ['E', 'End turn (auto-pass until your next turn)'], ['A', 'While attacking: assign all eligible creatures to the selected opponent'], ['F', 'Toggle full screen'], ['L', 'Show or hide the game log'], ['?  or  H', 'Show this help']];
 const TIPS = [
   ['🎯', 'The big button at the bottom right is always your next step. Press Space to use it.'],
-  ['🖱️', 'Hover any card to see it large on the right. Click glowing cards in your hand to play them.'],
-  ['⚔', 'To attack, click an opponent to choose them as the target, then click your glowing creatures. You can also drag a creature onto an opponent.'],
-  ['🛡', 'When you are attacked, drag one of your untapped creatures onto the attacker it should block. Several creatures can block the same attacker (menace needs two). Right-click a blocker, or drag it onto empty space, to unassign it. Click-then-click still works too.'],
+  ['🖱️', 'Hover a card to preview it on the right. On a phone, long-press a card (or tap one that is not playable). Tap glowing cards to play them.'],
+  ['⚔', 'To attack, tap an opponent to aim, then tap your glowing creatures. You can also drag a creature onto an opponent.'],
+  ['🛡', 'When you are attacked, tap one of your creatures, then tap the attacker it should block. Dragging onto the attacker works too. Tap an assigned blocker again to unassign it. Menace needs two blockers.'],
   ['📚', 'Spells and abilities go on the stack in the middle of the table. You get priority automatically when you can respond.'],
   ['★', 'Your commander waits in the command zone next to your life total. Every recast costs {2} more.'],
 ];
+
+function readLayout() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const compact = w <= 1100 || h <= 560;
+  return { compact, portrait: compact && h > w, short: compact && h <= 520, wide: compact && w >= 780 };
+}
+function applyLayout(l = readLayout()) {
+  const root = document.documentElement;
+  root.classList.toggle('compact', l.compact);
+  root.classList.toggle('portrait', l.portrait);
+  root.classList.toggle('short', l.short);
+  root.classList.toggle('wide', l.wide);
+  return l;
+}
 
 export default function App() {
   const gref = useRef<Game | null>(null);
@@ -307,7 +350,7 @@ export default function App() {
   const [saved, setSaved] = useState<decks.SavedDeck[]>(SAVED0);
   const [aiDecks, setAiDecks] = useState<'precon' | 'mine' | 'official'>(() => (localStorage.getItem('ca_ai_decks') as 'precon' | 'mine' | 'official') || 'precon');
   const [cmdChoice, setCmdChoice] = useState<{ deckId: string; faces: string[] } | null>(null);
-  const [speed, setSpeed] = useState(600);
+  const [speed, setSpeed] = useState(() => /[?&]fast\b/.test(location.search) ? 40 : 600);
   const [stopAll, setStopAll] = useState(false);
   const [anim, setAnim] = useState(true);
   const [passUntil, setPassUntil] = useState<number | null>(null);
@@ -318,12 +361,20 @@ export default function App() {
   const [atkWalker, setAtkWalker] = useState<number | null>(null);
   const [selBlocker, setSelBlocker] = useState<number | null>(null);
   const [blkPlan, setBlkPlan] = useState<Record<number, number>>({});
-  const [bdrag, setBdrag] = useState<{ uid: number; x0: number; y0: number; x: number; y: number; over: number | null; moved: boolean } | null>(null);
+  const [bdrag, setBdrag] = useState<{ uid: number; x0: number; y0: number; x: number; y: number; over: number | null; moved: boolean; pointer: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const dragRef = useRef<{ move: (e: MouseEvent) => void; up: (e: MouseEvent) => void }>({ move: () => {}, up: () => {} });
+  const dragRef = useRef<{ move: (e: PointerEvent) => void; up: (e: PointerEvent) => void; cancel: () => void }>({ move: () => {}, up: () => {}, cancel: () => {} });
   const [hover, setHover] = useState<Hover>(null);
+  const [zoom, setZoom] = useState<Hover>(null);
+  const [layout, setLayout] = useState(readLayout);
+  const compact = layout.compact;
+  const [boards, setBoards] = useState<Record<number, boolean>>({});
+  const [stackOpen, setStackOpen] = useState(true);
+  const pressRef = useRef<{ timer: number; x: number; y: number } | null>(null);
+  const eatenRef = useRef(false);
+  const blockHandled = useRef(false);
   const [modal, setModal] = useState<Modal>(null);
-  const [logOpen, setLogOpen] = useState(true);
+  const [logOpen, setLogOpen] = useState(() => !readLayout().compact);
   const [fs, setFs] = useState(false);
   const g = gref.current;
   const opts: PassOpts = { stopAll, passUntilTurn: passUntil };
@@ -334,7 +385,7 @@ export default function App() {
   // test/debug hook (only with ?debug in the URL): lets scripted screenshots stage a board
   useEffect(() => { if (/[?&]debug\b/.test(location.search)) (window as unknown as Record<string, unknown>).__ca = { game: () => gref.current, act, CARDS, castSpell, visibleSpell, compile: (o: Record<string, unknown>) => { const d = compileScry({ colors: [], color_identity: [], keywords: [], mana_cost: '', ...o } as unknown as ScryCard).def; registerCards([d, ...(d.prepDef ? [d.prepDef] : [])]); return d.id; } }; }, [act]);
   function beginMatch(deckId: string, commanderId?: string) {
-    setCmdChoice(null);
+    setCmdChoice(null); setZoom(null);
     localStorage.setItem('ca_deck', deckId);
     const pre = DECKS.slice(0, 4).map(d => d.id).filter(x => x !== deckId);
     const mine = [...CUSTOM_PRESETS.map(d => d.id), ...saved.map(d => d.id)].filter(x => x !== deckId).sort(() => Math.random() - 0.5);
@@ -351,6 +402,14 @@ export default function App() {
     beginMatch(deckId);
   }
   useEffect(() => { const f = () => setFs(!!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f); }, []);
+  useEffect(() => {
+    const apply = () => setLayout(applyLayout());
+    apply();
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', apply);
+    window.visualViewport?.addEventListener('resize', apply);
+    return () => { window.removeEventListener('resize', apply); window.removeEventListener('orientationchange', apply); window.visualViewport?.removeEventListener('resize', apply); };
+  }, []);
   const toggleFs = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.().catch(() => {}); };
 
   useEffect(() => {
@@ -454,10 +513,27 @@ export default function App() {
     if (f.x === undefined && costOf(g, c).x) { setPending(f); return; }
     advance(f);
   }
+  function pressStart(h: Hover, e: React.PointerEvent) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if ((e.target as HTMLElement).closest('button, a, input, select, textarea, label')) return;
+    const x = e.clientX, y = e.clientY;
+    const timer = window.setTimeout(() => { pressRef.current = null; eatenRef.current = true; setHover(h); setZoom(h); }, 480);
+    pressRef.current = { timer, x, y };
+  }
+  function pressMove(e: { clientX: number; clientY: number }) {
+    const pr = pressRef.current; if (!pr) return;
+    if (Math.hypot(e.clientX - pr.x, e.clientY - pr.y) > 12) { window.clearTimeout(pr.timer); pressRef.current = null; }
+  }
+  function pressEnd() { const pr = pressRef.current; if (!pr) return; window.clearTimeout(pr.timer); pressRef.current = null; }
+  function eat() { if (!eatenRef.current) return false; eatenRef.current = false; return true; }
+  function peek(h: Hover) { setHover(h); if (compact) setZoom(h); }
   function clickHand(c: Card) {
+    if (eat()) return;
     if (!g) return;
+    const hov = { id: c.id, uid: c.uid };
+    setHover(hov);
     if (canPlayLand(g, HUMAN, c)) return act(g => playLand(g, HUMAN, c.uid));
-    if (!(['', 'warp', 'morph', 'impending', 'sneak', 'evoke', 'free', 'webSling', 'overload', 'omni', 'surge'] as const).some(k => canCast(g, HUMAN, c, k ? { [k]: true } : {}))) return;
+    if (!(['', 'warp', 'morph', 'impending', 'sneak', 'evoke', 'free', 'webSling', 'overload', 'omni', 'surge'] as const).some(k => canCast(g, HUMAN, c, k ? { [k]: true } : {}))) { peek(hov); return; }
     startCast(c);
   }
   function activateAb(c: Card, i: number) {
@@ -476,53 +552,73 @@ export default function App() {
     setAtkPlan(p); setAtkPwPlan(pw);
   }
   function clickPerm(c: Card) {
+    if (eat()) return;
+    if (blockHandled.current) { blockHandled.current = false; return; }
     if (!g) return;
+    const hov: Hover = c.faceDown && c.owner !== HUMAN ? { id: 'face-down' } : { id: c.id, uid: c.uid };
+    setHover(hov);
     if (spec) { targetClick({ card: c.uid }); return; }
     if (declaring && c.owner !== HUMAN && isType(c, 'Planeswalker')) { setAtkTarget(c.owner); setAtkWalker(atkWalker === c.uid ? null : c.uid); return; }
     if (c.owner === HUMAN && !declaring && !blocking && isType(c, 'Creature') && !(def(c).abilities ?? []).length && canTapMana([c])) { tapMana([c]); return; }
     if (declaring && c.owner === HUMAN) return toggleAttacker(c);
     if (blocking) {
-      if (c.owner === HUMAN && isType(c, 'Creature') && !c.tapped) return;
-      if (c.attacking === HUMAN && selBlocker !== null) { const b = findCard(g, selBlocker)!; const r = blockReason(g, b, c); if (r) flash(r); else setBlkPlan({ ...blkPlan, [selBlocker]: c.uid }); setSelBlocker(null); }
+      if (c.owner === HUMAN && isType(c, 'Creature') && !c.tapped) { toggleBlocker(c); return; }
+      if (c.attacking === HUMAN && selBlocker !== null) { const b = findCard(g, selBlocker)!; const r = blockReason(g, b, c); if (r) flash(r); else setBlkPlan({ ...blkPlan, [selBlocker]: c.uid }); setSelBlocker(null); return; }
     }
+    if (compact) setZoom(hov);
   }
   function toggleBlocker(c: Card) {
     { if (blkPlan[c.uid] !== undefined) { const p = { ...blkPlan }; delete p[c.uid]; setBlkPlan(p); } else setSelBlocker(selBlocker === c.uid ? null : c.uid); }
   }
   function flash(m: string) { setToast(m); setTimeout(() => setToast(t => (t === m ? null : t)), 2600); }
   const canBlockerStart = (c: Card) => blocking && c.owner === HUMAN && isType(c, 'Creature') && !c.tapped;
-  function blockDown(c: Card, e: React.MouseEvent) {
-    if (e.button !== 0 || !canBlockerStart(c)) return;
-    e.preventDefault(); setSelBlocker(null);
-    setBdrag({ uid: c.uid, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, over: null, moved: false });
+  function blockDown(c: Card, e: React.PointerEvent) {
+    if (!canBlockerStart(c)) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if ((e.target as HTMLElement).closest('button')) return;
+    if (e.pointerType === 'mouse') e.preventDefault();
+    setSelBlocker(null);
+    setBdrag({ uid: c.uid, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, over: null, moved: false, pointer: e.pointerType });
+  }
+  function cardDown(c: Card, e: React.PointerEvent) {
+    blockHandled.current = false;
+    blockDown(c, e);
+    pressStart(c.faceDown && c.owner !== HUMAN ? { id: 'face-down' } : { id: c.id, uid: c.uid }, e);
   }
   function blockCtx(c: Card, e: React.MouseEvent) {
-    if (!blocking) return; e.preventDefault();
+    e.preventDefault();
+    if (!blocking) return;
     const p = { ...blkPlan };
     if (p[c.uid] !== undefined) delete p[c.uid]; else if (c.attacking === HUMAN) for (const [b, a] of Object.entries(p)) if (a === c.uid) delete p[+b];
     setBlkPlan(p); setSelBlocker(null);
   }
   dragRef.current = {
     move: e => {
+      pressMove(e);
       if (!bdrag || !g) return;
       const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-uid]') as HTMLElement | null;
       const u = el ? +el.dataset.uid! : NaN; const a = Number.isNaN(u) ? undefined : findCard(g, u);
-      setBdrag({ ...bdrag, x: e.clientX, y: e.clientY, over: a && a.attacking === HUMAN ? u : null, moved: bdrag.moved || Math.hypot(e.clientX - bdrag.x0, e.clientY - bdrag.y0) > 6 });
+      const slop = bdrag.pointer === 'touch' ? 16 : 8;
+      setBdrag({ ...bdrag, x: e.clientX, y: e.clientY, over: a && a.attacking === HUMAN ? u : null, moved: bdrag.moved || Math.hypot(e.clientX - bdrag.x0, e.clientY - bdrag.y0) > slop });
     },
     up: () => {
+      pressEnd();
       if (!bdrag || !g) return; const d = bdrag; setBdrag(null);
+      if (eatenRef.current) return;
       const b = findCard(g, d.uid); if (!b) return;
-      if (!d.moved) return toggleBlocker(b);
+      blockHandled.current = true;
+      if (!d.moved) { toggleBlocker(b); return; }
       const p = { ...blkPlan };
       if (d.over !== null) { const r = blockReason(g, b, findCard(g, d.over)!); if (r) { flash(`${def(b).name} can't block ${def(findCard(g, d.over)!).name}: ${r}`); return; } p[d.uid] = d.over; }
       else delete p[d.uid];
       setBlkPlan(p);
     },
+    cancel: () => { pressEnd(); setBdrag(null); },
   };
   useEffect(() => {
-    const m = (e: MouseEvent) => dragRef.current.move(e), u = (e: MouseEvent) => dragRef.current.up(e);
-    window.addEventListener('mousemove', m); window.addEventListener('mouseup', u);
-    return () => { window.removeEventListener('mousemove', m); window.removeEventListener('mouseup', u); };
+    const m = (e: PointerEvent) => dragRef.current.move(e), u = (e: PointerEvent) => dragRef.current.up(e), c = () => dragRef.current.cancel();
+    window.addEventListener('pointermove', m); window.addEventListener('pointerup', u); window.addEventListener('pointercancel', c);
+    return () => { window.removeEventListener('pointermove', m); window.removeEventListener('pointerup', u); window.removeEventListener('pointercancel', c); };
   }, []);
   function clickPlayer(pid: number) { if (spec) { targetClick({ player: pid }); return; } if (declaring && !g!.players[pid].lost && pid !== HUMAN) { setAtkTarget(pid); setAtkWalker(null); } }
   function dragStart(c: Card, e: DragEvent) {
@@ -561,8 +657,8 @@ export default function App() {
       if (curSlot.opt) secondary.push({ label: 'Skip (no target)', run: skipSlot });
       if (flow.kind !== 'trigger') secondary.push({ label: 'Cancel', run: () => setPending(null), key: 'Esc' });
     }
-    else if (blocking) { const dmg = incoming.reduce((s, a) => s + power(g, a), 0); prompt = `⚠ ${incoming.length} attacker${incoming.length > 1 ? 's' : ''}, ${dmg} damage coming at you. ${selBlocker !== null ? 'Now click the attacker to block.' : 'Drag your creatures onto attackers to block (several can block one). Right-click or drag off to unassign.'}`; tone = 'danger'; const n = Object.keys(blkPlan).length; primary = { label: n ? `Confirm ${n} block${n > 1 ? 's' : ''}${short.length ? ' ⚠' : ''}` : 'No blocks', run: confirmBlocks, key: 'Enter' }; }
-    else if (declaring) { const n = Object.keys(atkPlan).length; prompt = `⚔ Attack: click an opponent to aim (now: ${curAtkTarget !== undefined ? g.players[curAtkTarget].name : '-'}), then click your glowing creatures, or drag them onto an opponent.`; primary = { label: n ? `Attack with ${n}` : 'No attack', run: confirmAttacks, key: 'Enter', tone: n ? 'attack' : undefined }; secondary.push({ label: `All → ${curAtkTarget !== undefined ? g.players[curAtkTarget].name : ''}`, run: attackAll, key: 'A' }); }
+    else if (blocking) { const dmg = incoming.reduce((s, a) => s + power(g, a), 0); prompt = `⚠ ${incoming.length} attacker${incoming.length > 1 ? 's' : ''}, ${dmg} damage coming at you. ${selBlocker !== null ? 'Now tap the attacker to block.' : 'Tap a creature, then tap the attacker it blocks. Drag works too.'}`; tone = 'danger'; const n = Object.keys(blkPlan).length; primary = { label: n ? `Confirm ${n} block${n > 1 ? 's' : ''}${short.length ? ' ⚠' : ''}` : 'No blocks', run: confirmBlocks, key: 'Enter' }; }
+    else if (declaring) { const n = Object.keys(atkPlan).length; prompt = `⚔ Attack: tap an opponent to aim (now: ${curAtkTarget !== undefined ? g.players[curAtkTarget].name : '-'}), then tap your glowing creatures. Drag onto an opponent works too.`; primary = { label: n ? `Attack with ${n}` : 'No attack', run: confirmAttacks, key: 'Enter', tone: n ? 'attack' : undefined }; secondary.push({ label: `All → ${curAtkTarget !== undefined ? g.players[curAtkTarget].name : ''}`, run: attackAll, key: 'A' }); }
     else if (myPriority && top) { prompt = `🔔 You have priority. Respond with an instant or ability, or pass. Top: ${topDesc}`; tone = 'prio'; primary = { label: 'Pass ▸ Resolve', run: doPass }; }
     else if (myPriority && myTurn && inMain) {
       prompt = `${g.step === 'main1' ? 'Main phase' : 'Second main phase'}: ${me.landPlayed ? 'land played' : me.hand.some(c => isType(c, 'Land')) ? 'play a land' : 'no land in hand'}${playable ? ` · ${playable} playable (glowing)` : ' · nothing affordable'}.`;
@@ -593,12 +689,13 @@ export default function App() {
   // ---------- setup screen ----------
   if (!g || !me) return (
     <div className="setup">
+      <div className="setupscroll">
       <button className="fsbtn" onClick={toggleFs} title="Full screen (F)">{fs ? '⤡' : '⛶'} Full screen</button>
       <h1>Commander Arena</h1>
       <p className="sub">Four-player free-for-all Commander: you against three AI opponents. 40 life · 21 commander damage · commander tax · stack &amp; priority</p>
       <h3 className="dsec">Starter decks</h3>
       <div className="deckpick">{DECKS.slice(0, 4).map(d => { const c = CARDS[d.commander]; return (
-        <button key={d.id} className={`deckopt ${deck === d.id ? 'on' : ''}`} onClick={() => { setCmdChoice(null); setDeck(d.id); }} onDoubleClick={() => newMatch(d.id)}>
+        <button key={d.id} data-deck={d.id} className={`deckopt ${deck === d.id ? 'on' : ''}`} onClick={() => { setCmdChoice(null); setDeck(d.id); }} onDoubleClick={() => newMatch(d.id)}>
           <div className="dimg"><CardFace d={c} /></div><b>{d.name}</b><span>{c.name}</span><small>{c.text.split('\n').slice(-1)[0]}</small></button>); })}</div>
       <section className="deckgroup official" data-section="official">
         <h3 className="dsec">Official precons</h3>
@@ -624,9 +721,13 @@ export default function App() {
           <button className="deckopt addnew" onClick={() => setModal('import')}><span className="plus">＋</span><b>Import deck</b><small>Paste a list or load a .txt / .dek file. Saved here under Custom decks.</small></button>
         </div>
       </section>
-      <div className="setopts"><label>AI opponents use <select value={aiDecks} onChange={e => { setAiDecks(e.target.value as 'precon' | 'mine' | 'official'); localStorage.setItem('ca_ai_decks', e.target.value); }}>
-        <option value="precon">the starter decks</option><option value="official">official precons (random)</option><option value="mine">custom decks (random), then starter decks</option></select></label></div>
-      <button className="big" onClick={() => newMatch()}>Start game ▶</button>
+      <p className="credit">Card images &amp; data courtesy of Scryfall. Magic: The Gathering is © Wizards of the Coast. Unofficial fan project.</p>
+      </div>
+      <div className="startbar">
+        <div className="setopts"><label>AI opponents use <select value={aiDecks} onChange={e => { setAiDecks(e.target.value as 'precon' | 'mine' | 'official'); localStorage.setItem('ca_ai_decks', e.target.value); }}>
+          <option value="precon">the starter decks</option><option value="official">official precons (random)</option><option value="mine">custom decks (random), then starter decks</option></select></label></div>
+        <button className="big" onClick={() => newMatch()}>Start game ▶</button>
+      </div>
       {cmdChoice && <div className="modal choice" data-commander-choice={cmdChoice.deckId} onClick={() => setCmdChoice(null)}><div className="mbox cmdbox" onClick={e => e.stopPropagation()}>
         <h2>Choose your commander</h2>
         <p className="csub">{DECKS.find(d => d.id === cmdChoice.deckId)?.name} lists {cmdChoice.faces.length} possible commanders. One starts in the command zone. The others are shuffled into your library, so the deck stays 100 cards.</p>
@@ -637,7 +738,6 @@ export default function App() {
         <div className="cbtns"><button className="sec" onClick={() => setCmdChoice(null)}>Cancel</button></div>
       </div></div>}
       {modal === 'import' && <ImportDialog close={() => setModal(null)} art={img => img ? <img className="cimg" src={img} alt="" /> : <div className="frame" />} saved={d => { setSaved(decks.saveDeck(d)); setDeck(d.id); setModal(null); }} />}
-      <p className="credit">Card images &amp; data courtesy of Scryfall. Magic: The Gathering is © Wizards of the Coast. Unofficial fan project.</p>
     </div>
   );
 
@@ -648,7 +748,7 @@ export default function App() {
     const full = bdrag?.moved ? bdrag.over === c.uid : false; // full reason only on the hovered attacker
     if (dragSrc !== null) { const r = blockReason(g, findCard(g, dragSrc)!, c); if (r) return '✕ ' + (full ? r : r.split(':')[0]); }
     if (short.includes(c.uid)) return full || dragSrc === null ? '⚠ Menace: add 1 more blocker' : '⚠ Menace';
-    if (dragSrc !== null) return hasKw(c, 'menace') && !Object.values(blkPlan).includes(c.uid) ? (full ? '✓ Menace: needs 2+ blockers' : '✓ Menace') : (full ? '✓ Drop to block' : '✓');
+    if (dragSrc !== null) return hasKw(c, 'menace') && !Object.values(blkPlan).includes(c.uid) ? (full ? '✓ Menace: needs 2+ blockers' : '✓ Menace') : (full ? '✓ Drop to block' : '✓ Tap');
     return null;
   };
   const permCls = (c: Card) => {
@@ -663,21 +763,22 @@ export default function App() {
     if (bdrag?.uid === c.uid && bdrag.moved) out.push('dragging');
     return out.join(' ');
   };
-  const ui: UI = { canTapMana, tapMana, g, blockDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand };
+  const ui: UI = { canTapMana, tapMana, g, cardDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand, compact, targeting: !!spec, boardOn: pid => !!boards[pid], toggleBoard: pid => setBoards(b => ({ ...b, [pid]: !b[pid] })), pressStart, eat, peek, stackOpen, toggleStack: () => setStackOpen(o => !o) };
   const hand = me.hand; const n = hand.length;
 
   return (
-    <div className={`app ${anim ? 'anim' : 'noanim'} ${logOpen ? 'logopen' : 'logclosed'}`}>
+    <div className={`app ${anim ? 'anim' : 'noanim'} ${logOpen ? 'logopen' : 'logclosed'} ${blocking ? 'isblocking' : ''}`} data-compact={compact ? '1' : '0'}>
       <header>
         <b className="logo">Commander Arena</b>
         <div className="turninfo" style={{ borderColor: PCOLORS[g.active] }}>Turn {Math.ceil(g.turn / 4) || 1}<small> ({g.turn})</small> · <b style={{ color: PCOLORS[g.active] }}>{g.active === HUMAN ? 'Your turn' : `${g.players[g.active].name}'s turn`}</b></div>
-        <div className="phasebar">{SHOWN_STEPS.map(s => <span key={s} className={`ph ${s === g.step || (s === 'damage' && g.step === 'firstStrike') ? 'cur' : ''} ${STEPS.indexOf(s) < STEPS.indexOf(g.step) ? 'done' : ''}`}>{STEP_LABEL[s]}</span>)}</div>
+        <div className="phasebar">{SHOWN_STEPS.map(s => <span key={s} className={`ph ${s === g.step || (s === 'damage' && g.step === 'firstStrike') ? 'cur' : ''} ${STEPS.indexOf(s) < STEPS.indexOf(g.step) ? 'done' : ''}`}>{compact ? (PHASE_SHORT[s] ?? STEP_LABEL[s]) : STEP_LABEL[s]}</span>)}</div>
         {passUntil === g.turn && <span className="autopass">⏩ Auto-passing this turn</span>}
         {stopAll && <span className="autopass hold">✋ Holding priority</span>}
+        <button className="ghost logbtn" onClick={() => setLogOpen(o => !o)}>{logOpen ? 'Close log' : 'Log'}</button>
         <button className="ghost" onClick={() => setModal('settings')} title="Settings">⚙ Settings</button>
-        <button className="ghost" onClick={() => setModal('help')} title="Keyboard shortcuts (?)">⌨ Keys</button>
-        <button className="ghost" onClick={toggleFs} title="Full screen (F)">{fs ? '⤡ Exit full screen' : '⛶ Full screen'}</button>
-        <button className="ghost" onClick={() => { gref.current = null; bump(); }}>Quit</button>
+        <button className="ghost deskonly" onClick={() => setModal('help')} title="Keyboard shortcuts (?)">⌨ Keys</button>
+        <button className="ghost deskonly" onClick={toggleFs} title="Full screen (F)">{fs ? '⤡ Exit full screen' : '⛶ Full screen'}</button>
+        <button className="ghost" onClick={() => { setZoom(null); gref.current = null; bump(); }}>Quit</button>
       </header>
 
       <main className="table">
@@ -690,12 +791,13 @@ export default function App() {
         </section>
         <div className="hand" style={{ ['--n' as string]: n }}>
           {(() => { const top = me.library[me.library.length - 1]; if (!top || (!topLook(g, HUMAN) && !topCastable(g, HUMAN, top))) return null; const ok = topCastable(g, HUMAN, top) && (canCast(g, HUMAN, top) || canCast(g, HUMAN, top, { omni: true })); return (
-            <div key={top.uid} className={`hcard ${ok ? 'playable' : ''}`} title="Top of your library" onClick={() => ok && startCast(top)} onMouseEnter={() => setHover({ id: top.id })} onMouseLeave={() => setHover(null)}>
+            <div key={top.uid} data-hand={top.uid} className={`hcard ${ok ? 'playable' : ''}`} title="Top of your library" onPointerDown={e => pressStart({ id: top.id, uid: top.uid }, e)} onContextMenu={e => e.preventDefault()} onClick={() => { if (eat()) return; if (ok) startCast(top); else peek({ id: top.id, uid: top.uid }); }} onMouseEnter={() => setHover({ id: top.id })} onMouseLeave={() => setHover(null)}>
               <div className="hinner"><CardFace d={def(top)} /></div><div className="handab"><span>Top of library</span></div></div>); })()}
           {hand.map((c, i) => { const ok = canPlayLand(g, HUMAN, c) || canCast(g, HUMAN, c) || canCast(g, HUMAN, c, { warp: true }) || canCast(g, HUMAN, c, { sneak: true }) || canCast(g, HUMAN, c, { back: true }) || canPlayLand(g, HUMAN, c, true) || canForetell(g, HUMAN, c) || canCast(g, HUMAN, c, { evoke: true }) || canCast(g, HUMAN, c, { free: true }) || canCast(g, HUMAN, c, { webSling: true }) || canCast(g, HUMAN, c, { overload: true }); const off = i - (n - 1) / 2; return (
-            <div key={c.uid} className={`hcard ${ok ? 'playable' : ''} ${pending?.uid === c.uid ? 'selected' : ''}`} style={{ ['--r' as string]: `${off * Math.min(4, 24 / Math.max(n, 1))}deg`, ['--y' as string]: `${Math.abs(off) * Math.abs(off) * 0.25}vh`, zIndex: i + 1 }}
-              draggable={ok && spellSlots(def(c)).length > 0} onDragStart={e => dragStart(c, e)} onDragEnd={() => { /* keep pending if not dropped on target */ }}
-              onClick={() => clickHand(c)} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}>
+            <div key={c.uid} data-hand={c.uid} className={`hcard ${ok ? 'playable' : ''} ${pending?.uid === c.uid ? 'selected' : ''}`} style={{ ['--r' as string]: `${off * Math.min(4, 24 / Math.max(n, 1))}deg`, ['--y' as string]: `${Math.abs(off) * Math.abs(off) * 0.25}vh`, zIndex: i + 1 }}
+              draggable={!compact && ok && spellSlots(def(c)).length > 0} onDragStart={e => dragStart(c, e)} onDragEnd={() => { /* keep pending if not dropped on target */ }}
+              onPointerDown={e => pressStart({ id: c.id, uid: c.uid }, e)} onContextMenu={e => e.preventDefault()}
+              onClick={() => clickHand(c)} onMouseEnter={() => setHover({ id: c.id, uid: c.uid })} onMouseLeave={() => setHover(null)}>
               <div className="hinner"><CardFace d={def(c)} /></div>
               {(() => { const b = def(c).back; const bs: ReactElement[] = [];
                 if (b && backCastable(g, HUMAN, c) && canCast(g, HUMAN, c, { back: true })) bs.push(<button key="b" data-back={c.uid} title={b.name} onMouseEnter={e => { e.stopPropagation(); setHover({ id: b.id }); }} onClick={e => { e.stopPropagation(); flipFace(c); startCast(c); }}>▶ {b.adventure ? 'Adventure' : 'Back'}: {b.name.length > 18 ? b.name.slice(0, 16) + '…' : b.name}</button>);
@@ -719,7 +821,7 @@ export default function App() {
       </main>
 
       <aside>
-        <Preview g={g} h={hover} />
+        <Preview g={g} h={hover} compact={compact} />
         <div className="logwrap">
           <button className="loghead" onClick={() => setLogOpen(o => !o)}>Game log <span>{logOpen ? '▾ hide (L)' : '▸ show (L)'}</span></button>
           {logOpen && <div className="log" ref={el => { if (el) el.scrollTop = el.scrollHeight; }}>
@@ -729,6 +831,8 @@ export default function App() {
         </div>
       </aside>
 
+      {compact && logOpen && <button type="button" className="sheetback" aria-label="Close log" onClick={() => setLogOpen(false)} />}
+      {zoom && <CardZoom g={g} h={zoom} close={() => setZoom(null)} onActivate={activateAb} />}
       <Arrows g={g} plan={atkPlan} blk={blkPlan} pw={atkPwPlan} />
       {bdrag?.moved && <DragLine uid={bdrag.uid} x={bdrag.x} y={bdrag.y} color={bdrag.over === null ? '#9ec3ff' : blockReason(g, findCard(g, bdrag.uid)!, findCard(g, bdrag.over)!) ? '#ef5350' : '#42a5f5'} />}
       {toast && <div className="toast">{toast}</div>}
@@ -747,17 +851,17 @@ export default function App() {
           <div className="zgrid pickgrid">{cands.map(c => <div key={c.uid} className="zcard pick" data-pick={c.uid} onClick={() => targetClick({ card: c.uid })} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}><CardFace d={def(c)} /><span className="pickn">{g.players[c.owner].name}</span></div>)}</div>
           <div className="cbtns">{curSlot.opt && <button className="sec" onClick={skipSlot}>Skip</button>}{flow!.kind !== 'trigger' && <button className="sec" onClick={() => setPending(null)}>Cancel</button>}</div></div></div>); })()}
 
-      {modal && typeof modal === 'object' && <ZoneViewer g={g} pid={modal.pid} zone={modal.zone} close={() => setModal(null)} setHover={setHover} />}
+      {modal && typeof modal === 'object' && <ZoneViewer g={g} pid={modal.pid} zone={modal.zone} close={() => setModal(null)} setHover={setHover} onPeek={h => { setHover(h); setZoom(h); }} />}
       {modal === 'help' && <div className="modal" onClick={() => setModal(null)}><div className="mbox" onClick={e => e.stopPropagation()}>
         <h2>Keyboard shortcuts<button className="x" onClick={() => setModal(null)}>✕</button></h2>
         <table className="keys"><tbody>{SHORTCUTS.map(([k, v]) => <tr key={k}><td><kbd>{k}</kbd></td><td>{v}</td></tr>)}</tbody></table>
-        <h3>Mouse</h3><p className="muted">Click glowing cards to play them. Targets glow green. You can drag a targeted spell from your hand onto its target, drag an attacker onto an opponent, or drag a blocker onto an attacking creature (right-click a blocker to unassign it). Hover anything for a large preview. Click 🪦 or ⛔ to view a graveyard or exile.</p>
+        <h3>Mouse and touch</h3><p className="muted">Tap glowing cards to play them. Targets glow green. Tap an opponent, then your creatures, to attack. When you are attacked, tap a blocker, then the attacker (drag works too; tap the blocker again to unassign). Long-press a card for a large preview, or hover it on a desktop. Tap 🪦 or ⛔ to view a graveyard or exile.</p>
       </div></div>}
       {modal === 'settings' && <div className="modal" onClick={() => setModal(null)}><div className="mbox" onClick={e => e.stopPropagation()}>
         <h2>Settings<button className="x" onClick={() => setModal(null)}>✕</button></h2>
         <label className="setrow">AI speed <select value={speed} onChange={e => setSpeed(+e.target.value)}><option value={1100}>Slow</option><option value={600}>Normal</option><option value={200}>Fast</option><option value={40}>Instant</option></select></label>
         <label className="setrow"><input type="checkbox" checked={!stopAll} onChange={e => setStopAll(!e.target.checked)} /> Smart auto-pass <small>Only stop when you can respond, something targets you, or it's your main phase</small></label>
-        <label className="setrow"><input type="checkbox" checked={stopAll} onChange={e => setStopAll(e.target.checked)} /> Hold priority <small>Stop at every priority point, including on your own spells</small></label>
+        <label className="setrow"><input type="checkbox" data-hold checked={stopAll} onChange={e => setStopAll(e.target.checked)} /> Hold priority <small>Stop at every priority point, including on your own spells</small></label>
         <label className="setrow"><input type="checkbox" checked={anim} onChange={e => setAnim(e.target.checked)} /> Animations</label>
         <button className="sec" onClick={() => setModal('tips')}>Show tips again</button>
       </div></div>}

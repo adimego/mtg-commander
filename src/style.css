@@ -297,3 +297,201 @@ html,body,#root,.app,.table{overflow:clip!important}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
 .poison{color:#7fd16b;font-weight:700;margin-left:6px;font-size:.9em}
 .dtag.set{background:#c62828;color:#fff}
+
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+html,body{overscroll-behavior:none}
+.slot:has(.perm.dragging){pointer-events:none}
+.logbtn,.sheetback{display:none}
+.setupscroll{display:contents}
+.startbar{order:2}.credit{order:3}
+
+.zoomov{position:fixed;inset:0;z-index:280;background:#000c;display:flex;align-items:flex-end;justify-content:center;padding:max(.6rem,env(safe-area-inset-top)) max(.6rem,env(safe-area-inset-right)) max(.6rem,env(safe-area-inset-bottom)) max(.6rem,env(safe-area-inset-left))}
+.zoombox{position:relative;width:min(92vw,420px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1.2rem);overflow:auto;background:#121c19;border:1px solid var(--line);border-radius:1rem;padding:.6rem .7rem 1rem;box-shadow:0 2rem 4rem #000}
+.zoomx{position:sticky;top:0;float:right;z-index:2;min-width:44px;min-height:44px;background:#ffffff18;color:#fff;border:1px solid #ffffff30}
+.zoombox .preview{border:0;padding:0}
+.zoombox .pvcard{width:min(100%,280px)}
+.zoomoracle{white-space:pre-wrap;margin:.4rem 0 0;line-height:1.35;color:#e7eee9}
+.zoomabs{display:flex;flex-direction:column;gap:.4rem;margin-top:.6rem}
+.zoomabs button{min-height:44px;text-align:left;background:#00897bee;color:#fff;padding:.45rem .6rem;border-radius:.45rem}
+.zoomabs button:disabled{background:#263832;color:#7f948c}
+button.stackhead{width:100%;background:none;color:#ce93d8;text-align:left;border-radius:0}
+
+/* Phones (portrait and landscape) and wide or near-square foldables.
+   A typical desktop (1280x720 and up) does not match. */
+html.compact,html.compact body{height:100%;height:100dvh}
+html.compact body{position:fixed;inset:0;width:100%;overflow:hidden!important}
+html.compact #root{height:100%;overflow:hidden!important}
+html.compact{font-size:15px}
+html.compact .app{
+  height:100%;height:100dvh;width:100%;max-height:100dvh;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
+}
+html.compact .logbtn{display:inline-flex;align-items:center;justify-content:center}
+html.compact .deskonly{display:none}
+html.compact header{grid-column:1 / -1;height:auto;min-height:44px;flex-wrap:nowrap;gap:.25rem .4rem;padding:.15rem .4rem}
+html.compact .logo{font-size:.95rem}
+html.compact .turninfo{font-size:.85rem;min-width:0;overflow:hidden;text-overflow:ellipsis}
+html.compact .turninfo small{display:none}
+html.compact .phasebar{flex:1 1 auto;min-width:0;justify-content:flex-start;overflow-x:auto;gap:.15rem}
+html.compact .ph{padding:.2rem .4rem;font-size:.72rem;white-space:nowrap}
+html.compact header .ghost{min-width:44px;min-height:44px;padding:.35rem .55rem;font-size:.8rem}
+html.compact.portrait header{flex-wrap:wrap}
+html.compact.portrait .phasebar{order:5;flex:1 0 100%}
+html.compact .primary kbd,html.compact .sec kbd{display:none}
+html.compact .table{
+  grid-template-rows:auto auto minmax(0,1fr) minmax(96px,max-content) auto;grid-template-columns:minmax(0,1fr);
+  padding:0;overflow:hidden!important;min-height:0;
+}
+html.compact.short .table{grid-template-rows:auto auto minmax(0,1fr) minmax(78px,max-content) auto}
+html.compact .opps{grid-row:1;display:flex;flex-wrap:nowrap;gap:.35rem;overflow-x:auto;overflow-y:hidden;min-height:0;max-height:22dvh;padding:.25rem .35rem;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-x}
+html.compact.short .opps{max-height:112px}
+html.compact .opps:has(.showboard){flex-wrap:wrap;overflow-y:auto;touch-action:pan-x pan-y}
+html.compact .prompt{grid-row:2;padding:.1rem .4rem;font-size:.82rem}
+html.compact .prompt span{padding:.28rem .7rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+html.compact .player.me{grid-row:3;display:flex;flex-direction:column;min-height:0;overflow:auto;padding:.15rem .35rem .55rem;margin:0;gap:.2rem;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+html.compact .hand{
+  grid-row:4;position:relative;left:auto!important;right:auto!important;bottom:auto;z-index:5;height:auto;min-height:0;max-height:132px;
+  display:flex;flex-wrap:nowrap;justify-content:flex-start;align-items:flex-end;gap:.35rem;
+  overflow-x:auto;overflow-y:hidden;padding:.2rem .45rem .45rem;pointer-events:auto;
+  touch-action:pan-x;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+  background:linear-gradient(#0000,#00000055);
+}
+html.compact.short .hand{max-height:86px}
+html.compact .actionbar{
+  grid-row:5;position:relative;right:auto;bottom:auto;z-index:70;
+  display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:.35rem;
+  padding:.3rem .4rem;background:#060a09ee;
+}
+html.compact .gyplay,html.compact .stackview{position:fixed!important;grid-row:1;z-index:75}
+html.compact .gyplay{left:max(.4rem,env(safe-area-inset-left));right:auto;bottom:auto;top:34%;max-width:min(70vw,16rem)}
+html.compact .gyplay button{min-height:44px}
+html.compact .stackview{
+  top:auto!important;left:max(.4rem,env(safe-area-inset-left))!important;right:max(.4rem,env(safe-area-inset-right))!important;
+  bottom:calc(env(safe-area-inset-bottom) + 4.6rem);width:auto!important;transform:none!important;max-height:42dvh;
+}
+html.compact .stackview.shut .sitems{display:none}
+html.compact button.stackhead{min-height:44px}
+html.compact .primary{min-width:0;min-height:44px;flex:1 1 8rem;font-size:1rem;padding:.55rem .9rem;border-radius:.7rem}
+html.compact .actionbar .sec{min-height:44px;padding:.45rem .7rem;font-size:.9rem}
+html.compact .hcard{width:68px;min-width:68px;height:auto;margin:0;flex:0 0 auto;display:flex;flex-direction:column;transform:none!important;pointer-events:auto}
+html.compact .hinner{position:relative;left:auto;bottom:auto;width:100%!important;opacity:1;transform:none!important}
+html.compact .hinner .cimg,html.compact .hinner .frame{max-height:118px;width:auto;max-width:100%;margin:0 auto}
+html.compact.short .hinner .cimg,html.compact.short .hinner .frame{max-height:74px}
+html.compact .hcard:hover{z-index:auto!important}
+html.compact .hcard:hover .hinner,html.compact .hcard.playable:hover .hinner,html.compact .hcard.selected .hinner{transform:none!important}
+html.compact .hcard.playable .hinner{box-shadow:0 0 0 .16rem var(--gold),0 0 .6rem #f2c14e88}
+html.compact .hcard.selected .hinner{box-shadow:0 0 0 .2rem #00e5ff}
+html.compact .handab{position:static}
+html.compact .handab button{min-height:44px;font-size:.72rem;white-space:normal}
+html.compact.portrait .hcard{width:76px;min-width:76px}
+html.compact.short .hcard{width:54px;min-width:54px}
+html.compact .me .crow{--cw:72px}
+html.compact .me .nrow{--cw:56px}
+html.compact .opp .crow{--cw:48px}
+html.compact .opp .nrow{--cw:40px}
+html.compact.portrait .me .crow{--cw:84px}
+html.compact.portrait .me .nrow{--cw:64px}
+html.compact.short .me .crow{--cw:58px}
+html.compact.short .me .nrow{--cw:46px}
+html.compact.short.wide .me .crow{--cw:66px}
+html.compact .row{height:auto;min-height:calc(var(--cw) * 1.4);overflow-x:auto;flex-wrap:nowrap;align-items:flex-start;-webkit-overflow-scrolling:touch;touch-action:pan-x;overscroll-behavior-x:contain}
+html.compact .row:not(:has(.slot)){min-height:0;height:auto}
+html.compact.short .row:not(:has(.slot)){display:none}
+html.compact .slot{flex:0 0 auto;min-width:var(--cw);height:auto;min-height:calc(var(--cw) * 1.4)}
+html.compact .slot.tapped{width:calc(var(--cw) * 1.4);min-width:calc(var(--cw) * 1.4)}
+html.compact .perm{display:flex;flex-direction:column}
+html.compact .abstrip{position:static;margin-top:.25rem}
+html.compact .abstrip button{min-height:44px;font-size:.75rem;white-space:normal}
+html.compact.short .abstrip{display:none}
+html.compact .lands{flex-wrap:nowrap;overflow-x:auto;touch-action:pan-x}
+html.compact .landchip{min-height:44px;flex:0 0 auto;font-size:.85rem}
+html.compact .me .landchip{font-size:.85rem}
+html.compact .player.opp{flex:1 1 0;max-width:none;min-width:0;padding:.3rem .35rem}
+html.compact .player.opp.showboard{flex:1 1 100%;max-height:26dvh;overflow:auto}
+html.compact.short .player.opp.showboard{max-height:100px}
+html.compact .player.opp:not(.showboard) .bf,
+html.compact .player.opp:not(.showboard) .cdmg,
+html.compact .player.opp:not(.showboard) .emblems{display:none}
+html.compact .player.opp .avatar{width:32px;height:32px}
+html.compact .player.opp .life{font-size:1.15rem;min-width:2.2rem}
+html.compact .player.opp .cmdzone{display:none}
+html.compact .player.opp .phead{flex-wrap:nowrap}
+html.compact .player.opp .pname{font-size:.85rem;overflow:hidden;text-overflow:ellipsis}
+html.compact .player.opp .pdeck{display:none}
+html.compact .player.opp .counts{font-size:.75rem;gap:.25rem}
+html.compact.short .cdmg,html.compact.short .me .emblems{display:none}
+html.compact.short .player.opp .counts > span{display:none}
+html.compact .boardtoggle{flex:none;min-width:44px;min-height:44px;padding:0 .45rem;background:#ffffff14;color:var(--txt);border:1px solid #ffffff30;border-radius:.45rem;font-size:.72rem}
+html.compact .zbtn{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
+html.compact .me .avatar{width:36px;height:36px}
+html.compact .me .cmdzone{width:44px}
+html.compact .me .life.big{font-size:1.55rem;min-width:2.8rem}
+html.compact .me .phead{flex-wrap:nowrap;row-gap:.2rem;align-items:center}
+html.compact .me .pinfo{min-width:0}
+html.compact .me .pdeck{display:none}
+html.compact .me .pname{font-size:.95rem}
+html.compact .me .counts{font-size:.8rem;flex-wrap:nowrap;overflow-x:auto}
+html.compact.short .me .life.big{font-size:1.25rem}
+html.compact.short .me .avatar{width:32px;height:32px}
+html.compact.short .me .cmdzone{width:36px}
+html.compact .loyab{min-height:44px;font-size:.8rem}
+html.compact .loypanel{min-width:min(72vw,18rem);max-width:min(86vw,20rem)}
+html.compact aside{display:none}
+html.compact .app.logopen > aside{
+  display:flex;position:fixed;z-index:240;left:0;right:0;bottom:0;top:auto;
+  height:min(72dvh,100%);max-height:calc(100dvh - env(safe-area-inset-top) - 2rem);
+  border-left:0;border-top:1px solid var(--line);border-radius:1rem 1rem 0 0;
+  padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -1rem 3rem #000c;
+}
+html.compact .sheetback{display:block;position:fixed;inset:0;z-index:230;background:#000a;border:0;border-radius:0;padding:0}
+html.compact aside .preview.empty{display:none}
+html.compact aside .preview{max-height:28dvh;overflow:auto}
+html.compact .loghead{min-height:44px}
+html.compact .app.isblocking .me .perm{touch-action:none}
+
+html.compact .setup{
+  height:100%;height:100dvh;max-height:100dvh;overflow:hidden;justify-content:flex-start;align-items:stretch;
+  padding:calc(env(safe-area-inset-top) + .4rem) max(.6rem,env(safe-area-inset-right)) 0 max(.6rem,env(safe-area-inset-left));
+  overscroll-behavior:contain;text-align:center;
+}
+html.compact .setupscroll{display:flex;flex-direction:column;align-items:center;flex:1;min-height:0;overflow:auto;width:100%;padding-bottom:1rem;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+html.compact .setup h1{font-size:2rem}
+html.compact .sub{font-size:.95rem;padding:0 .4rem}
+html.compact .fsbtn{position:static;align-self:flex-end;min-height:44px}
+html.compact .deckpick{flex-wrap:wrap;justify-content:center;gap:.6rem;width:100%;margin:.4rem 0}
+html.compact .deckpick .deckopt,html.compact .deckopt{width:calc(50% - .6rem);max-width:190px;min-height:44px}
+html.compact .deckpick .dimg{height:24vw;max-height:120px;min-height:80px}
+html.compact .deckpick .dimg .cimg,html.compact .deckpick .dimg .frame{width:100%;height:100%;object-fit:cover;object-position:center top}
+html.compact .deckopt small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:0}
+html.compact .dart{height:76px}
+html.compact .deckgroup{width:100%;padding:.2rem .35rem .5rem}
+html.compact .dnote{font-size:.85rem}
+html.compact .dacts button{min-height:44px;padding:.35rem .55rem}
+html.compact .deckopt.addnew{min-height:8rem;width:calc(50% - .6rem)}
+html.compact .startbar{
+  position:static;flex:none;z-index:5;width:100%;display:flex;flex-direction:column;align-items:center;gap:.45rem;
+  padding:.55rem .4rem calc(.45rem + env(safe-area-inset-bottom));background:#0b1210f2;border-top:1px solid var(--line);
+}
+html.compact .startbar .big{width:min(100%,24rem);min-height:48px}
+html.compact .setopts select,html.compact select,html.compact input,html.compact textarea{font-size:16px}
+html.compact .setopts select{min-height:44px}
+html.compact .cmdpick{gap:.6rem}
+html.compact .cmdpick button{width:min(44vw,180px);min-height:44px}
+html.compact .mbox,html.compact .mbox.wide,html.compact .tips .mbox,html.compact .importbox{
+  width:auto;max-width:calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 1rem);
+  padding:1rem;margin:.4rem;
+}
+html.compact .modal{overflow:auto;align-items:flex-start;padding:calc(env(safe-area-inset-top) + .4rem) .4rem calc(env(safe-area-inset-bottom) + .4rem)}
+html.compact .modal.choice{padding-top:calc(env(safe-area-inset-top) + .4rem);align-items:center}
+html.compact .improw{flex-direction:column}
+html.compact .decktext{min-height:28dvh;width:100%}
+html.compact .impside,html.compact .report .impcmd{width:auto}
+html.compact .impbtns{flex-wrap:wrap;gap:.4rem}
+html.compact .x{min-width:44px;min-height:44px}
+html.compact .cbtns .big,html.compact .big,html.compact .oitem,html.compact .sec{min-height:44px}
+html.compact .pickgrid,html.compact .zgrid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+html.compact .pickgrid{max-height:48dvh}
+html.compact .tiplist li{font-size:1rem;align-items:flex-start}
+html.compact .stats{flex-wrap:wrap}
+html.compact .swap{flex-direction:column;gap:.4rem}

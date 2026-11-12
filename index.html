@@ -1,2 +1,33 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Commander Arena</title></head>
-<body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#0b1210" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Commander" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>Commander Arena</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="icon" href="./icon-192.png" sizes="192x192" type="image/png" />
+  <script>
+    (function () {
+      var w = window.innerWidth, h = window.innerHeight;
+      var compact = w <= 1100 || h <= 560;
+      var root = document.documentElement;
+      root.classList.toggle('compact', compact);
+      root.classList.toggle('portrait', compact && h > w);
+      root.classList.toggle('short', compact && h <= 520);
+      root.classList.toggle('wide', compact && w >= 780);
+    })();
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
