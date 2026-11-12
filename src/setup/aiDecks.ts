@@ -21,6 +21,14 @@ export function resolveAiDecks(choices: readonly string[], pool: readonly string
   });
 }
 
+/** Deck ids an AI may play: starter decks, then precons and custom lists. Later groups do not repeat an id. */
+export function buildAiPool(groups: readonly (readonly { id: string }[])[]): string[] {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const group of groups) for (const d of group) if (d?.id && !seen.has(d.id)) { seen.add(d.id); ids.push(d.id); }
+  return ids;
+}
+
 /** Three seats, defaulting to Random. Unknown saved ids (a deleted deck) become Random. */
 export function normalizeAiPicks(raw: unknown, valid: ReadonlySet<string>, seats = 3): string[] {
   const arr = Array.isArray(raw) ? raw : [];

@@ -6,7 +6,7 @@ import * as decks from './import/deck';
 import { createPortal } from 'react-dom';
 import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell, log } from './engine/engine';
-import { AI_RANDOM, normalizeAiPicks, resolveAiDecks } from './setup/aiDecks';
+import { AI_RANDOM, buildAiPool, normalizeAiPicks, resolveAiDecks } from './setup/aiDecks';
 import { needsBack, type BoardViews } from './setup/views';
 import { DecisionDialog, KickerDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
@@ -36,10 +36,11 @@ const PRECONS = loadPrecons();
 const OFFICIAL = PRECONS.filter(isOfficialPrecon);
 const CUSTOM_PRESETS = PRECONS.filter(d => !isOfficialPrecon(d));
 const AI_SEATS = 3;
-/** Official precons and custom lists (presets plus decks saved in this browser). Starter decks stay a human choice. */
-function aiPool(savedDecks: { id: string }[]) { return [...OFFICIAL, ...CUSTOM_PRESETS, ...savedDecks]; }
+const STARTERS = DECKS.slice(0, 4);
+/** Starter decks, official precons, and custom lists (presets plus decks saved in this browser). */
+function aiPool(savedDecks: { id: string }[]) { return buildAiPool([STARTERS, OFFICIAL, CUSTOM_PRESETS, savedDecks]); }
 function loadAiPicks(savedDecks: { id: string }[]) {
-  const valid = new Set(aiPool(savedDecks).map(d => d.id));
+  const valid = new Set(aiPool(savedDecks));
   try { return normalizeAiPicks(JSON.parse(localStorage.getItem('ca_ai_picks') || 'null'), valid, AI_SEATS); }
   catch { return normalizeAiPicks(null, valid, AI_SEATS); }
 }
@@ -446,7 +447,7 @@ export default function App() {
   function beginMatch(deckId: string, commanderId?: string) {
     setCmdChoice(null); setZoom(null);
     localStorage.setItem('ca_deck', deckId);
-    const pool = aiPool(saved).map(d => d.id);
+    const pool = aiPool(saved);
     const others = resolveAiDecks(aiPicks, pool, Math.random, deckId);
     gref.current = newGame({ decks: [deckId, ...others], commanders: commanderId ? [commanderId] : undefined });
     for (const p of gref.current.players) if (!p.human) log(gref.current, `${p.name} is playing ${p.deckName}.`);
@@ -462,7 +463,7 @@ export default function App() {
   }
   useEffect(() => { const f = () => setFs(!!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f); }, []);
   useEffect(() => {
-    const valid = new Set(aiPool(saved).map(d => d.id));
+    const valid = new Set(aiPool(saved));
     setAiPicks(prev => {
       const next = normalizeAiPicks(prev, valid, AI_SEATS);
       if (next.every((p, i) => p === prev[i])) return prev;
@@ -819,6 +820,7 @@ export default function App() {
           {aiPicks.map((pick, i) => <label key={i} className="airow"><span>AI {i + 1}</span>
             <select data-ai={i + 1} aria-label={`AI ${i + 1} deck`} value={pick} onChange={e => setAiPicks(prev => { const next = prev.map((p, j) => j === i ? e.target.value : p); localStorage.setItem('ca_ai_picks', JSON.stringify(next)); return next; })}>
               <option value={AI_RANDOM}>Random</option>
+              <optgroup label="Starter decks">{STARTERS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</optgroup>
               <optgroup label="Official precons">{OFFICIAL.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</optgroup>
               <optgroup label="Custom decks">{[...CUSTOM_PRESETS, ...saved].map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</optgroup>
             </select></label>)}
