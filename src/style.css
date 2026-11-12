@@ -482,7 +482,7 @@ html.compact .mbox,html.compact .mbox.wide,html.compact .tips .mbox,html.compact
   width:auto;max-width:calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 1rem);
   padding:1rem;margin:.4rem;
 }
-html.compact .modal{overflow:auto;align-items:flex-start;padding:calc(env(safe-area-inset-top) + .4rem) .4rem calc(env(safe-area-inset-bottom) + .4rem)}
+html.compact .modal{overflow:auto;align-items:flex-start;padding:calc(env(safe-area-inset-top) + 3.6rem) .4rem calc(env(safe-area-inset-bottom) + .4rem)}
 html.compact .modal.choice{padding-top:calc(env(safe-area-inset-top) + .4rem);align-items:center}
 html.compact .improw{flex-direction:column}
 html.compact .decktext{min-height:28dvh;width:100%}
@@ -509,6 +509,9 @@ html.compact.short .sub{display:none}
 html.compact.short .deckpick .dimg{height:16vh;min-height:0;max-height:64px}
 html.compact.short .deckopt small,html.compact.short .deckopt span{display:none}
 html.compact.short .deckopt b{font-size:.8rem}
+
+/* Phone Back control: fixed to the viewport so a scrolled panel cannot hide it. */
+.backbtn{position:fixed;z-index:500;top:calc(env(safe-area-inset-top) + .35rem);left:calc(env(safe-area-inset-left) + .35rem);min-width:44px;min-height:44px;padding:0 .9rem;display:inline-flex;align-items:center;justify-content:center;background:#0b1210f5;color:#fff;border:1px solid #ffffff55;border-radius:.7rem;font-weight:800;box-shadow:0 .35rem 1.1rem #000c}
 html.compact.short .aiset{flex-direction:row}
 html.compact.short .airow{flex:1;min-width:0;flex-direction:column;align-items:stretch;gap:.15rem}
 html.compact.short .airow span{min-width:0}
