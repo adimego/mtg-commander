@@ -75,6 +75,7 @@ test('iPhone Back returns to the board from every inspect view', async ({ page }
 
   await openAndBack(page, async () => {
     await page.locator('[data-player="1"] .boardtoggle').tap();
+    await expect(page.locator('[data-opp-view="1"]')).toBeVisible();
     await expect(page.locator('[data-player="1"]')).toHaveAttribute('data-board', 'open');
   }, '[data-board="open"]');
 

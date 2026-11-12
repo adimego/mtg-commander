@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell, log } from './engine/engine';
 import { AI_RANDOM, normalizeAiPicks, resolveAiDecks } from './setup/aiDecks';
-import { backToBoard, needsBack, type BoardViews } from './setup/views';
+import { needsBack, type BoardViews } from './setup/views';
 import { DecisionDialog, KickerDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
@@ -89,7 +89,7 @@ interface UI {
   g: Game; setHover: (h: Hover) => void; clickPerm: (c: Card) => void; permCls: (c: Card) => string; activateAb: (c: Card, i: number) => void;
   isTarget: (t: Target) => boolean; cardDown: (c: Card, e: React.PointerEvent) => void; blockCtx: (c: Card, e: React.MouseEvent) => void; why: (c: Card) => string | null; dropOn: (t: Target, e: DragEvent) => void; dragStart: (c: Card, e: DragEvent) => void;
   clickPlayer: (pid: number) => void; atkPlan: Record<number, number>; atkPw: Record<number, number>; atkWalker: number | null; atkTarget?: number; declaring: boolean; openZone: (pid: number, zone: 'graveyard' | 'exile') => void; clickCommand: (c: Card) => void; canTapMana: (cs: Card[]) => boolean; tapMana: (cs: Card[]) => void;
-  compact: boolean; targeting: boolean; boardsDismissed: boolean; boardOn: (pid: number) => boolean; toggleBoard: (pid: number) => void;
+  compact: boolean; targeting: boolean; viewOpp: number | null; toggleBoard: (pid: number) => void; focusOpp: (pid: number) => void;
   pressStart: (h: Hover, e: React.PointerEvent) => void; eat: () => boolean; peek: (h: Hover) => void;
   stackOpen: boolean; toggleStack: () => void;
 }
@@ -208,16 +208,61 @@ function Emblems({ g, pid }: { g: Game; pid: number }) {
 function OppPanel({ ui, pid }: { ui: UI; pid: number }) {
   const { g } = ui; const p = g.players[pid]; const t = { player: pid };
   const tgt = ui.isTarget(t); const atkSel = ui.declaring && ui.atkTarget === pid;
-  const incoming = attackers(g).some(a => a.owner === pid && a.attacking === HUMAN);
-  const open = !ui.boardsDismissed && (incoming || ui.targeting || ui.boardOn(pid));
+  const viewing = ui.viewOpp === pid;
+  const incoming = attackers(g).filter(a => a.owner === pid && a.attacking === HUMAN);
   return (
-    <section className={`player opp ${g.active === pid ? 'active' : ''} ${p.lost ? 'lost' : ''} ${tgt ? 'targetable' : ''} ${atkSel ? 'atktarget' : ''} ${ui.declaring && !p.lost ? 'atkpick' : ''} ${open ? 'showboard' : ''}`} style={{ ['--pc' as string]: PCOLORS[pid] }} data-player={pid} data-board={open ? 'open' : 'shut'} data-deckname={p.deckName}
+    <section className={`player opp ${g.active === pid ? 'active' : ''} ${p.lost ? 'lost' : ''} ${tgt ? 'targetable' : ''} ${atkSel ? 'atktarget' : ''} ${ui.declaring && !p.lost ? 'atkpick' : ''}`} style={{ ['--pc' as string]: PCOLORS[pid] }} data-player={viewing ? undefined : pid} data-board={viewing ? undefined : 'shut'} data-deckname={p.deckName}
       onClick={() => ui.clickPlayer(pid)} onDragOver={e => { if (tgt || (ui.declaring && !p.lost)) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
-      <PlayerHeader ui={ui} pid={pid} trail={ui.compact ? <button type="button" className="boardtoggle" aria-expanded={open} onClick={e => { e.stopPropagation(); ui.toggleBoard(pid); }}>{open ? 'Hide' : 'Board'}</button> : undefined} />
-      <CmdDamage g={g} pid={pid} />
-      <Emblems g={g} pid={pid} />
+      <PlayerHeader ui={ui} pid={pid} trail={ui.compact ? <button type="button" className="boardtoggle" aria-expanded={viewing} onClick={e => { e.stopPropagation(); ui.toggleBoard(pid); }}>{viewing ? 'Hide' : 'Board'}</button> : undefined} />
+      {ui.compact && ui.viewOpp === null && incoming.length > 0 && <div className="atkrow" data-attackers={incoming.length}>{incoming.map(c => <Permanent key={c.uid} ui={ui} c={c} />)}</div>}
+      {!ui.compact && <>
+        <CmdDamage g={g} pid={pid} />
+        <Emblems g={g} pid={pid} />
+        {atkSel && <div className="atkflag">🎯 Attack target</div>}
+        <Battlefield ui={ui} pid={pid} />
+      </>}
+    </section>
+  );
+}
+/** Full opponent table on a phone. Cards stay the real permanents, so targeting, attacks, and previews keep working. */
+function OppBoardView({ ui, pid }: { ui: UI; pid: number }) {
+  const { g } = ui; const p = g.players[pid]; const seats = [1, 2, 3];
+  const at = Math.max(0, seats.indexOf(pid));
+  const prev = seats[(at + seats.length - 1) % seats.length];
+  const next = seats[(at + 1) % seats.length];
+  const tgt = ui.isTarget({ player: pid }); const atkSel = ui.declaring && ui.atkTarget === pid;
+  const walkers: Card[] = [], creatures: Card[] = [], lands: Card[] = [], other: Card[] = [];
+  for (const c of p.battlefield) {
+    if (isType(c, 'Planeswalker')) walkers.push(c);
+    else if (isType(c, 'Creature')) creatures.push(c);
+    else if (isType(c, 'Land')) lands.push(c);
+    else other.push(c);
+  }
+  const groups: [string, string, Card[]][] = [['creatures', 'Creatures', creatures], ['planeswalkers', 'Planeswalkers', walkers], ['other', 'Other permanents', other], ['lands', 'Lands', lands]];
+  return (
+    <section className={`oppview ${p.lost ? 'lost' : ''} ${atkSel ? 'atktarget' : ''}`} data-opp-view={pid} data-player={pid} data-board="open" style={{ ['--pc' as string]: PCOLORS[pid] }}>
+      <div className="oppview-tabs" role="tablist" aria-label="Opponents">
+        <button type="button" className="oppnav" aria-label="Previous opponent" onClick={() => ui.focusOpp(prev)}>‹</button>
+        {seats.map(i => <button key={i} type="button" role="tab" data-opp-tab={i} aria-selected={i === pid} className={i === pid ? 'on' : ''} onClick={() => ui.focusOpp(i)}><b>{g.players[i].name}</b><span>{g.players[i].life}</span></button>)}
+        <button type="button" className="oppnav" aria-label="Next opponent" onClick={() => ui.focusOpp(next)}>›</button>
+      </div>
       {atkSel && <div className="atkflag">🎯 Attack target</div>}
-      <Battlefield ui={ui} pid={pid} />
+      <div className="oppview-scroll">
+        <div className={`oppview-head ${tgt ? 'targetable' : ''}`} onClick={() => ui.clickPlayer(pid)} onDragOver={e => { if (tgt || (ui.declaring && !p.lost)) e.preventDefault(); }} onDrop={e => ui.dropOn({ player: pid }, e)}>
+          <PlayerHeader ui={ui} pid={pid} />
+          <CmdDamage g={g} pid={pid} />
+          <Emblems g={g} pid={pid} />
+          {tgt && <button type="button" className="oppstrike" onClick={e => { e.stopPropagation(); ui.clickPlayer(pid); }}>Choose this player</button>}
+          {ui.declaring && !p.lost && <button type="button" className="oppstrike" onClick={e => { e.stopPropagation(); ui.clickPlayer(pid); }}>{atkSel ? 'Attacking this player' : 'Attack this player'}</button>}
+        </div>
+        {p.battlefield.length === 0 && <p className="oppview-empty">No permanents on the battlefield.</p>}
+        {groups.filter(([, , list]) => list.length).map(([id, title, list]) => (
+          <section key={id} className="oppview-group" data-group={id}>
+            <h3>{title} <span>{list.length}</span></h3>
+            <div className="oppview-grid">{list.map(c => <Permanent key={c.uid} ui={ui} c={c} />)}</div>
+          </section>
+        ))}
+      </div>
     </section>
   );
 }
@@ -381,8 +426,7 @@ export default function App() {
   const [zoom, setZoom] = useState<Hover>(null);
   const [layout, setLayout] = useState(readLayout);
   const compact = layout.compact;
-  const [boards, setBoards] = useState<Record<number, boolean>>({});
-  const [boardsDismissed, setBoardsDismissed] = useState(false);
+  const [viewOpp, setViewOpp] = useState<number | null>(null);
   const [stackOpen, setStackOpen] = useState(true);
   const pressRef = useRef<{ timer: number; x: number; y: number } | null>(null);
   const eatenRef = useRef(false);
@@ -405,7 +449,7 @@ export default function App() {
     const others = resolveAiDecks(aiPicks, pool);
     gref.current = newGame({ decks: [deckId, ...others], commanders: commanderId ? [commanderId] : undefined });
     for (const p of gref.current.players) if (!p.human) log(gref.current, `${p.name} is playing ${p.deckName}.`);
-    setAtkPlan({}); setBlkPlan({}); setPending(null); setPassUntil(null); bump();
+    setAtkPlan({}); setBlkPlan({}); setPending(null); setPassUntil(null); setViewOpp(null); bump();
     if (!localStorage.getItem('ca_tips_seen')) setModal('tips');
   }
   function newMatch(deckId = deck) {
@@ -416,8 +460,6 @@ export default function App() {
     beginMatch(deckId);
   }
   useEffect(() => { const f = () => setFs(!!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f); }, []);
-  const combatBoards = !!g && (g.awaiting === 'attack' || g.awaiting === 'block' || !!g.choice);
-  useEffect(() => { if (!combatBoards) setBoardsDismissed(false); }, [combatBoards]);
   useEffect(() => {
     const valid = new Set(aiPool(saved).map(d => d.id));
     setAiPicks(prev => {
@@ -706,8 +748,8 @@ export default function App() {
       if (cmdChoice) { setCmdChoice(null); return; }
       if (modal) { setModal(null); return; }
       if (compact && logOpen) { setLogOpen(false); return; }
+      if (compact && viewOpp !== null) { setViewOpp(null); return; }
       if (compact && stackOpen && g?.stack.length) { setStackOpen(false); return; }
-      if (compact && (Object.values(boards).some(Boolean) || !boardsDismissed && (g?.players.some(p => p.battlefield.some(c => c.attacking === HUMAN)) || !!spec))) { setBoards({}); setBoardsDismissed(true); return; }
       clearSel(); setAtkPlan({}); setBlkPlan({}); return;
     }
     if (modal || !g) return;
@@ -803,26 +845,27 @@ export default function App() {
     if (bdrag?.uid === c.uid && bdrag.moved) out.push('dragging');
     return out.join(' ');
   };
-  const forcedBoard = !!spec || g.players.some(p => p.battlefield.some(c => c.attacking === HUMAN));
   const views: BoardViews = {
     zoom: !!zoom,
     zone: !!(modal && typeof modal === 'object'),
     menu: modal === 'settings' || modal === 'help' || modal === 'tips',
     log: compact && logOpen,
     stack: compact && stackOpen && g.stack.length > 0,
-    board: compact && !boardsDismissed && (Object.values(boards).some(Boolean) || forcedBoard),
+    board: compact && viewOpp !== null,
   };
   function goBack() {
-    const next = backToBoard(views);
-    if (!next.zoom) setZoom(null);
-    if (!next.zone && !next.menu) setModal(m => (m && typeof m === 'object') || m === 'settings' || m === 'help' || m === 'tips' || m === 'import' ? null : m);
-    if (compact) { setLogOpen(false); setStackOpen(false); setBoards({}); setBoardsDismissed(true); }
+    if (zoom) { setZoom(null); return; }
+    if (modal && (typeof modal === 'object' || modal === 'settings' || modal === 'help' || modal === 'tips' || modal === 'import')) { setModal(null); return; }
+    if (compact && logOpen) { setLogOpen(false); return; }
+    if (compact && viewOpp !== null) { setViewOpp(null); return; }
+    if (compact && stackOpen && g?.stack.length) setStackOpen(false);
   }
-  const ui: UI = { canTapMana, tapMana, g, cardDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand, compact, targeting: !!spec, boardsDismissed, boardOn: pid => !!boards[pid], toggleBoard: pid => { if (boardsDismissed) { setBoardsDismissed(false); setBoards({ [pid]: true }); return; } setBoards(b => ({ ...b, [pid]: !b[pid] })); }, pressStart, eat, peek, stackOpen, toggleStack: () => setStackOpen(o => !o) };
+  const focusOpp = (pid: number) => setViewOpp(pid);
+  const ui: UI = { canTapMana, tapMana, g, cardDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand, compact, targeting: !!spec, viewOpp: compact ? viewOpp : null, toggleBoard: pid => setViewOpp(viewOpp === pid ? null : pid), focusOpp, pressStart, eat, peek, stackOpen, toggleStack: () => setStackOpen(o => !o) };
   const hand = me.hand; const n = hand.length;
 
   return (
-    <div className={`app ${anim ? 'anim' : 'noanim'} ${logOpen ? 'logopen' : 'logclosed'} ${blocking ? 'isblocking' : ''}`} data-compact={compact ? '1' : '0'}>
+    <div className={`app ${anim ? 'anim' : 'noanim'} ${logOpen ? 'logopen' : 'logclosed'} ${blocking ? 'isblocking' : ''} ${compact && viewOpp !== null ? 'oppopen' : ''}`} data-compact={compact ? '1' : '0'}>
       <header>
         <b className="logo">Commander Arena</b>
         <div className="turninfo" style={{ borderColor: PCOLORS[g.active] }}>Turn {Math.ceil(g.turn / 4) || 1}<small> ({g.turn})</small> · <b style={{ color: PCOLORS[g.active] }}>{g.active === HUMAN ? 'Your turn' : `${g.players[g.active].name}'s turn`}</b></div>
@@ -833,10 +876,11 @@ export default function App() {
         <button className="ghost" onClick={() => setModal('settings')} title="Settings">⚙ Settings</button>
         <button className="ghost deskonly" onClick={() => setModal('help')} title="Keyboard shortcuts (?)">⌨ Keys</button>
         <button className="ghost deskonly" onClick={toggleFs} title="Full screen (F)">{fs ? '⤡ Exit full screen' : '⛶ Full screen'}</button>
-        <button className="ghost" onClick={() => { setZoom(null); gref.current = null; bump(); }}>Quit</button>
+        <button className="ghost" onClick={() => { setZoom(null); setViewOpp(null); gref.current = null; bump(); }}>Quit</button>
       </header>
 
       <main className="table">
+        {compact && viewOpp !== null && <OppBoardView ui={ui} pid={viewOpp} />}
         <div className="opps">{[1, 2, 3].map(i => <OppPanel key={i} ui={ui} pid={i} />)}</div>
         <div className={`prompt ${tone}`}><span>{prompt}</span></div>
         <section className={`player me ${g.active === HUMAN ? 'active' : ''} ${isTarget({ player: HUMAN }) ? 'targetable' : ''}`} style={{ ['--pc' as string]: PCOLORS[0] }} data-player={HUMAN}

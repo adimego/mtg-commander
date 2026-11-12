@@ -345,8 +345,11 @@ html.compact .table{
 }
 html.compact.short .table{grid-template-rows:auto auto minmax(0,1fr) minmax(78px,max-content) auto}
 html.compact .opps{grid-row:1;display:flex;flex-wrap:nowrap;gap:.35rem;overflow-x:auto;overflow-y:hidden;min-height:0;max-height:22dvh;padding:.25rem .35rem;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-x}
+html.compact .opps:has(.atkrow){max-height:none;overflow:visible;flex-wrap:wrap}
+html.compact .atkrow{display:flex;gap:.35rem;overflow-x:auto;--cw:72px;padding:.1rem 0 .2rem;touch-action:pan-x;-webkit-overflow-scrolling:touch}
+html.compact .atkrow .slot{flex:0 0 auto;width:var(--cw);min-width:var(--cw);height:calc(var(--cw) * 1.4);min-height:calc(var(--cw) * 1.4)}
+html.compact .atkrow .slot.tapped{width:calc(var(--cw) * 1.4);min-width:calc(var(--cw) * 1.4)}
 html.compact.short .opps{max-height:112px}
-html.compact .opps:has(.showboard){flex-wrap:wrap;overflow-y:auto;touch-action:pan-x pan-y}
 html.compact .prompt{grid-row:2;padding:.1rem .4rem;font-size:.82rem}
 html.compact .prompt span{padding:.28rem .7rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 html.compact .player.me{grid-row:3;display:flex;flex-direction:column;min-height:0;overflow:auto;padding:.15rem .35rem .55rem;margin:0;gap:.2rem;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
@@ -408,11 +411,9 @@ html.compact .lands{flex-wrap:nowrap;overflow-x:auto;touch-action:pan-x}
 html.compact .landchip{min-height:44px;flex:0 0 auto;font-size:.85rem}
 html.compact .me .landchip{font-size:.85rem}
 html.compact .player.opp{flex:1 1 0;max-width:none;min-width:0;padding:.3rem .35rem}
-html.compact .player.opp.showboard{flex:1 1 100%;max-height:26dvh;overflow:auto}
-html.compact.short .player.opp.showboard{max-height:100px}
-html.compact .player.opp:not(.showboard) .bf,
-html.compact .player.opp:not(.showboard) .cdmg,
-html.compact .player.opp:not(.showboard) .emblems{display:none}
+html.compact .player.opp .bf,
+html.compact .player.opp .cdmg,
+html.compact .player.opp .emblems{display:none}
 html.compact .player.opp .avatar{width:32px;height:32px}
 html.compact .player.opp .life{font-size:1.15rem;min-width:2.2rem}
 html.compact .player.opp .cmdzone{display:none}
@@ -423,6 +424,84 @@ html.compact .player.opp .counts{font-size:.75rem;gap:.25rem}
 html.compact.short .cdmg,html.compact.short .me .emblems{display:none}
 html.compact.short .player.opp .counts > span{display:none}
 html.compact .boardtoggle{flex:none;min-width:44px;min-height:44px;padding:0 .45rem;background:#ffffff14;color:var(--txt);border:1px solid #ffffff30;border-radius:.45rem;font-size:.72rem}
+
+/* Opponent board: the whole table on a phone, and the wider pane beside yours on a foldable.
+   A short wide screen cannot stack two readable boards, so the enemy table takes the left
+   and your hand, board, and confirm button stay on the right. */
+html.compact .app.oppopen .opps{display:none}
+html.compact .app.oppopen .table{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto auto auto}
+html.compact .app.oppopen .oppview{grid-area:1/1;min-height:0}
+html.compact .app.oppopen .prompt{grid-area:2/1}
+html.compact .app.oppopen .hand{grid-area:3/1}
+html.compact .app.oppopen .actionbar{grid-area:4/1}
+html.compact .app.oppopen:not(.isblocking) .player.me{display:none}
+html.compact .app.oppopen.isblocking .table{grid-template-rows:minmax(0,1.45fr) auto minmax(120px,.9fr) auto auto}
+html.compact .app.oppopen.isblocking .player.me{display:flex;grid-area:3/1}
+html.compact .app.oppopen.isblocking .hand{grid-area:4/1}
+html.compact .app.oppopen.isblocking .actionbar{grid-area:5/1}
+html.compact.wide .app.oppopen .table,
+html.compact.wide .app.oppopen.isblocking .table{grid-template-columns:minmax(0,1.8fr) minmax(240px,1fr);grid-template-rows:auto minmax(0,1fr) auto auto}
+html.compact.wide .app.oppopen .oppview{grid-area:1/1/-1/2}
+html.compact.wide .app.oppopen .prompt{grid-area:1/2}
+html.compact.wide .app.oppopen .player.me{display:flex;grid-area:2/2}
+html.compact.wide .app.oppopen .hand{grid-area:3/2}
+html.compact.wide .app.oppopen .actionbar{grid-area:4/2}
+/* Keep the stack in the flow so it does not cover the hand or the enemy cards. */
+html.compact .app.oppopen .stackview{position:relative!important;inset:auto!important;transform:none!important;width:auto!important;max-height:8rem;z-index:5;margin:0 .3rem}
+html.compact .app.oppopen:has(.stackview) .table{grid-template-rows:minmax(0,1fr) auto auto auto auto}
+html.compact .app.oppopen:has(.stackview) .stackview{grid-area:2/1}
+html.compact .app.oppopen:has(.stackview) .prompt{grid-area:3/1}
+html.compact .app.oppopen:has(.stackview) .hand{grid-area:4/1}
+html.compact .app.oppopen:has(.stackview) .actionbar{grid-area:5/1}
+html.compact .app.oppopen.isblocking:has(.stackview) .table{grid-template-rows:minmax(0,1.3fr) auto auto minmax(100px,.8fr) auto auto}
+html.compact .app.oppopen.isblocking:has(.stackview) .player.me{grid-area:4/1}
+html.compact .app.oppopen.isblocking:has(.stackview) .hand{grid-area:5/1}
+html.compact .app.oppopen.isblocking:has(.stackview) .actionbar{grid-area:6/1}
+html.compact.wide .app.oppopen:has(.stackview) .table,
+html.compact.wide .app.oppopen.isblocking:has(.stackview) .table{grid-template-columns:minmax(0,1.8fr) minmax(240px,1fr);grid-template-rows:auto auto minmax(0,1fr) auto auto}
+html.compact.wide .app.oppopen:has(.stackview) .oppview{grid-area:1/1/-1/2}
+html.compact.wide .app.oppopen:has(.stackview) .prompt{grid-area:1/2}
+html.compact.wide .app.oppopen:has(.stackview) .stackview{grid-area:2/2;max-height:6.5rem}
+html.compact.wide .app.oppopen:has(.stackview) .player.me{display:flex;grid-area:3/2}
+html.compact.wide .app.oppopen:has(.stackview) .hand{grid-area:4/2}
+html.compact.wide .app.oppopen:has(.stackview) .actionbar{grid-area:5/2}
+html.compact .oppview.lost{opacity:.45;filter:grayscale(.8)}
+html.compact .oppview{
+  --cw:116px;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;
+  background:#101a17;border:2px solid var(--pc,var(--line));border-radius:.8rem;
+}
+html.compact.portrait .oppview{--cw:120px}
+html.compact.short .oppview{--cw:104px}
+html.compact .oppview-tabs{display:flex;gap:.3rem;align-items:stretch;flex:none;padding:.3rem;background:#060a09}
+html.compact .oppview-tabs button{min-height:44px;min-width:44px;background:#ffffff14;color:var(--txt);border:1px solid #ffffff30;border-radius:.45rem;padding:.15rem .4rem}
+html.compact .oppview-tabs button[role="tab"]{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+html.compact .oppview-tabs button[role="tab"] b{font-size:.78rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.compact .oppview-tabs button[role="tab"] span{font-size:.72rem;font-weight:800}
+html.compact .oppview-tabs button.on{background:var(--pc);color:#111;border-color:transparent}
+html.compact .oppnav{flex:none;width:44px;font-size:1.4rem;padding:0}
+html.compact .oppview-scroll{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:.35rem .45rem .8rem}
+html.compact .oppview-head{display:flex;flex-direction:column;gap:.25rem;padding:.2rem .15rem .45rem;border-radius:.6rem}
+html.compact .oppview-head.targetable{outline:.22rem dashed #76ff03;cursor:crosshair}
+html.compact .oppview .phead{flex-wrap:wrap;align-items:center;gap:.45rem}
+html.compact .oppview .avatar{width:44px;height:44px}
+html.compact .oppview .life{font-size:1.7rem;min-width:3.2rem}
+html.compact .oppview .pname{font-size:1rem}
+html.compact .oppview .pdeck{display:block;font-size:.8rem;color:#d5e4dc}
+html.compact .oppview .counts{font-size:.85rem;gap:.35rem}
+html.compact.short .oppview .counts > span{display:inline}
+html.compact .oppview .cmdzone{display:block;width:72px}
+html.compact.short .oppview .cmdzone{width:56px}
+html.compact .oppview .cdmg{display:flex}
+html.compact.short .oppview .cdmg{display:flex}
+html.compact .oppview-group h3{margin:.65rem 0 .3rem;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+html.compact .oppview-group h3 span{color:var(--muted);letter-spacing:0}
+html.compact .oppview-empty{color:var(--muted);margin:.4rem 0}
+html.compact .oppview-grid{display:flex;flex-wrap:wrap;gap:.45rem;align-items:flex-start}
+html.compact .oppview .slot{flex:0 0 auto;width:var(--cw);min-width:var(--cw);height:calc(var(--cw) * 1.4);min-height:calc(var(--cw) * 1.4)}
+html.compact .oppview .slot.tapped{width:calc(var(--cw) * 1.45);min-width:calc(var(--cw) * 1.45)}
+html.compact .oppview .perm{position:absolute;width:var(--cw)}
+html.compact .oppstrike{min-height:44px;align-self:flex-start;background:#ff5252;color:#fff;padding:.4rem .8rem;border-radius:.5rem}
+html.compact .oppview .atkflag{position:static;transform:none;align-self:flex-start;margin:.2rem .45rem}
 html.compact .zbtn{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
 html.compact .me .avatar{width:36px;height:36px}
 html.compact .me .cmdzone{width:44px}
