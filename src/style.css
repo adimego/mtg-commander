@@ -69,7 +69,12 @@ aside{display:flex;flex-direction:column;min-height:0;background:#060a09d9;borde
 .anim .perm{transition:transform .25s ease,box-shadow .2s}
 .slot.tapped .perm{left:calc(var(--cw)*.2);transform:rotate(90deg);filter:brightness(.62)}
 .me .perm.attacking{transform:translateY(-1.8vh)}.me .slot.tapped .perm.attacking{transform:translateY(-1.8vh) rotate(90deg);filter:none}
-.opp .perm.attacking{transform:translateY(1.4vh)}.opp .slot.tapped .perm.attacking{transform:translateY(1.4vh) rotate(90deg);filter:none}
+.opp .perm.attacking{transform:translateY(1.4vh)}
+/* Opponent boards stay in their grid cell. Tapped is a dim grey card, not a sideways one. */
+.opp .slot.tapped,.oppview .slot.tapped{width:var(--cw);min-width:var(--cw);transition:none}
+.opp .slot.tapped .perm,.oppview .slot.tapped .perm{left:0;transform:none;filter:grayscale(.85) brightness(.72);opacity:.78;transition:none}
+.opp .slot.tapped .pt,.oppview .slot.tapped .pt{transform:none}
+.opp .slot.tapped .badge.atk,.opp .slot.tapped .badge.blk,.oppview .slot.tapped .badge.atk,.oppview .slot.tapped .badge.blk{transform:translateX(-50%)}
 .cimg{width:100%;display:block;border-radius:4.5%/3.3%;user-select:none}
 .perm.attacking{box-shadow:0 0 0 .2rem #ff5252,0 0 1rem #ff5252}.perm.blocking{box-shadow:0 0 0 .2rem #42a5f5,0 0 1rem #42a5f5}
 .perm.planned{box-shadow:0 0 0 .22rem #ff9800,0 0 1rem #ff9800}.perm.selected{box-shadow:0 0 0 .25rem #00e5ff,0 0 1.2rem #00e5ff}
@@ -356,7 +361,7 @@ html.compact .opps{grid-row:1;display:flex;flex-wrap:nowrap;gap:.35rem;overflow-
 html.compact .opps:has(.atkrow){max-height:none;overflow:visible;flex-wrap:wrap}
 html.compact .atkrow{display:flex;gap:.35rem;overflow-x:auto;--cw:72px;padding:.1rem 0 .2rem;touch-action:pan-x;-webkit-overflow-scrolling:touch}
 html.compact .atkrow .slot{flex:0 0 auto;width:var(--cw);min-width:var(--cw);height:calc(var(--cw) * 1.4);min-height:calc(var(--cw) * 1.4)}
-html.compact .atkrow .slot.tapped{width:calc(var(--cw) * 1.4);min-width:calc(var(--cw) * 1.4)}
+html.compact .atkrow .slot.tapped,html.compact .opp .slot.tapped{width:var(--cw);min-width:var(--cw)}
 html.compact.short .opps{max-height:112px}
 html.compact .prompt{grid-row:2;padding:.1rem .4rem;font-size:.82rem}
 html.compact .prompt span{padding:.28rem .7rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -506,7 +511,7 @@ html.compact .oppview-group h3 span{color:var(--muted);letter-spacing:0}
 html.compact .oppview-empty{color:var(--muted);margin:.4rem 0}
 html.compact .oppview-grid{display:flex;flex-wrap:wrap;gap:.45rem;align-items:flex-start}
 html.compact .oppview .slot{flex:0 0 auto;width:var(--cw);min-width:var(--cw);height:calc(var(--cw) * 1.4);min-height:calc(var(--cw) * 1.4)}
-html.compact .oppview .slot.tapped{width:calc(var(--cw) * 1.45);min-width:calc(var(--cw) * 1.45)}
+html.compact .oppview .slot.tapped{width:var(--cw);min-width:var(--cw)}
 html.compact .oppview .perm{position:absolute;width:var(--cw)}
 html.compact .oppstrike{min-height:44px;align-self:flex-start;background:#ff5252;color:#fff;padding:.4rem .8rem;border-radius:.5rem}
 html.compact .oppview .atkflag{position:static;transform:none;align-self:flex-start;margin:.2rem .45rem}
@@ -671,6 +676,8 @@ html.compact.short.wide .gcmd-tile{width:34px;height:48px}
 .gzone{display:flex;flex-wrap:wrap;gap:.2rem;align-content:flex-start}
 .gtile{display:flex;flex-wrap:wrap;gap:.15rem .3rem;align-items:center;background:#0007;color:var(--txt);border:1px solid #ffffff22;border-radius:.35rem;padding:.1rem .3rem;font-size:.72rem;text-align:left;max-width:100%}
 .gtile.tapped{opacity:.55;transform:rotate(-8deg)}
+.player.opp .gtile.tapped{opacity:.62;filter:grayscale(.8) brightness(.78);transform:none;transition:none}
+.player.opp .gtile.tapped::after{content:'tapped';font-size:.6rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#ffcc80}
 .gtile.attacking{border-color:#ff5252}
 .gtile.blocking{border-color:#42a5f5}
 .gtile .gpt{font-weight:900}
