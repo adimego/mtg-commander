@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell, log } from './engine/engine';
 import { AI_RANDOM, buildAiPool, normalizeAiPicks, resolveAiDecks } from './setup/aiDecks';
+import { AttackDock, BlockDock, GlanceBoard } from './Duo';
 import { needsBack, type BoardViews } from './setup/views';
 import { DecisionDialog, KickerDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
@@ -90,7 +91,7 @@ interface UI {
   g: Game; setHover: (h: Hover) => void; clickPerm: (c: Card) => void; permCls: (c: Card) => string; activateAb: (c: Card, i: number) => void;
   isTarget: (t: Target) => boolean; cardDown: (c: Card, e: React.PointerEvent) => void; blockCtx: (c: Card, e: React.MouseEvent) => void; why: (c: Card) => string | null; dropOn: (t: Target, e: DragEvent) => void; dragStart: (c: Card, e: DragEvent) => void;
   clickPlayer: (pid: number) => void; atkPlan: Record<number, number>; atkPw: Record<number, number>; atkWalker: number | null; atkTarget?: number; declaring: boolean; openZone: (pid: number, zone: 'graveyard' | 'exile') => void; clickCommand: (c: Card) => void; canTapMana: (cs: Card[]) => boolean; tapMana: (cs: Card[]) => void;
-  compact: boolean; targeting: boolean; viewOpp: number | null; toggleBoard: (pid: number) => void; focusOpp: (pid: number) => void;
+  compact: boolean; wide: boolean; targeting: boolean; viewOpp: number | null; toggleBoard: (pid: number) => void; focusOpp: (pid: number) => void;
   pressStart: (h: Hover, e: React.PointerEvent) => void; eat: () => boolean; peek: (h: Hover) => void;
   stackOpen: boolean; toggleStack: () => void;
 }
@@ -214,8 +215,9 @@ function OppPanel({ ui, pid }: { ui: UI; pid: number }) {
   return (
     <section className={`player opp ${g.active === pid ? 'active' : ''} ${p.lost ? 'lost' : ''} ${tgt ? 'targetable' : ''} ${atkSel ? 'atktarget' : ''} ${ui.declaring && !p.lost ? 'atkpick' : ''}`} style={{ ['--pc' as string]: PCOLORS[pid] }} data-player={viewing ? undefined : pid} data-board={viewing ? undefined : 'shut'} data-deckname={p.deckName}
       onClick={() => ui.clickPlayer(pid)} onDragOver={e => { if (tgt || (ui.declaring && !p.lost)) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
-      <PlayerHeader ui={ui} pid={pid} trail={ui.compact ? <button type="button" className="boardtoggle" aria-expanded={viewing} onClick={e => { e.stopPropagation(); ui.toggleBoard(pid); }}>{viewing ? 'Hide' : 'Board'}</button> : undefined} />
-      {ui.compact && ui.viewOpp === null && incoming.length > 0 && <div className="atkrow" data-attackers={incoming.length}>{incoming.map(c => <Permanent key={c.uid} ui={ui} c={c} />)}</div>}
+      {!ui.wide && <PlayerHeader ui={ui} pid={pid} trail={ui.compact ? <button type="button" className="boardtoggle" aria-expanded={viewing} onClick={e => { e.stopPropagation(); ui.toggleBoard(pid); }}>{viewing ? 'Hide' : 'Board'}</button> : undefined} />}
+      {ui.wide && <GlanceBoard ui={ui} pid={pid} />}
+      {ui.compact && !ui.wide && ui.viewOpp === null && incoming.length > 0 && <div className="atkrow" data-attackers={incoming.length}>{incoming.map(c => <Permanent key={c.uid} ui={ui} c={c} />)}</div>}
       {!ui.compact && <>
         <CmdDamage g={g} pid={pid} />
         <Emblems g={g} pid={pid} />
@@ -391,7 +393,7 @@ const TIPS = [
 function readLayout() {
   const w = window.innerWidth, h = window.innerHeight;
   const compact = w <= 1100 || h <= 560;
-  return { compact, portrait: compact && h > w, short: compact && h <= 520, wide: compact && w >= 780 };
+  return { compact, portrait: compact && h > w, short: compact && h <= 520, wide: compact && w >= 700 };
 }
 function applyLayout(l = readLayout()) {
   const root = document.documentElement;
@@ -714,6 +716,28 @@ export default function App() {
   const attackAll = () => { if (!g || curAtkTarget === undefined) return; const p = { ...atkPlan }; for (const c of me!.battlefield) if (canAttack(g, c) && p[c.uid] === undefined && power(g, c) > 0) p[c.uid] = curAtkTarget; setAtkPlan(p); if (atkWalker !== null && findCard(g, atkWalker)?.owner === curAtkTarget) { const pw = { ...atkPwPlan }; for (const u of Object.keys(p)) if (atkPlan[+u] === undefined) pw[+u] = atkWalker; setAtkPwPlan(pw); } };
   const confirmAttacks = () => { act(g => { declareAttackers(g, HUMAN, Object.entries(atkPlan).map(([u, d]) => ({ uid: +u, defender: d, pw: atkPwPlan[+u] }))); }); setAtkPlan({}); setAtkPwPlan({}); setAtkWalker(null); };
   const confirmBlocks = () => { act(g => { declareBlockers(g, HUMAN, Object.entries(blkPlan).map(([b, a]) => ({ blocker: +b, attacker: a }))); }); setBlkPlan({}); setSelBlocker(null); };
+  function attackWith(c: Card, defender: number, pwUid?: number) {
+    if (!g || !canAttack(g, c)) { if (atkPlan[c.uid] !== undefined) { const p = { ...atkPlan }; const w = { ...atkPwPlan }; delete p[c.uid]; delete w[c.uid]; setAtkPlan(p); setAtkPwPlan(w); } return; }
+    const same = atkPlan[c.uid] === defender && (atkPwPlan[c.uid] ?? undefined) === pwUid;
+    const p = { ...atkPlan }; const w = { ...atkPwPlan };
+    if (same) { delete p[c.uid]; delete w[c.uid]; }
+    else { p[c.uid] = defender; if (pwUid !== undefined) w[c.uid] = pwUid; else delete w[c.uid]; setAtkTarget(defender); setAtkWalker(pwUid ?? null); }
+    setAtkPlan(p); setAtkPwPlan(w);
+  }
+  function moveBlocker(blocker: number, dir: -1 | 1) {
+    const atk = blkPlan[blocker]; if (atk === undefined) return;
+    const entries = Object.entries(blkPlan).map(([b, a]) => [+b, a] as [number, number]);
+    const groupIdx = entries.map((e, i) => e[1] === atk ? i : -1).filter(i => i >= 0);
+    const pos = groupIdx.findIndex(i => entries[i][0] === blocker);
+    const swapPos = pos + dir;
+    if (pos < 0 || swapPos < 0 || swapPos >= groupIdx.length) return;
+    const next = [...entries];
+    const ia = groupIdx[pos], ib = groupIdx[swapPos];
+    [next[ia], next[ib]] = [next[ib], next[ia]];
+    const plan: Record<number, number> = {};
+    for (const [b, a] of next) plan[b] = a;
+    setBlkPlan(plan);
+  }
   const doPass = () => act(g => { pass(g, HUMAN); });
   const endTurn = () => { if (!g) return; setPassUntil(g.turn); act(g => { if (g.priority === HUMAN) pass(g, HUMAN); }); };
 
@@ -879,11 +903,12 @@ export default function App() {
     if (compact && stackOpen && g?.stack.length) setStackOpen(false);
   }
   const focusOpp = (pid: number) => setViewOpp(pid);
-  const ui: UI = { canTapMana, tapMana, g, cardDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand, compact, targeting: !!spec, viewOpp: compact ? viewOpp : null, toggleBoard: pid => setViewOpp(viewOpp === pid ? null : pid), focusOpp, pressStart, eat, peek, stackOpen, toggleStack: () => setStackOpen(o => !o) };
+  const wide = layout.wide;
+  const ui: UI = { canTapMana, tapMana, g, cardDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand, compact, wide, targeting: !!spec, viewOpp: compact ? viewOpp : null, toggleBoard: pid => setViewOpp(viewOpp === pid ? null : pid), focusOpp, pressStart, eat, peek, stackOpen, toggleStack: () => setStackOpen(o => !o) };
   const hand = me.hand; const n = hand.length;
 
   return (
-    <div className={`app ${anim ? 'anim' : 'noanim'} ${logOpen ? 'logopen' : 'logclosed'} ${blocking ? 'isblocking' : ''} ${compact && viewOpp !== null ? 'oppopen' : ''} ${cleanupDiscard ? 'discarding' : ''}`} data-compact={compact ? '1' : '0'} data-discard-need={cleanupDiscard?.min} data-discard-sel={cleanupDiscard ? discardSel.length : undefined}>
+    <div className={`app ${anim ? 'anim' : 'noanim'} ${logOpen ? 'logopen' : 'logclosed'} ${blocking ? 'isblocking' : ''} ${compact && viewOpp !== null ? 'oppopen' : ''} ${cleanupDiscard ? 'discarding' : ''} ${wide && (declaring || blocking) ? 'incombat' : ''}`} data-compact={compact ? '1' : '0'} data-wide={wide ? '1' : '0'} data-discard-need={cleanupDiscard?.min} data-discard-sel={cleanupDiscard ? discardSel.length : undefined}>
       <header>
         <b className="logo">Commander Arena</b>
         <div className="turninfo" style={{ borderColor: PCOLORS[g.active] }}>Turn {Math.ceil(g.turn / 4) || 1}<small> ({g.turn})</small> · <b style={{ color: PCOLORS[g.active] }}>{g.active === HUMAN ? 'Your turn' : `${g.players[g.active].name}'s turn`}</b></div>
@@ -898,13 +923,15 @@ export default function App() {
       </header>
 
       <main className="table">
+        {wide && declaring && <AttackDock g={g} plan={atkPlan} pw={atkPwPlan} target={curAtkTarget} onAim={pid => { setAtkTarget(pid); setAtkWalker(null); }} onAll={attackAll} onPreview={c => { setHover({ id: c.id, uid: c.uid }); if (compact) setZoom({ id: c.id, uid: c.uid }); }} onAttack={attackWith} />}
+        {wide && blocking && <BlockDock g={g} plan={blkPlan} selected={selBlocker} onPick={toggleBlocker} onAssign={uid => { if (selBlocker === null) return; const b = findCard(g, selBlocker); const a = findCard(g, uid); if (!b || !a) return; const r = blockReason(g, b, a); if (r) flash(r); else setBlkPlan({ ...blkPlan, [selBlocker]: uid }); setSelBlocker(null); }} onUnassign={uid => { const p = { ...blkPlan }; delete p[uid]; setBlkPlan(p); }} onMove={moveBlocker} onPreview={c => { setHover({ id: c.id, uid: c.uid }); if (compact) setZoom({ id: c.id, uid: c.uid }); }} />}
         {compact && viewOpp !== null && <OppBoardView ui={ui} pid={viewOpp} />}
         <div className="opps">{[1, 2, 3].map(i => <OppPanel key={i} ui={ui} pid={i} />)}</div>
         <div className={`prompt ${tone}`}><span>{prompt}</span></div>
         <section className={`player me ${g.active === HUMAN ? 'active' : ''} ${isTarget({ player: HUMAN }) ? 'targetable' : ''}`} style={{ ['--pc' as string]: PCOLORS[0] }} data-player={HUMAN}
           onClick={() => isTarget({ player: HUMAN }) && targetClick({ player: HUMAN })} onDragOver={e => { if (isTarget({ player: HUMAN })) e.preventDefault(); }} onDrop={e => dropOn({ player: HUMAN }, e)}>
-          <div className="meside"><PlayerHeader ui={ui} pid={HUMAN} big /><CmdDamage g={g} pid={HUMAN} /><Emblems g={g} pid={HUMAN} /></div>
-          <Battlefield ui={ui} pid={HUMAN} />
+          {wide ? <GlanceBoard ui={ui} pid={HUMAN} /> : <><div className="meside"><PlayerHeader ui={ui} pid={HUMAN} big /><CmdDamage g={g} pid={HUMAN} /><Emblems g={g} pid={HUMAN} /></div>
+          <Battlefield ui={ui} pid={HUMAN} /></>}
         </section>
         <div className="hand" style={{ ['--n' as string]: n }}>
           {(() => { const top = me.library[me.library.length - 1]; if (!top || (!topLook(g, HUMAN) && !topCastable(g, HUMAN, top))) return null; const ok = topCastable(g, HUMAN, top) && (canCast(g, HUMAN, top) || canCast(g, HUMAN, top, { omni: true })); return (
