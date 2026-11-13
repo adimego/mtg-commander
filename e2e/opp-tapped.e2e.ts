@@ -39,7 +39,7 @@ async function stage(page: Page) {
 /** A sideways card's matrix has a non-zero rotation; a flat one is none or a pure translation. */
 async function tapStyle(page: Page, sel: string) {
   return page.locator(sel).first().evaluate(el => {
-    const face = el.matches('.perm, .gtile') ? el : el.querySelector('.perm')!;
+    const face = el.matches('.perm, .gtile, .cimg, .frame') ? el : el.querySelector('.perm, .cimg, .frame')!;
     const s = getComputedStyle(face);
     const slot = el.closest('.slot') ?? el;
     const row = slot.parentElement;
@@ -86,6 +86,11 @@ test('tapped opponent permanents stay put and only dim', async ({ browser }) => 
   expect(tile.rotated, JSON.stringify(tile)).toBe(false);
   expect(tile.filter, JSON.stringify(tile)).toContain('grayscale');
   expect(tile.opacity, JSON.stringify(tile)).toBeLessThan(0.95);
+  await wide.locator('.player.opp .gtile.tapped').first().click();
+  await expect(wide.locator('[data-zoom] .pvcard[data-tapped="1"]')).toBeVisible();
+  const zoomed = await tapStyle(wide, '[data-zoom] .pvcard.tapped .cimg');
+  expect(zoomed.rotated, JSON.stringify(zoomed)).toBe(true);
+  await wide.locator('[data-zoom] .zoombox').screenshot({ path: `${ART}/screenshot_opp_tapped_zoom.png`, animations: 'disabled' });
   await fold.close();
 
   const phone = await browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true });

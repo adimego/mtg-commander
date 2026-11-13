@@ -323,6 +323,9 @@ html,body{overscroll-behavior:none}
 .zoomx{position:sticky;top:0;float:right;z-index:2;min-width:44px;min-height:44px;background:#ffffff18;color:#fff;border:1px solid #ffffff30}
 .zoombox .preview{border:0;padding:0}
 .zoombox .pvcard{width:min(100%,280px)}
+.pvcard.tapped{width:min(100%,340px);aspect-ratio:88/63;display:flex;align-items:center;justify-content:center}
+.zoombox .pvcard.tapped{width:min(100%,340px)}
+.pvcard.tapped .cimg,.pvcard.tapped .frame{width:calc(100% * 63 / 88);max-width:none;height:auto;transform:rotate(90deg);filter:brightness(.72);transition:none}
 .zoomoracle{white-space:pre-wrap;margin:.4rem 0 0;line-height:1.35;color:#e7eee9}
 .zoomabs{display:flex;flex-direction:column;gap:.4rem;margin-top:.6rem}
 .zoomabs button{min-height:44px;text-align:left;background:#00897bee;color:#fff;padding:.45rem .6rem;border-radius:.45rem}

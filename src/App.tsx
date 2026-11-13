@@ -338,7 +338,7 @@ function Preview({ g, h, compact }: { g: Game | null; h: Hover; compact?: boolea
   const kws = (d.keywords ?? []).filter(k => KW_HELP[k]);
   return (
     <div className="preview">
-      <div className="pvcard"><CardFace d={d} /></div>
+      <div className={`pvcard ${c?.tapped ? 'tapped' : ''}`} data-tapped={c?.tapped ? '1' : '0'}><CardFace d={c ? def(c) : d} /></div>
       <div className="pvtext">
         <div className="pvname">{d.name} <ManaCost c={d.cost} /></div>
         <div className="pvtype">{d.typeLine}</div>
