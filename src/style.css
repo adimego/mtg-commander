@@ -69,7 +69,12 @@ aside{display:flex;flex-direction:column;min-height:0;background:#060a09d9;borde
 .anim .perm{transition:transform .25s ease,box-shadow .2s}
 .slot.tapped .perm{left:calc(var(--cw)*.2);transform:rotate(90deg);filter:brightness(.62)}
 .me .perm.attacking{transform:translateY(-1.8vh)}.me .slot.tapped .perm.attacking{transform:translateY(-1.8vh) rotate(90deg);filter:none}
-.opp .perm.attacking{transform:translateY(1.4vh)}.opp .slot.tapped .perm.attacking{transform:translateY(1.4vh) rotate(90deg);filter:none}
+.opp .perm.attacking{transform:translateY(1.4vh)}
+/* Opponent boards stay in their grid cell. Tapped is a dim grey card, not a sideways one. */
+.opp .slot.tapped,.oppview .slot.tapped{width:var(--cw);min-width:var(--cw);transition:none}
+.opp .slot.tapped .perm,.oppview .slot.tapped .perm{left:0;transform:none;filter:grayscale(.85) brightness(.72);opacity:.78;transition:none}
+.opp .slot.tapped .pt,.oppview .slot.tapped .pt{transform:none}
+.opp .slot.tapped .badge.atk,.opp .slot.tapped .badge.blk,.oppview .slot.tapped .badge.atk,.oppview .slot.tapped .badge.blk{transform:translateX(-50%)}
 .cimg{width:100%;display:block;border-radius:4.5%/3.3%;user-select:none}
 .perm.attacking{box-shadow:0 0 0 .2rem #ff5252,0 0 1rem #ff5252}.perm.blocking{box-shadow:0 0 0 .2rem #42a5f5,0 0 1rem #42a5f5}
 .perm.planned{box-shadow:0 0 0 .22rem #ff9800,0 0 1rem #ff9800}.perm.selected{box-shadow:0 0 0 .25rem #00e5ff,0 0 1.2rem #00e5ff}
@@ -318,6 +323,9 @@ html,body{overscroll-behavior:none}
 .zoomx{position:sticky;top:0;float:right;z-index:2;min-width:44px;min-height:44px;background:#ffffff18;color:#fff;border:1px solid #ffffff30}
 .zoombox .preview{border:0;padding:0}
 .zoombox .pvcard{width:min(100%,280px)}
+.pvcard.tapped{width:min(100%,340px);aspect-ratio:88/63;display:flex;align-items:center;justify-content:center}
+.zoombox .pvcard.tapped{width:min(100%,340px)}
+.pvcard.tapped .cimg,.pvcard.tapped .frame{width:calc(100% * 63 / 88);max-width:none;height:auto;transform:rotate(90deg);filter:brightness(.72);transition:none}
 .zoomoracle{white-space:pre-wrap;margin:.4rem 0 0;line-height:1.35;color:#e7eee9}
 .zoomabs{display:flex;flex-direction:column;gap:.4rem;margin-top:.6rem}
 .zoomabs button{min-height:44px;text-align:left;background:#00897bee;color:#fff;padding:.45rem .6rem;border-radius:.45rem}
@@ -356,7 +364,7 @@ html.compact .opps{grid-row:1;display:flex;flex-wrap:nowrap;gap:.35rem;overflow-
 html.compact .opps:has(.atkrow){max-height:none;overflow:visible;flex-wrap:wrap}
 html.compact .atkrow{display:flex;gap:.35rem;overflow-x:auto;--cw:72px;padding:.1rem 0 .2rem;touch-action:pan-x;-webkit-overflow-scrolling:touch}
 html.compact .atkrow .slot{flex:0 0 auto;width:var(--cw);min-width:var(--cw);height:calc(var(--cw) * 1.4);min-height:calc(var(--cw) * 1.4)}
-html.compact .atkrow .slot.tapped{width:calc(var(--cw) * 1.4);min-width:calc(var(--cw) * 1.4)}
+html.compact .atkrow .slot.tapped,html.compact .opp .slot.tapped{width:var(--cw);min-width:var(--cw)}
 html.compact.short .opps{max-height:112px}
 html.compact .prompt{grid-row:2;padding:.1rem .4rem;font-size:.82rem}
 html.compact .prompt span{padding:.28rem .7rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -506,7 +514,7 @@ html.compact .oppview-group h3 span{color:var(--muted);letter-spacing:0}
 html.compact .oppview-empty{color:var(--muted);margin:.4rem 0}
 html.compact .oppview-grid{display:flex;flex-wrap:wrap;gap:.45rem;align-items:flex-start}
 html.compact .oppview .slot{flex:0 0 auto;width:var(--cw);min-width:var(--cw);height:calc(var(--cw) * 1.4);min-height:calc(var(--cw) * 1.4)}
-html.compact .oppview .slot.tapped{width:calc(var(--cw) * 1.45);min-width:calc(var(--cw) * 1.45)}
+html.compact .oppview .slot.tapped{width:var(--cw);min-width:var(--cw)}
 html.compact .oppview .perm{position:absolute;width:var(--cw)}
 html.compact .oppstrike{min-height:44px;align-self:flex-start;background:#ff5252;color:#fff;padding:.4rem .8rem;border-radius:.5rem}
 html.compact .oppview .atkflag{position:static;transform:none;align-self:flex-start;margin:.2rem .45rem}
@@ -604,9 +612,12 @@ html.compact.short .airow{flex:1;min-width:0;flex-direction:column;align-items:s
 html.compact.short .airow span{min-width:0}
 
 /* Wide foldable and landscape phone: every board is on screen, and combat is a tap panel. */
+html.compact.wide,html.compact.wide body,html.compact.wide .app{height:100svh;height:100dvh;max-height:100dvh}
+html.compact.wide{--hand-w:84px;--hand-h:calc(var(--hand-w) * 88 / 63)}
+html.compact.short.wide{--hand-w:58px}
 html.compact.wide .table{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-  grid-template-rows:minmax(0,1.15fr) minmax(0,1fr) auto auto auto;
+  grid-template-rows:minmax(0,1fr) minmax(5.6rem,1fr) auto minmax(calc(var(--hand-h) + .75rem),auto) auto;
   overflow:hidden!important;min-height:0;position:relative;
 }
 html.compact.wide .opps{display:contents;max-height:none;overflow:visible;padding:0}
@@ -616,10 +627,18 @@ html.compact.wide .player.opp:nth-child(2){grid-column:2;grid-row:1}
 html.compact.wide .player.opp:nth-child(3){grid-column:3;grid-row:1}
 html.compact.wide .player.me{grid-column:1 / -1;grid-row:2;overflow:hidden;min-height:0;display:flex;flex-direction:column;padding:.15rem .3rem}
 html.compact.wide .prompt{grid-column:1 / -1;grid-row:3}
-html.compact.wide .hand{grid-column:1 / -1;grid-row:4;max-height:72px}
+html.compact.wide .hand{
+  grid-column:1 / -1;grid-row:4;max-height:none;height:auto;
+  min-height:calc(var(--hand-h) + .75rem);align-items:center;overflow-x:auto;overflow-y:hidden;
+  padding:.25rem max(.4rem,env(safe-area-inset-right)) .3rem max(.4rem,env(safe-area-inset-left));
+}
+html.compact.wide .hcard{width:var(--hand-w);min-width:var(--hand-w);height:var(--hand-h)}
+html.compact.wide .hinner{height:100%}
+html.compact.wide .hinner .cimg,html.compact.wide .hinner .frame{max-height:none;width:100%;height:100%;object-fit:contain;object-position:center top}
+html.compact.wide .app.discarding .hand{max-height:none;min-height:calc(var(--hand-h) + .75rem);height:auto;overflow-y:hidden}
+html.compact.wide .app.discarding .hcard{width:var(--hand-w);min-width:var(--hand-w);height:var(--hand-h)}
+html.compact.wide .app.discarding .hinner .cimg,html.compact.wide .app.discarding .hinner .frame{max-height:none;width:100%;height:100%;object-fit:contain;object-position:center top}
 html.compact.wide .actionbar{grid-column:1 / -1;grid-row:5}
-html.compact.short.wide .hand{max-height:58px}
-html.compact.short.wide .hinner .cimg,html.compact.short.wide .hinner .frame{max-height:48px}
 html.compact.wide .app.incombat .player.opp,html.compact.wide .app.incombat .player.me{visibility:hidden}
 html.compact.wide .combatdock{grid-column:1 / -1;grid-row:1 / 3;z-index:40;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#0c1412f5;border:1px solid var(--line);border-radius:.5rem}
 html.compact.wide .combatbar{display:flex;flex-wrap:wrap;gap:.3rem;align-items:center;padding:.25rem .35rem;flex:none}
@@ -641,9 +660,27 @@ html.compact.wide .gwhy{color:#ffb74d;font-size:.75rem}
 .gcd{font-size:.68rem;border:1px solid #ffffff33;border-radius:.4rem;padding:0 .3rem}
 .gcd.danger{background:#b71c1c}
 .glance-body{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:.2rem}
+.gcmd{display:flex;flex:none;gap:.4rem;align-items:center;overflow-x:auto;padding:.15rem .1rem .2rem}
+.gcmd-label{flex:none;font-size:.68rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);max-width:4.2rem;line-height:1.1}
+.gcmd-one{display:flex;flex:none;gap:.35rem;align-items:center}
+.gcmd-tile{position:relative;width:40px;height:56px;flex:none;padding:0;border:2px solid var(--gold);border-radius:.35rem;overflow:hidden;background:#07110e;cursor:pointer}
+.gcmd-tile .cimg{width:100%;height:100%;object-fit:cover;object-position:center top}
+.gcmd-tile .tax{position:absolute;left:0;right:0;bottom:0;background:#000c;color:#ffe082;font-size:.58rem;font-weight:800;text-align:center;line-height:1.2}
+.gcmd-tile.away{opacity:.45}
+.gcmd-tile.playable{box-shadow:0 0 .7rem .15rem var(--gold)}
+.gcmd-cast{min-height:44px;min-width:8.5rem;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:.05rem;padding:.2rem .55rem;border-radius:.45rem;background:#c9a227;color:#1a1404;font-weight:800}
+.gcmd-cast:disabled{background:#2a332c;color:#c9d6cf}
+.gcmd-cost{font-weight:700;font-size:.75rem}
+.gcmd-why{font-weight:600;font-size:.68rem;color:#ffcc80}
+.gcmd-cast:disabled .gcmd-why{color:#ffcc80}
+.zoomcast{min-height:44px;margin:.4rem 0;padding:.35rem .7rem;border-radius:.45rem;background:#c9a227;color:#1a1404;font-weight:800}
+.zoomcast:disabled{background:#2a332c;color:#d5e4dc}
+html.compact.short.wide .gcmd-tile{width:34px;height:48px}
 .gzone{display:flex;flex-wrap:wrap;gap:.2rem;align-content:flex-start}
 .gtile{display:flex;flex-wrap:wrap;gap:.15rem .3rem;align-items:center;background:#0007;color:var(--txt);border:1px solid #ffffff22;border-radius:.35rem;padding:.1rem .3rem;font-size:.72rem;text-align:left;max-width:100%}
 .gtile.tapped{opacity:.55;transform:rotate(-8deg)}
+.player.opp .gtile.tapped{opacity:.62;filter:grayscale(.8) brightness(.78);transform:none;transition:none}
+.player.opp .gtile.tapped::after{content:'tapped';font-size:.6rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#ffcc80}
 .gtile.attacking{border-color:#ff5252}
 .gtile.blocking{border-color:#42a5f5}
 .gtile .gpt{font-weight:900}

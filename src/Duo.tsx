@@ -1,4 +1,4 @@
-import { CARDS, attackers, blockReason, canAttack, ctr, def, hasKw, isType, power, toughness, type Card, type Game } from './engine/engine';
+import { CARDS, attackers, blockReason, canAttack, canCast, costOf, costText, ctr, def, hasKw, hasPriority, instantSpeed, isType, power, sorceryTiming, toughness, type Card, type Game } from './engine/engine';
 
 const PAIR = ['#ef5350', '#42a5f5', '#ffb300', '#66bb6a', '#ab47bc', '#26c6da', '#ff7043', '#8d6e63'];
 const SHOW_KW = ['flying', 'reach', 'menace', 'trample', 'deathtouch', 'first strike', 'double strike', 'vigilance', 'lifelink', 'haste', 'defender', 'hexproof'];
@@ -14,7 +14,55 @@ type DuoUi = {
   clickPerm: (c: Card) => void;
   openZone: (pid: number, zone: 'graveyard' | 'exile') => void;
   eat: () => boolean;
+  previewCard: (h: { id: string; uid?: number }) => void;
+  castCommander: (c: Card) => void;
 };
+
+/** Why a commander in (or out of) the command zone can or cannot be cast right now. Cost includes commander tax while it is in the zone. */
+export function commanderCastInfo(g: Game, c: Card): { ok: boolean; cost: string; why: string } {
+  const p = g.players[c.owner];
+  const cost = costText(costOf(g, c));
+  if (!p.command.includes(c)) {
+    const why = p.battlefield.includes(c) ? 'In play' : p.hand.includes(c) ? 'In your hand' : p.exile.includes(c) ? 'In exile' : p.graveyard.includes(c) ? 'In your graveyard' : 'Not in the command zone';
+    return { ok: false, cost, why };
+  }
+  if (!instantSpeed(def(c)) && !sorceryTiming(g, c.owner)) return { ok: false, cost, why: 'Your main phase only' };
+  if (!hasPriority(g, c.owner)) return { ok: false, cost, why: "You don't have priority" };
+  if (!canCast(g, c.owner, c)) return { ok: false, cost, why: 'Not enough mana' };
+  return { ok: true, cost, why: '' };
+}
+
+function CommandStrip({ ui }: { ui: DuoUi }) {
+  const { g } = ui;
+  const p = g.players[0];
+  const ids = p.commanderIds;
+  return (
+    <div className="gcmd" data-command-zone>
+      <span className="gcmd-label">Command zone</span>
+      {ids.map(id => {
+        const cmd = CARDS[id];
+        const inZone = p.command.find(c => c.id === id && c.prepFor === undefined);
+        const shown = inZone ?? [...p.battlefield, ...p.hand, ...p.graveyard, ...p.exile].find(c => c.id === id);
+        const info = shown ? commanderCastInfo(g, shown) : { ok: false, cost: '', why: 'Not in the command zone' };
+        const tax = 2 * (p.casts[id] ?? 0);
+        const label = ids.length > 1 ? `Cast ${cmd?.name.split(',')[0] ?? 'commander'}` : 'Cast commander';
+        return (
+          <div className="gcmd-one" key={id}>
+            <button type="button" className={`gcmd-tile ${inZone ? '' : 'away'} ${info.ok ? 'playable' : ''}`} data-cmd={id} title={`${cmd?.name ?? 'Commander'} (command zone). Commander tax: +${tax}`} onClick={() => { if (ui.eat()) return; ui.previewCard({ id, uid: shown?.uid }); }}>
+              {cmd?.img ? <img className="cimg" src={cmd.img} alt={cmd.name} draggable={false} /> : <span className="gname">{cmd?.name ?? 'Commander'}</span>}
+              <span className="tax">TAX +{tax}</span>
+            </button>
+            <button type="button" className="gcmd-cast" data-cast-cmd={id} data-cast-why={info.why} disabled={!info.ok} onClick={() => { if (info.ok && inZone) ui.castCommander(inZone); }}>
+              <b>{label}</b>
+              {info.cost && <span className="gcmd-cost">{info.cost}</span>}
+              {!info.ok && <span className="gcmd-why">{info.why}</span>}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 const kwsOf = (c: Card) => (def(c).keywords ?? []).filter(k => SHOW_KW.includes(k));
 const shortName = (c: Card) => def(c).name.split(',')[0];
@@ -72,8 +120,8 @@ export function GlanceBoard({ ui, pid }: { ui: DuoUi; pid: number }) {
         <span title="Cards in library">📚{p.library.length}</span>
         <button type="button" className="zbtn" title="View graveyard" onClick={e => { e.stopPropagation(); ui.openZone(pid, 'graveyard'); }}>🪦{p.graveyard.length}</button>
         <button type="button" className="zbtn" title="View exile" onClick={e => { e.stopPropagation(); ui.openZone(pid, 'exile'); }}>⛔{p.exile.length}</button>
-        <span className="glance-tax" title="Commander tax">Tax +{tax}</span>
-        <span className="glance-cmd" title="Commander">{(CARDS[p.commanderId]?.name ?? 'Commander').split(',')[0]}</span>
+        {pid !== 0 && <span className="glance-tax" title="Commander tax">Tax +{tax}</span>}
+        {pid !== 0 && <span className="glance-cmd" title="Commander">{(CARDS[p.commanderId]?.name ?? 'Commander').split(',')[0]}</span>}
         {ui.compact && pid !== 0 && <button type="button" className="boardtoggle" aria-expanded={ui.viewOpp === pid} onClick={e => { e.stopPropagation(); ui.toggleBoard(pid); }}>{ui.viewOpp === pid ? 'Hide' : 'Board'}</button>}
       </div>
       <div className="glance-dmg">
@@ -82,6 +130,7 @@ export function GlanceBoard({ ui, pid }: { ui: DuoUi; pid: number }) {
           return <span key={o.id} className={`gcd ${v >= 14 ? 'danger' : ''}`} title={`${v}/21 from ${o.name}`}>{v}</span>;
         })}
       </div>
+      {pid === 0 && <CommandStrip ui={ui} />}
       <div className="glance-body">
         <div className="gzone" data-group="creatures">
           {stacksOf(creatures, expand).map(cs => <Tile key={cs[0].uid} ui={ui} c={cs[0]} count={cs.length} />)}
