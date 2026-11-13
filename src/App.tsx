@@ -5,9 +5,9 @@ import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
 import { createPortal } from 'react-dom';
 import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
-import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell, log } from './engine/engine';
+import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, locate, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell, log, checkState } from './engine/engine';
 import { AI_RANDOM, buildAiPool, normalizeAiPicks, resolveAiDecks } from './setup/aiDecks';
-import { AttackDock, BlockDock, GlanceBoard } from './Duo';
+import { AttackDock, BlockDock, GlanceBoard, commanderCastInfo } from './Duo';
 import { needsBack, type BoardViews } from './setup/views';
 import { DecisionDialog, KickerDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
@@ -92,7 +92,7 @@ interface UI {
   isTarget: (t: Target) => boolean; cardDown: (c: Card, e: React.PointerEvent) => void; blockCtx: (c: Card, e: React.MouseEvent) => void; why: (c: Card) => string | null; dropOn: (t: Target, e: DragEvent) => void; dragStart: (c: Card, e: DragEvent) => void;
   clickPlayer: (pid: number) => void; atkPlan: Record<number, number>; atkPw: Record<number, number>; atkWalker: number | null; atkTarget?: number; declaring: boolean; openZone: (pid: number, zone: 'graveyard' | 'exile') => void; clickCommand: (c: Card) => void; canTapMana: (cs: Card[]) => boolean; tapMana: (cs: Card[]) => void;
   compact: boolean; wide: boolean; targeting: boolean; viewOpp: number | null; toggleBoard: (pid: number) => void; focusOpp: (pid: number) => void;
-  pressStart: (h: Hover, e: React.PointerEvent) => void; eat: () => boolean; peek: (h: Hover) => void;
+  pressStart: (h: Hover, e: React.PointerEvent) => void; eat: () => boolean; peek: (h: Hover) => void; previewCard: (h: { id: string; uid?: number }) => void; castCommander: (c: Card) => void;
   stackOpen: boolean; toggleStack: () => void;
 }
 
@@ -363,16 +363,19 @@ function ZoneViewer({ g, pid, zone, close, setHover, onPeek }: { g: Game; pid: n
 function BackButton({ onClick }: { onClick: () => void }) {
   return createPortal(<button type="button" className="backbtn" data-back onClick={e => { e.stopPropagation(); onClick(); }}>← Back</button>, document.body);
 }
-function CardZoom({ g, h, close, onActivate }: { g: Game; h: NonNullable<Hover>; close: () => void; onActivate: (c: Card, i: number) => void }) {
+function CardZoom({ g, h, close, onActivate, onCast }: { g: Game; h: NonNullable<Hover>; close: () => void; onActivate: (c: Card, i: number) => void; onCast: (c: Card) => void }) {
   const d = CARDS[h.id]; if (!d) return null;
-  const c = h.uid !== undefined ? findCard(g, h.uid) : undefined;
-  const abs = c && c.owner === HUMAN ? (def(c).abilities ?? []).map((a, i) => ({ a, i })) : [];
+  const c = h.uid !== undefined ? locate(g, h.uid)?.c : undefined;
+  const abs = c && c.owner === HUMAN && g.players[HUMAN].battlefield.includes(c) ? (def(c).abilities ?? []).map((a, i) => ({ a, i })) : [];
+  const cmd = c && c.owner === HUMAN && c.prepFor === undefined && g.players[HUMAN].commanderIds.includes(c.id);
+  const cast = cmd ? commanderCastInfo(g, c) : null;
   return createPortal(
     <div className="zoomov" data-zoom role="dialog" aria-label={`Preview ${d.name}`} onClick={close}>
       <div className="zoombox" onClick={e => e.stopPropagation()}>
         <button type="button" className="zoomx" onClick={close}>Close</button>
         <Preview g={g} h={h} compact />
         {d.text && <div className="zoomoracle">{d.text}</div>}
+        {cast && <button type="button" className="zoomcast" data-zoom-cast disabled={!cast.ok} onClick={() => { if (cast.ok) { onCast(c!); close(); } }}><b>Cast</b> {cast.cost}{!cast.ok && <span>{cast.why}</span>}</button>}
         {abs.length > 0 && <div className="zoomabs">{abs.map(({ a, i }) => {
           const ok = canActivate(g, HUMAN, c!, i);
           return <button type="button" key={i} disabled={!ok} onClick={() => { onActivate(c!, i); close(); }}><b>{abCost(a)}</b> {a.label}</button>;
@@ -445,7 +448,7 @@ export default function App() {
   // a back face / Adventure chosen in hand turns face up again if the cast is cancelled
   useEffect(() => { const gg = gref.current; if (!gg || pending) return; const hs = gg.players[HUMAN].hand.filter(c => c.face); if (hs.length) act(() => hs.forEach(frontFace)); }, [pending, act]);
   // test/debug hook (only with ?debug in the URL): lets scripted screenshots stage a board
-  useEffect(() => { if (/[?&]debug\b/.test(location.search)) (window as unknown as Record<string, unknown>).__ca = { game: () => gref.current, act, CARDS, castSpell, visibleSpell, compile: (o: Record<string, unknown>) => { const d = compileScry({ colors: [], color_identity: [], keywords: [], mana_cost: '', ...o } as unknown as ScryCard).def; registerCards([d, ...(d.prepDef ? [d.prepDef] : [])]); return d.id; } }; }, [act]);
+  useEffect(() => { if (/[?&]debug\b/.test(location.search)) (window as unknown as Record<string, unknown>).__ca = { game: () => gref.current, act, CARDS, castSpell, visibleSpell, checkState: () => { if (gref.current) { checkState(gref.current); bump(); } }, compile: (o: Record<string, unknown>) => { const d = compileScry({ colors: [], color_identity: [], keywords: [], mana_cost: '', ...o } as unknown as ScryCard).def; registerCards([d, ...(d.prepDef ? [d.prepDef] : [])]); return d.id; } }; }, [act]);
   function beginMatch(deckId: string, commanderId?: string) {
     setCmdChoice(null); setZoom(null);
     localStorage.setItem('ca_deck', deckId);
@@ -904,7 +907,7 @@ export default function App() {
   }
   const focusOpp = (pid: number) => setViewOpp(pid);
   const wide = layout.wide;
-  const ui: UI = { canTapMana, tapMana, g, cardDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand, compact, wide, targeting: !!spec, viewOpp: compact ? viewOpp : null, toggleBoard: pid => setViewOpp(viewOpp === pid ? null : pid), focusOpp, pressStart, eat, peek, stackOpen, toggleStack: () => setStackOpen(o => !o) };
+  const ui: UI = { canTapMana, tapMana, g, cardDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand, compact, wide, targeting: !!spec, viewOpp: compact ? viewOpp : null, toggleBoard: pid => setViewOpp(viewOpp === pid ? null : pid), focusOpp, pressStart, eat, peek, previewCard: h => { setHover(h); if (compact) setZoom(h); }, castCommander: c => { setZoom(null); startCast(c); }, stackOpen, toggleStack: () => setStackOpen(o => !o) };
   const hand = me.hand; const n = hand.length;
 
   return (
@@ -976,7 +979,7 @@ export default function App() {
       </aside>
 
       {compact && logOpen && <button type="button" className="sheetback" aria-label="Close log" onClick={() => setLogOpen(false)} />}
-      {zoom && <CardZoom g={g} h={zoom} close={() => setZoom(null)} onActivate={activateAb} />}
+      {zoom && <CardZoom g={g} h={zoom} close={() => setZoom(null)} onActivate={activateAb} onCast={c => { setZoom(null); startCast(c); }} />}
       {compact && needsBack(views) && <BackButton onClick={goBack} />}
       <Arrows g={g} plan={atkPlan} blk={blkPlan} pw={atkPwPlan} />
       {bdrag?.moved && <DragLine uid={bdrag.uid} x={bdrag.x} y={bdrag.y} color={bdrag.over === null ? '#9ec3ff' : blockReason(g, findCard(g, bdrag.uid)!, findCard(g, bdrag.over)!) ? '#ef5350' : '#42a5f5'} />}
