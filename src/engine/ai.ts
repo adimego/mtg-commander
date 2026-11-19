@@ -158,7 +158,8 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   const evoke = !free && !normal && !!d.evoke && canCast(g, pid, c, { evoke: true }) && (d.triggers ?? []).some(t => t.ev === 'etb' || t.ev === 'ltb' || t.ev === 'dies');
   // web-slinging: return a tapped creature worth less than this one
   const webRet = !normal && !evoke && d.webSling && canCast(g, pid, c, { webSling: true }) ? webRets(g, pid).filter(q => !q.token && cmc(def(q)) < cmc(d)).sort((a, b) => cmc(def(a)) - cmc(def(b)))[0] : undefined;
-  if (!free && !normal && !evoke && !webRet && !omni && !surge) return false;
+  const exileAlt = !normal && !omni && !free && !!d.exileAlt && canCast(g, pid, c, { exileAlt: true });
+  if (!free && !normal && !evoke && !webRet && !omni && !surge && !exileAlt) return false;
   // teamwork: tap creatures that won't attack this turn anyway
   const tw = d.teamwork !== undefined ? teamworkPick(g, pid, c) : null;
   const teamwork = !!tw && (g.active !== pid || g.step === 'main2' || tw.every(x => !canAttack(g, x, true)));
@@ -178,7 +179,7 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
     targets = dense ? ts : slots.map(() => undefined); if (!dense) active.forEach((i, k) => (targets[i] = ts[k]));
   }
   const orPay = !!d.costOr && !p.battlefield.some(q => q !== c && isType(q, 'Creature') && def(q).legendary && !isCommander(g, q));
-  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined });
+  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt });
 }
 const isCounter = (d: CardDef) => !!(d.spell?.effects.some(e => e.op === 'counter' || (e.op === 'unless' && e.sub?.some(s => s.op === 'counter'))));
 const isPump = (d: CardDef) => !!d.spell?.effects.some(e => e.op === 'pump') && !d.spell.effects.some(e => HARMFUL.includes(e.op));
