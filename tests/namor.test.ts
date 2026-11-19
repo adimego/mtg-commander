@@ -394,6 +394,96 @@ describe('Namor deck interactions', () => {
     expect(g.players[0].library.length).toBe(lib - 2);
   });
 
+  it("Archmage's Charm can take a mana value 1 permanent", () => {
+    const g = setup();
+    const ring = put(g, 1, card('Sol Ring', 'Artifact', '{1}', '{T}: Add {C}{C}.'));
+    const charm = mk(g, 0, card("Archmage's Charm", 'Instant', '{U}{U}{U}', 'Choose one —\n• Counter target spell.\n• Target player draws two cards.\n• Gain control of target nonland permanent with mana value 1 or less.'));
+    g.players[0].hand.push(charm); g.players[0].pool.push('U', 'U', 'U');
+    expect(castSpell(g, 0, charm.uid, { modes: [2], targets: [undefined, undefined, { card: ring.uid }] })).toBe(true);
+    run(g);
+    expect(g.players[0].battlefield).toContain(ring);
+  });
+
+  it('Commandeer exiles two blue cards and steals a noncreature spell', () => {
+    const g = setup();
+    g.active = 1; g.step = 'main1'; g.priority = 1;
+    const draw = mk(g, 1, ZAP());
+    g.players[1].hand.push(draw); g.players[1].pool.push('U');
+    expect(castSpell(g, 1, draw.uid)).toBe(true);
+    g.priority = 0;
+    const blue1 = mk(g, 0, ZAP()); const blue2 = mk(g, 0, card('N Peek', 'Instant', '{U}', 'Draw a card.'));
+    const cmd = mk(g, 0, card('Commandeer', 'Instant', '{5}{U}{U}', "You may exile two blue cards from your hand rather than pay this spell's mana cost.\nGain control of target noncreature spell. You may choose new targets for it."));
+    g.players[0].hand.push(cmd, blue1, blue2);
+    expect(canCast(g, 0, cmd)).toBe(false);
+    expect(canCast(g, 0, cmd, { exileAlt: true })).toBe(true);
+    const spell = g.stack.find(s => s.card === draw)!;
+    expect(castSpell(g, 0, cmd.uid, { exileAlt: true, targets: [{ stack: spell.id }] })).toBe(true);
+    expect(g.players[0].exile).toEqual(expect.arrayContaining([blue1, blue2]));
+    const lib = g.players[0].library.length;
+    run(g, { may: false });
+    expect(g.players[0].library.length).toBe(lib - 1);
+  });
+
+  it('Deeproot Pilgrimage makes one hexproof Merfolk when nontoken Merfolk become tapped', () => {
+    const g = setup();
+    put(g, 0, card('Deeproot Pilgrimage', 'Enchantment', '{1}{U}', 'Whenever one or more nontoken Merfolk you control become tapped, create a 1/1 blue Merfolk creature token with hexproof.'));
+    const a = put(g, 0, MER('N Pilot')); const b = put(g, 0, MER('N Pilot 2'));
+    const tok = put(g, 0, MER('N Token')); tok.token = true;
+    a.tapped = true; b.tapped = true; tok.tapped = true;
+    flushTriggers(g); run(g);
+    const made = g.players[0].battlefield.filter(c => c.token && c !== tok && def(c).sub?.includes('Merfolk'));
+    expect(made.length).toBe(1);
+    expect(hasKw(made[0], 'hexproof')).toBe(true);
+  });
+
+  it('Orysa costs {3} less when your creatures have toughness 10 or more', () => {
+    const g = setup();
+    const orysa = () => card('Orysa, Tide Choreographer', 'Legendary Creature — Merfolk Bard', '{4}{U}', 'This spell costs {3} less to cast if creatures you control have total toughness 10 or greater.\nWhen Orysa enters, draw two cards.', { power: '3', toughness: '4' });
+    expect(costOf(g, mk(g, 0, orysa())).generic).toBe(4);
+    for (let i = 0; i < 5; i++) put(g, 0, card(`N Wall ${i}`, 'Creature — Wall', '{U}', '', { power: '0', toughness: '2' }));
+    const cheap = mk(g, 0, orysa());
+    const paid = costOf(g, cheap);
+    expect(paid.generic).toBe(1);
+    expect(paid.U ?? 0).toBe(1);
+    g.players[0].hand.push(cheap); g.players[0].pool.push('U', 'C');
+    const lib = g.players[0].library.length;
+    expect(castSpell(g, 0, cheap.uid)).toBe(true); run(g);
+    expect(g.players[0].library.length).toBe(lib - 2);
+    expect(g.players[0].battlefield).toContain(cheap);
+  });
+
+  it("Roaming Throne doubles another Merfolk's trigger", () => {
+    const g = setup();
+    const throne = put(g, 0, card('Roaming Throne', 'Artifact Creature — Golem', '{4}', 'Ward {2}\nAs this creature enters, choose a creature type.\nThis creature is the chosen type in addition to its other types.\nIf a triggered ability of another creature you control of the chosen type triggers, it triggers an additional time.', { power: '4', toughness: '4' }));
+    expect(def(throne).ward).toBe(2);
+    expect(def(throne).chooseType).toBe(true);
+    expect(def(throne).typeTrigTwice).toBe(true);
+    throne.chosenType = 'Merfolk';
+    const scout = mk(g, 0, card('N Scout', 'Creature — Merfolk', '{U}', 'When N Scout enters, draw a card.', { power: '1', toughness: '1' }));
+    const lib = g.players[0].library.length;
+    enter(g, scout, 0); flushTriggers(g); run(g);
+    expect(g.players[0].library.length).toBe(lib - 2);
+  });
+
+  it('Harmonized Trio prepares, then its Brainstorm copy draws three and puts two back', () => {
+    const g = setup();
+    const trio = put(g, 0, card('Harmonized Trio', 'Creature — Merfolk Bard Wizard', '{U}', '{T}, Tap two untapped creatures you control: This creature becomes prepared.', { power: '1', toughness: '1', layout: 'prepare', card_faces: [
+      { name: 'Harmonized Trio', mana_cost: '{U}', type_line: 'Creature — Merfolk Bard Wizard', oracle_text: '{T}, Tap two untapped creatures you control: This creature becomes prepared.', power: '1', toughness: '1' },
+      { name: 'Brainstorm', mana_cost: '{U}', type_line: 'Instant', oracle_text: 'Draw three cards, then put two cards from your hand on top of your library in any order.' },
+    ] } as Partial<ScryCard>));
+    const a = put(g, 0, MER('N Crew A')); const b = put(g, 0, MER('N Crew B'));
+    expect(activate(g, 0, trio.uid, 0)).toBe(true); run(g);
+    expect(trio.prepared).toBe(true);
+    expect(a.tapped && b.tapped).toBe(true);
+    const copy = g.players[0].command.find(c => c.prepFor === trio.uid)!;
+    expect(def(copy).name).toBe('Brainstorm');
+    g.players[0].pool.push('U');
+    const lib = g.players[0].library.length;
+    expect(castSpell(g, 0, copy.uid)).toBe(true); run(g);
+    expect(trio.prepared).toBeFalsy();
+    expect(g.players[0].library.length).toBe(lib - 1);
+  });
+
   it('the Namor deck plays a few turns against precons without crashing', () => {
     const ps = loadPrecons(); const namor = ps.find(p => p.name === 'Namor the Sub-Mariner')!;
     const others = ps.filter(p => p !== namor).slice(0, 3).map(p => p.id);
