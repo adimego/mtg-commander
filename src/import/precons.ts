@@ -2,20 +2,21 @@
 import data from '../data/precons.json';
 import namor from '../data/namor.json';
 import zurgo from '../data/zurgo.json';
+import krenko from '../data/krenko.json';
 import { classify, images } from './classify';
 import type { ScryCard } from './scryfall';
 import { registerCards, registerDeck } from '../engine/engine';
 import type { DeckDef } from '../engine/types';
 
 export interface Precon extends DeckDef { set: string; setName: string; art?: string; supported: number; total: number; unsupported: string[] }
-/** Wizards preconstructed product. Other presets (Namor, Zurgo, filed under "Your decks") are the player's own lists. */
+/** Wizards preconstructed product. Other presets (Namor, Zurgo, Krenko, filed under "Your decks") are the player's own lists. */
 export const isOfficialPrecon = (p: { set: string }) => p.set === 'MSC' || p.set === 'FRC';
 interface Raw { decks: { id: string; name: string; set: string; setName: string; commanders: string[]; cards: { q: number; name: string }[] }[]; cards: Record<string, ScryCard> }
 let cache: Precon[] | null = null;
 /** Compile + register every precon (idempotent). */
 export function loadPrecons(): Precon[] {
   if (cache) return cache;
-  const extras = [namor, zurgo] as unknown as Raw[];
+  const extras = [namor, zurgo, krenko] as unknown as Raw[];
   const raw: Raw = { decks: [...(data as unknown as Raw).decks, ...extras.flatMap(e => e.decks)], cards: { ...(data as unknown as Raw).cards, ...Object.assign({}, ...extras.map(e => e.cards)) } };
   const cls = new Map(Object.entries(raw.cards).map(([n, c]) => [n, classify(c)]));
   registerCards([...cls.values()].flatMap(x => [x.def, ...(x.def.prepDef ? [x.def.prepDef] : [])]));

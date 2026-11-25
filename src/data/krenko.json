@@ -1,0 +1,1707 @@
+{
+ "decks": [
+  {
+   "id": "preset-krenko",
+   "name": "Krenko, Mob Boss",
+   "set": "USR",
+   "setName": "Your decks",
+   "commanders": [
+    "Krenko, Mob Boss"
+   ],
+   "cards": [
+    {
+     "q": 1,
+     "name": "Abrade"
+    },
+    {
+     "q": 1,
+     "name": "Adventurer's Inn"
+    },
+    {
+     "q": 1,
+     "name": "Anax, Hardened in the Forge"
+    },
+    {
+     "q": 1,
+     "name": "Arcane Signet"
+    },
+    {
+     "q": 1,
+     "name": "Battle-Scarred Goblin"
+    },
+    {
+     "q": 1,
+     "name": "Brightstone Ritual"
+    },
+    {
+     "q": 1,
+     "name": "Cacophony Scamp"
+    },
+    {
+     "q": 1,
+     "name": "Chainsaw"
+    },
+    {
+     "q": 1,
+     "name": "Combustion Man"
+    },
+    {
+     "q": 1,
+     "name": "Commander's Sphere"
+    },
+    {
+     "q": 1,
+     "name": "Courageous Goblin"
+    },
+    {
+     "q": 1,
+     "name": "Dragon Fodder"
+    },
+    {
+     "q": 1,
+     "name": "Evolving Wilds"
+    },
+    {
+     "q": 1,
+     "name": "Fanatical Firebrand"
+    },
+    {
+     "q": 1,
+     "name": "Fire Nation Palace"
+    },
+    {
+     "q": 1,
+     "name": "Fleeting Effigy"
+    },
+    {
+     "q": 1,
+     "name": "Frenzied Goblin"
+    },
+    {
+     "q": 1,
+     "name": "General Kreat, the Boltbringer"
+    },
+    {
+     "q": 1,
+     "name": "Glassworks // Shattered Yard"
+    },
+    {
+     "q": 1,
+     "name": "Goblin Boarders"
+    },
+    {
+     "q": 1,
+     "name": "Goblin Chieftain"
+    },
+    {
+     "q": 1,
+     "name": "Goblin Grenade"
+    },
+    {
+     "q": 1,
+     "name": "Goblin Negotiation"
+    },
+    {
+     "q": 1,
+     "name": "Goblin Surprise"
+    },
+    {
+     "q": 1,
+     "name": "Goblin War Strike"
+    },
+    {
+     "q": 1,
+     "name": "Gogo, Mysterious Mime"
+    },
+    {
+     "q": 1,
+     "name": "Grab the Prize"
+    },
+    {
+     "q": 1,
+     "name": "Grenzo, Havoc Raiser"
+    },
+    {
+     "q": 1,
+     "name": "Heraldic Banner"
+    },
+    {
+     "q": 1,
+     "name": "Hexing Squelcher"
+    },
+    {
+     "q": 1,
+     "name": "High Market"
+    },
+    {
+     "q": 1,
+     "name": "Hordeling Outburst"
+    },
+    {
+     "q": 1,
+     "name": "How to Start a Riot"
+    },
+    {
+     "q": 1,
+     "name": "Idol of Oblivion"
+    },
+    {
+     "q": 1,
+     "name": "Impulsive Pilferer"
+    },
+    {
+     "q": 1,
+     "name": "Krenko's Command"
+    },
+    {
+     "q": 1,
+     "name": "Laughing Mad"
+    },
+    {
+     "q": 1,
+     "name": "Legion Warboss"
+    },
+    {
+     "q": 1,
+     "name": "Lightning Greaves"
+    },
+    {
+     "q": 1,
+     "name": "Marvin, Murderous Mimic"
+    },
+    {
+     "q": 30,
+     "name": "Mountain"
+    },
+    {
+     "q": 1,
+     "name": "Muxus, Goblin Grandee"
+    },
+    {
+     "q": 1,
+     "name": "Overwhelming Surge"
+    },
+    {
+     "q": 1,
+     "name": "Pillage"
+    },
+    {
+     "q": 1,
+     "name": "Quest for the Goblin Lord"
+    },
+    {
+     "q": 1,
+     "name": "Raging Goblinoids"
+    },
+    {
+     "q": 1,
+     "name": "Raid Bombardment"
+    },
+    {
+     "q": 1,
+     "name": "Reckless Lackey"
+    },
+    {
+     "q": 1,
+     "name": "Ruby Medallion"
+    },
+    {
+     "q": 1,
+     "name": "Rumble Arena"
+    },
+    {
+     "q": 1,
+     "name": "Rundvelt Hordemaster"
+    },
+    {
+     "q": 1,
+     "name": "Searslicer Goblin"
+    },
+    {
+     "q": 1,
+     "name": "Secluded Courtyard"
+    },
+    {
+     "q": 1,
+     "name": "Secret Tunnel"
+    },
+    {
+     "q": 1,
+     "name": "Shattering Spree"
+    },
+    {
+     "q": 1,
+     "name": "Shock Brigade"
+    },
+    {
+     "q": 1,
+     "name": "Siege-Gang Commander"
+    },
+    {
+     "q": 1,
+     "name": "Spider-Punk"
+    },
+    {
+     "q": 1,
+     "name": "Spikeshot Goblin"
+    },
+    {
+     "q": 1,
+     "name": "Squee, Goblin Nabob"
+    },
+    {
+     "q": 1,
+     "name": "Terramorphic Expanse"
+    },
+    {
+     "q": 1,
+     "name": "The Fire Crystal"
+    },
+    {
+     "q": 1,
+     "name": "Treasure Nabber"
+    },
+    {
+     "q": 1,
+     "name": "Underfoot Underdogs"
+    },
+    {
+     "q": 1,
+     "name": "Vengeful Possession"
+    },
+    {
+     "q": 1,
+     "name": "Weaselback Redcap"
+    },
+    {
+     "q": 1,
+     "name": "Wild Ride"
+    },
+    {
+     "q": 1,
+     "name": "Wisecrack"
+    },
+    {
+     "q": 1,
+     "name": "You See a Pair of Goblins"
+    },
+    {
+     "q": 1,
+     "name": "Zada, Hedron Grinder"
+    }
+   ]
+  }
+ ],
+ "cards": {
+  "Abrade": {
+   "name": "Abrade",
+   "mana_cost": "{1}{R}",
+   "type_line": "Instant",
+   "oracle_text": "Choose one —\n• Abrade deals 3 damage to target creature.\n• Destroy target artifact.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/8/4/847b4081-25c9-4a9a-a2f3-d5fdadbfe81b.jpg?1793111894",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/8/4/847b4081-25c9-4a9a-a2f3-d5fdadbfe81b.jpg?1793111894"
+   }
+  },
+  "Adventurer's Inn": {
+   "name": "Adventurer's Inn",
+   "mana_cost": "",
+   "type_line": "Land — Town",
+   "oracle_text": "When this land enters, you gain 2 life.\n{T}: Add {C}.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "produced_mana": [
+    "C"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/f/0/f0da2ee1-986e-4cbf-92eb-d96fdb572ca5.jpg?1783906552",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/f/0/f0da2ee1-986e-4cbf-92eb-d96fdb572ca5.jpg?1783906552"
+   }
+  },
+  "Anax, Hardened in the Forge": {
+   "name": "Anax, Hardened in the Forge",
+   "mana_cost": "{1}{R}{R}",
+   "type_line": "Legendary Enchantment Creature — Demigod",
+   "oracle_text": "Anax's power is equal to your devotion to red. (Each {R} in the mana costs of permanents you control counts toward your devotion to red.)\nWhenever Anax or another nontoken creature you control dies, create a 1/1 red Satyr creature token with \"This token can't block.\" If the creature had power 4 or greater, create two of those tokens instead.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "*",
+   "toughness": "3",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/a/d/ad107ae0-2540-46f8-9970-72983b87ba04.jpg?1783915659",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/a/d/ad107ae0-2540-46f8-9970-72983b87ba04.jpg?1783915659"
+   }
+  },
+  "Arcane Signet": {
+   "name": "Arcane Signet",
+   "mana_cost": "{2}",
+   "type_line": "Artifact",
+   "oracle_text": "{T}: Add one mana of any color in your commander's color identity.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "produced_mana": [
+    "B",
+    "G",
+    "R",
+    "U",
+    "W"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/7/9/795df2ee-fbfc-4961-852c-e3ec50cc52da.jpg?1793021117",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/7/9/795df2ee-fbfc-4961-852c-e3ec50cc52da.jpg?1793021117"
+   }
+  },
+  "Battle-Scarred Goblin": {
+   "name": "Battle-Scarred Goblin",
+   "mana_cost": "{1}{R}",
+   "type_line": "Creature — Goblin Warrior",
+   "oracle_text": "Whenever this creature becomes blocked, it deals 1 damage to each creature blocking it.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/2/8/289d3d6c-8f7b-42d9-be9c-59c93128d207.jpg?1785497535",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/2/8/289d3d6c-8f7b-42d9-be9c-59c93128d207.jpg?1785497535"
+   }
+  },
+  "Brightstone Ritual": {
+   "name": "Brightstone Ritual",
+   "mana_cost": "{R}",
+   "type_line": "Instant",
+   "oracle_text": "Add {R} for each Goblin on the battlefield.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "produced_mana": [
+    "R"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/5/b/5b08b0a6-c94e-4407-8a24-c8202497b5f2.jpg?1783945058",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/5/b/5b08b0a6-c94e-4407-8a24-c8202497b5f2.jpg?1783945058"
+   }
+  },
+  "Cacophony Scamp": {
+   "name": "Cacophony Scamp",
+   "mana_cost": "{R}",
+   "type_line": "Creature — Phyrexian Goblin Warrior",
+   "oracle_text": "Whenever this creature deals combat damage to a player, you may sacrifice it. If you do, proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)\nWhen this creature dies, it deals damage equal to its power to any target.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Proliferate"
+   ],
+   "layout": "normal",
+   "power": "1",
+   "toughness": "1",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/3/5/3553dcef-7b99-49d5-b071-06b894696952.jpg?1783918034",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/3/5/3553dcef-7b99-49d5-b071-06b894696952.jpg?1783918034"
+   }
+  },
+  "Chainsaw": {
+   "name": "Chainsaw",
+   "mana_cost": "{1}{R}",
+   "type_line": "Artifact — Equipment",
+   "oracle_text": "When this Equipment enters, it deals 3 damage to up to one target creature.\nWhenever one or more creatures die, put a rev counter on this Equipment.\nEquipped creature gets +X/+0, where X is the number of rev counters on this Equipment.\nEquip {3}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Equip"
+   ],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/5/4/54e0c2cd-fa5f-427d-8e15-6066f002a8e3.jpg?1783909471",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/5/4/54e0c2cd-fa5f-427d-8e15-6066f002a8e3.jpg?1783909471"
+   }
+  },
+  "Combustion Man": {
+   "name": "Combustion Man",
+   "mana_cost": "{3}{R}{R}",
+   "type_line": "Legendary Creature — Human Assassin",
+   "oracle_text": "Whenever Combustion Man attacks, destroy target permanent unless its controller has Combustion Man deal damage to them equal to his power.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "4",
+   "toughness": "6",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/8/6/86f7399d-6876-4e85-ba34-ff1f97dc144a.jpg?1783904961",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/8/6/86f7399d-6876-4e85-ba34-ff1f97dc144a.jpg?1783904961"
+   }
+  },
+  "Commander's Sphere": {
+   "name": "Commander's Sphere",
+   "mana_cost": "{3}",
+   "type_line": "Artifact",
+   "oracle_text": "{T}: Add one mana of any color in your commander's color identity.\nSacrifice this artifact: Draw a card.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "produced_mana": [
+    "B",
+    "G",
+    "R",
+    "U",
+    "W"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/a/1/a145fe99-1cca-45c6-aa7e-ec5d8a7bcd13.jpg?1793021131",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/a/1/a145fe99-1cca-45c6-aa7e-ec5d8a7bcd13.jpg?1793021131"
+   }
+  },
+  "Courageous Goblin": {
+   "name": "Courageous Goblin",
+   "mana_cost": "{1}{R}",
+   "type_line": "Creature — Goblin",
+   "oracle_text": "Whenever this creature attacks while you control a creature with power 4 or greater, this creature gets +1/+0 and gains menace until end of turn. (It can't be blocked except by two or more creatures.)",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/8/d/8db6819c-666a-409d-85a5-b9ac34d8dd2f.jpg?1783909104",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/8/d/8db6819c-666a-409d-85a5-b9ac34d8dd2f.jpg?1783909104"
+   }
+  },
+  "Dragon Fodder": {
+   "name": "Dragon Fodder",
+   "mana_cost": "{1}{R}",
+   "type_line": "Sorcery",
+   "oracle_text": "Create two 1/1 red Goblin creature tokens.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/f/9/f9abe517-f601-4784-8d62-2350bd755146.jpg?1783908954",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/f/9/f9abe517-f601-4784-8d62-2350bd755146.jpg?1783908954"
+   }
+  },
+  "Evolving Wilds": {
+   "name": "Evolving Wilds",
+   "mana_cost": "",
+   "type_line": "Land",
+   "oracle_text": "{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/6/e/6e01ec28-d815-47a8-ab0f-d383a4736ebe.jpg?1793021295",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/6/e/6e01ec28-d815-47a8-ab0f-d383a4736ebe.jpg?1793021295"
+   }
+  },
+  "Fanatical Firebrand": {
+   "name": "Fanatical Firebrand",
+   "mana_cost": "{R}",
+   "type_line": "Creature — Goblin Pirate",
+   "oracle_text": "Haste (This creature can attack and {T} as soon as it comes under your control.)\n{T}, Sacrifice this creature: It deals 1 damage to any target.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Haste"
+   ],
+   "layout": "normal",
+   "power": "1",
+   "toughness": "1",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/d/1/d1296316-7781-4e98-95e6-7020648be6a5.jpg?1783909067",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/d/1/d1296316-7781-4e98-95e6-7020648be6a5.jpg?1783909067"
+   }
+  },
+  "Fire Nation Palace": {
+   "name": "Fire Nation Palace",
+   "mana_cost": "",
+   "type_line": "Land",
+   "oracle_text": "This land enters tapped unless you control a basic land.\n{T}: Add {R}.\n{1}{R}, {T}: Target creature you control gains firebending 4 until end of turn. (Whenever it attacks, add {R}{R}{R}{R}. This mana lasts until end of combat.)",
+   "colors": [],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "produced_mana": [
+    "R"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/c/9/c91ac3f2-9fcd-4b41-a168-ae7f70b67d3c.jpg?1783904912",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/c/9/c91ac3f2-9fcd-4b41-a168-ae7f70b67d3c.jpg?1783904912"
+   }
+  },
+  "Fleeting Effigy": {
+   "name": "Fleeting Effigy",
+   "mana_cost": "{R}",
+   "type_line": "Creature — Elemental",
+   "oracle_text": "Haste\nAt the beginning of your end step, return this creature to its owner's hand. (Return it only if it's on the battlefield.)\n{2}{R}: This creature gets +2/+0 until end of turn.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Haste"
+   ],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/1/9/1971fd6c-0a1c-41b2-93a6-886a176fbb73.jpg?1783907360",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/1/9/1971fd6c-0a1c-41b2-93a6-886a176fbb73.jpg?1783907360"
+   }
+  },
+  "Frenzied Goblin": {
+   "name": "Frenzied Goblin",
+   "mana_cost": "{R}",
+   "type_line": "Creature — Goblin Berserker",
+   "oracle_text": "Whenever this creature attacks, you may pay {R}. If you do, target creature can't block this turn.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "1",
+   "toughness": "1",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/d/5/d5592573-2889-40b1-b1d5-c2802482549a.jpg?1783909066",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/d/5/d5592573-2889-40b1-b1d5-c2802482549a.jpg?1783909066"
+   }
+  },
+  "General Kreat, the Boltbringer": {
+   "name": "General Kreat, the Boltbringer",
+   "mana_cost": "{2}{R}",
+   "type_line": "Legendary Creature — Goblin Soldier",
+   "oracle_text": "Whenever one or more Goblins you control attack, create a 1/1 red Goblin creature token that's tapped and attacking.\nWhenever another creature you control enters, General Kreat deals 1 damage to each opponent.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/2/2/226fc101-abcc-4ed4-8c0b-3677dc8d8f0a.jpg?1783908856",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/2/2/226fc101-abcc-4ed4-8c0b-3677dc8d8f0a.jpg?1783908856"
+   }
+  },
+  "Glassworks // Shattered Yard": {
+   "name": "Glassworks // Shattered Yard",
+   "mana_cost": "{2}{R} // {4}{R}",
+   "type_line": "Enchantment — Room // Enchantment — Room",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "split",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/f/e/fe32f667-8d9f-4414-913e-256cbc2fbc45.jpg?1783909469",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/f/e/fe32f667-8d9f-4414-913e-256cbc2fbc45.jpg?1783909469"
+   },
+   "card_faces": [
+    {
+     "name": "Glassworks",
+     "mana_cost": "{2}{R}",
+     "type_line": "Enchantment — Room",
+     "oracle_text": "When you unlock this door, this Room deals 4 damage to target creature an opponent controls.\n(You may cast either half. That door unlocks on the battlefield. As a sorcery, you may pay the mana cost of a locked door to unlock it.)"
+    },
+    {
+     "name": "Shattered Yard",
+     "mana_cost": "{4}{R}",
+     "type_line": "Enchantment — Room",
+     "oracle_text": "At the beginning of your end step, this Room deals 1 damage to each opponent.\n(You may cast either half. That door unlocks on the battlefield. As a sorcery, you may pay the mana cost of a locked door to unlock it.)"
+    }
+   ]
+  },
+  "Goblin Boarders": {
+   "name": "Goblin Boarders",
+   "mana_cost": "{2}{R}",
+   "type_line": "Creature — Goblin Pirate",
+   "oracle_text": "Raid — This creature enters with a +1/+1 counter on it if you attacked this turn.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Raid"
+   ],
+   "layout": "normal",
+   "power": "3",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/4/4/4409a063-bf2a-4a49-803e-3ce6bd474353.jpg?1783909102",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/4/4/4409a063-bf2a-4a49-803e-3ce6bd474353.jpg?1783909102"
+   }
+  },
+  "Goblin Chieftain": {
+   "name": "Goblin Chieftain",
+   "mana_cost": "{1}{R}{R}",
+   "type_line": "Creature — Goblin",
+   "oracle_text": "Haste (This creature can attack and {T} as soon as it comes under your control.)\nOther Goblin creatures you control get +1/+1 and have haste.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Haste"
+   ],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/8/9/89fcc35b-76fa-4408-8620-a1e11b2caf1f.jpg?1783930390",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/8/9/89fcc35b-76fa-4408-8620-a1e11b2caf1f.jpg?1783930390"
+   }
+  },
+  "Goblin Grenade": {
+   "name": "Goblin Grenade",
+   "mana_cost": "{R}",
+   "type_line": "Sorcery",
+   "oracle_text": "As an additional cost to cast this spell, sacrifice a Goblin.\nGoblin Grenade deals 5 damage to any target.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/b/0/b0e0ef27-3db2-4976-b9db-13e3d7cd795d.jpg?1783935601",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/b/0/b0e0ef27-3db2-4976-b9db-13e3d7cd795d.jpg?1783935601"
+   }
+  },
+  "Goblin Negotiation": {
+   "name": "Goblin Negotiation",
+   "mana_cost": "{X}{R}{R}",
+   "type_line": "Sorcery",
+   "oracle_text": "Goblin Negotiation deals X damage to target creature. Create a number of 1/1 red Goblin creature tokens equal to the amount of excess damage dealt to that creature this way.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/f/2/f2016585-e26c-4d13-b09f-af6383c192f7.jpg?1783909102",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/f/2/f2016585-e26c-4d13-b09f-af6383c192f7.jpg?1783909102"
+   }
+  },
+  "Goblin Surprise": {
+   "name": "Goblin Surprise",
+   "mana_cost": "{2}{R}",
+   "type_line": "Instant",
+   "oracle_text": "Choose one —\n• Creatures you control get +2/+0 until end of turn.\n• Create two 1/1 red Goblin creature tokens.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/5/2/527dd5d4-5f72-40bb-8a9d-1f5ac3f81e2e.jpg?1783909066",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/5/2/527dd5d4-5f72-40bb-8a9d-1f5ac3f81e2e.jpg?1783909066"
+   }
+  },
+  "Goblin War Strike": {
+   "name": "Goblin War Strike",
+   "mana_cost": "{R}",
+   "type_line": "Sorcery",
+   "oracle_text": "Goblin War Strike deals damage to target player or planeswalker equal to the number of Goblins you control.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/d/c/dce59945-37a2-4f09-8831-9d44b4a59ea7.jpg?1783944873",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/d/c/dce59945-37a2-4f09-8831-9d44b4a59ea7.jpg?1783944873"
+   }
+  },
+  "Gogo, Mysterious Mime": {
+   "name": "Gogo, Mysterious Mime",
+   "mana_cost": "{3}{R}",
+   "type_line": "Legendary Creature — Wizard",
+   "oracle_text": "At the beginning of combat on your turn, you may have Gogo become a copy of another target creature you control until end of turn, except its name is Gogo, Mysterious Mime. If you do, Gogo and that creature each get +2/+0 and gain haste until end of turn and attack this turn if able.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/0/d/0db05dc8-03f8-4ab4-9ca3-2aaaa0099eb4.jpg?1783906356",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/0/d/0db05dc8-03f8-4ab4-9ca3-2aaaa0099eb4.jpg?1783906356"
+   }
+  },
+  "Grab the Prize": {
+   "name": "Grab the Prize",
+   "mana_cost": "{1}{R}",
+   "type_line": "Sorcery",
+   "oracle_text": "As an additional cost to cast this spell, discard a card.\nDraw two cards. If the discarded card wasn't a land card, Grab the Prize deals 2 damage to each opponent.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/5/0/50895202-f1a1-4840-a11a-55b78b8b5929.jpg?1783909469",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/5/0/50895202-f1a1-4840-a11a-55b78b8b5929.jpg?1783909469"
+   }
+  },
+  "Grenzo, Havoc Raiser": {
+   "name": "Grenzo, Havoc Raiser",
+   "mana_cost": "{R}{R}",
+   "type_line": "Legendary Creature — Goblin Rogue",
+   "oracle_text": "Whenever a creature you control deals combat damage to a player, choose one —\n• Goad target creature that player controls.\n• Exile the top card of that player's library. Until end of turn, you may cast that card and you may spend mana as though it were mana of any color to cast that spell.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Goad"
+   ],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/a/b/aba981f9-ebc6-48ac-b768-557f632b82df.jpg?1783907070",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/a/b/aba981f9-ebc6-48ac-b768-557f632b82df.jpg?1783907070"
+   }
+  },
+  "Heraldic Banner": {
+   "name": "Heraldic Banner",
+   "mana_cost": "{3}",
+   "type_line": "Artifact",
+   "oracle_text": "As this artifact enters, choose a color.\nCreatures you control of the chosen color get +1/+0.\n{T}: Add one mana of the chosen color.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "produced_mana": [
+    "B",
+    "G",
+    "R",
+    "U",
+    "W"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/7/4/743ea709-dbb3-4db8-a2ce-544f47eb6339.jpg?1783909053",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/7/4/743ea709-dbb3-4db8-a2ce-544f47eb6339.jpg?1783909053"
+   }
+  },
+  "Hexing Squelcher": {
+   "name": "Hexing Squelcher",
+   "mana_cost": "{1}{R}",
+   "type_line": "Creature — Goblin Sorcerer",
+   "oracle_text": "This spell can't be countered.\nWard—Pay 2 life.\nSpells you control can't be countered.\nOther creatures you control have \"Ward—Pay 2 life.\"",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Ward"
+   ],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/6/7/674960ce-ff33-4d5e-a24a-a4582b2e9809.jpg?1783904442",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/6/7/674960ce-ff33-4d5e-a24a-a4582b2e9809.jpg?1783904442"
+   }
+  },
+  "High Market": {
+   "name": "High Market",
+   "mana_cost": "",
+   "type_line": "Land",
+   "oracle_text": "{T}: Add {C}.\n{T}, Sacrifice a creature: You gain 1 life.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "produced_mana": [
+    "C"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/8/9/894aa6b6-0d08-4c43-8734-9cb7b31359c6.jpg?1783903727",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/8/9/894aa6b6-0d08-4c43-8734-9cb7b31359c6.jpg?1783903727"
+   }
+  },
+  "Hordeling Outburst": {
+   "name": "Hordeling Outburst",
+   "mana_cost": "{1}{R}{R}",
+   "type_line": "Sorcery",
+   "oracle_text": "Create three 1/1 red Goblin creature tokens.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/e/4/e4138531-ef42-4c56-864e-d3525a4f2082.jpg?1783935146",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/e/4/e4138531-ef42-4c56-864e-d3525a4f2082.jpg?1783935146"
+   }
+  },
+  "How to Start a Riot": {
+   "name": "How to Start a Riot",
+   "mana_cost": "{2}{R}",
+   "type_line": "Instant — Lesson",
+   "oracle_text": "Target creature gains menace until end of turn. (It can't be blocked except by two or more creatures.)\nCreatures target player controls get +2/+0 until end of turn.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/2/3/23b3bf1e-ea85-47f5-8473-4d16615f68d7.jpg?1783904957",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/2/3/23b3bf1e-ea85-47f5-8473-4d16615f68d7.jpg?1783904957"
+   }
+  },
+  "Idol of Oblivion": {
+   "name": "Idol of Oblivion",
+   "mana_cost": "{2}",
+   "type_line": "Artifact",
+   "oracle_text": "{T}: Draw a card. Activate only if you created a token this turn.\n{8}, {T}, Sacrifice this artifact: Create a 10/10 colorless Eldrazi creature token.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/c/b/cbc25725-1485-4d98-abe1-906520f868d8.jpg?1783907011",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/c/b/cbc25725-1485-4d98-abe1-906520f868d8.jpg?1783907011"
+   }
+  },
+  "Impulsive Pilferer": {
+   "name": "Impulsive Pilferer",
+   "mana_cost": "{R}",
+   "type_line": "Creature — Goblin Pirate",
+   "oracle_text": "When this creature dies, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")\nEncore {3}{R} ({3}{R}, Exile this card from your graveyard: For each opponent, create a token copy that attacks that opponent this turn if able. They gain haste. Sacrifice them at the beginning of the next end step. Activate only as a sorcery.)",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Treasure",
+    "Encore"
+   ],
+   "layout": "normal",
+   "power": "1",
+   "toughness": "1",
+   "produced_mana": [
+    "B",
+    "G",
+    "R",
+    "U",
+    "W"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/0/f/0f020359-5ad1-43c4-8588-172be635cccc.jpg?1783911919",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/0/f/0f020359-5ad1-43c4-8588-172be635cccc.jpg?1783911919"
+   }
+  },
+  "Krenko, Mob Boss": {
+   "name": "Krenko, Mob Boss",
+   "mana_cost": "{2}{R}{R}",
+   "type_line": "Legendary Creature — Goblin Warrior",
+   "oracle_text": "{T}: Create X 1/1 red Goblin creature tokens, where X is the number of Goblins you control.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "3",
+   "toughness": "3",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/8/2/824b2d73-2151-4e5e-9f05-8f63e2bdcaa9.jpg?1783909065",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/8/2/824b2d73-2151-4e5e-9f05-8f63e2bdcaa9.jpg?1783909065"
+   }
+  },
+  "Krenko's Command": {
+   "name": "Krenko's Command",
+   "mana_cost": "{1}{R}",
+   "type_line": "Sorcery",
+   "oracle_text": "Create two 1/1 red Goblin creature tokens.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/6/9/699295ea-edf4-46f4-972e-82359c80bb2e.jpg?1783908828",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/6/9/699295ea-edf4-46f4-972e-82359c80bb2e.jpg?1783908828"
+   }
+  },
+  "Laughing Mad": {
+   "name": "Laughing Mad",
+   "mana_cost": "{2}{R}",
+   "type_line": "Instant",
+   "oracle_text": "As an additional cost to cast this spell, discard a card.\nDraw two cards.\nFlashback {3}{R} (You may cast this card from your graveyard for its flashback cost and any additional costs. Then exile it.)",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Flashback"
+   ],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/c/d/cd5b9daf-6325-4eb4-a069-4a8cc7807884.jpg?1783906603",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/c/d/cd5b9daf-6325-4eb4-a069-4a8cc7807884.jpg?1783906603"
+   }
+  },
+  "Legion Warboss": {
+   "name": "Legion Warboss",
+   "mana_cost": "{2}{R}",
+   "type_line": "Creature — Goblin Soldier",
+   "oracle_text": "Mentor (Whenever this creature attacks, put a +1/+1 counter on target attacking creature with lesser power.)\nAt the beginning of combat on your turn, create a 1/1 red Goblin creature token. That token gains haste until end of turn and attacks this combat if able.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Mentor"
+   ],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/3/d/3d726dff-2904-4a82-adaa-29c57a5c2aed.jpg?1783907068",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/3/d/3d726dff-2904-4a82-adaa-29c57a5c2aed.jpg?1783907068"
+   }
+  },
+  "Lightning Greaves": {
+   "name": "Lightning Greaves",
+   "mana_cost": "{2}",
+   "type_line": "Artifact — Equipment",
+   "oracle_text": "Equipped creature has haste and shroud. (It can't be the target of spells or abilities.)\nEquip {0}",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [
+    "Equip"
+   ],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/6/5/659ef698-96ea-4fa9-b63c-0da93a2d1e78.jpg?1793197566",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/6/5/659ef698-96ea-4fa9-b63c-0da93a2d1e78.jpg?1793197566"
+   }
+  },
+  "Marvin, Murderous Mimic": {
+   "name": "Marvin, Murderous Mimic",
+   "mana_cost": "{2}",
+   "type_line": "Legendary Artifact Creature — Toy",
+   "oracle_text": "Marvin has all activated abilities of creatures you control that don't have the same name as this creature.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/6/6/66898970-b99b-48f2-9240-68c301c95500.jpg?1783909431",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/6/6/66898970-b99b-48f2-9240-68c301c95500.jpg?1783909431"
+   }
+  },
+  "Mountain": {
+   "name": "Mountain",
+   "mana_cost": "",
+   "type_line": "Basic Land — Mountain",
+   "oracle_text": "({T}: Add {R}.)",
+   "colors": [],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "produced_mana": [
+    "R"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/8/5/85177bd7-6c50-48da-b692-ae5fe7bd357c.jpg?1791578439",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/8/5/85177bd7-6c50-48da-b692-ae5fe7bd357c.jpg?1791578439"
+   }
+  },
+  "Muxus, Goblin Grandee": {
+   "name": "Muxus, Goblin Grandee",
+   "mana_cost": "{4}{R}{R}",
+   "type_line": "Legendary Creature — Goblin Noble",
+   "oracle_text": "When Muxus enters, reveal the top six cards of your library. Put all Goblin creature cards with mana value 5 or less from among them onto the battlefield and the rest on the bottom of your library in a random order.\nWhenever Muxus attacks, it gets +1/+1 until end of turn for each other Goblin you control.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "4",
+   "toughness": "4",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/2/c/2c716d10-2130-43b7-a939-349d437e1091.jpg?1783930502",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/2/c/2c716d10-2130-43b7-a939-349d437e1091.jpg?1783930502"
+   }
+  },
+  "Overwhelming Surge": {
+   "name": "Overwhelming Surge",
+   "mana_cost": "{2}{R}",
+   "type_line": "Instant",
+   "oracle_text": "Choose one or both —\n• Overwhelming Surge deals 3 damage to target creature.\n• Destroy target noncreature artifact.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/b/d/bd7af85f-354e-468a-990b-bd774e68240f.jpg?1783907357",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/b/d/bd7af85f-354e-468a-990b-bd774e68240f.jpg?1783907357"
+   }
+  },
+  "Pillage": {
+   "name": "Pillage",
+   "mana_cost": "{1}{R}{R}",
+   "type_line": "Sorcery",
+   "oracle_text": "Destroy target artifact or land. It can't be regenerated.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/b/d/bdd06d55-a40f-4b0e-905b-3cd0ce12eb82.jpg?1783933107",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/b/d/bdd06d55-a40f-4b0e-905b-3cd0ce12eb82.jpg?1783933107"
+   }
+  },
+  "Quest for the Goblin Lord": {
+   "name": "Quest for the Goblin Lord",
+   "mana_cost": "{R}",
+   "type_line": "Enchantment",
+   "oracle_text": "Whenever a Goblin you control enters, you may put a quest counter on this enchantment.\nAs long as this enchantment has five or more quest counters on it, creatures you control get +2/+0.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/e/2/e23adb09-d216-47f5-a7d4-cb6a2ce48ada.jpg?1783942049",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/e/2/e23adb09-d216-47f5-a7d4-cb6a2ce48ada.jpg?1783942049"
+   }
+  },
+  "Raging Goblinoids": {
+   "name": "Raging Goblinoids",
+   "mana_cost": "{4}{R}",
+   "type_line": "Creature — Goblin Berserker Villain",
+   "oracle_text": "Haste\nMayhem {2}{R} (You may cast this card from your graveyard for {2}{R} if you discarded it this turn. Timing rules still apply.)",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Mayhem",
+    "Haste"
+   ],
+   "layout": "normal",
+   "power": "5",
+   "toughness": "4",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/8/5/8519598f-ab7f-49b0-90cc-c0b6422ebdf8.jpg?1783905334",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/8/5/8519598f-ab7f-49b0-90cc-c0b6422ebdf8.jpg?1783905334"
+   }
+  },
+  "Raid Bombardment": {
+   "name": "Raid Bombardment",
+   "mana_cost": "{2}{R}",
+   "type_line": "Enchantment",
+   "oracle_text": "Whenever a creature you control with power 2 or less attacks, this enchantment deals 1 damage to the player or planeswalker that creature is attacking.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/c/a/ca75d458-4947-4075-89b6-e93936c67370.jpg?1783933802",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/c/a/ca75d458-4947-4075-89b6-e93936c67370.jpg?1783933802"
+   }
+  },
+  "Reckless Lackey": {
+   "name": "Reckless Lackey",
+   "mana_cost": "{R}",
+   "type_line": "Creature — Goblin Pirate",
+   "oracle_text": "First strike, haste\n{2}{R}, Sacrifice this creature: Draw a card and create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "First strike",
+    "Treasure",
+    "Haste"
+   ],
+   "layout": "normal",
+   "power": "1",
+   "toughness": "2",
+   "produced_mana": [
+    "B",
+    "G",
+    "R",
+    "U",
+    "W"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/9/1/912fcd14-5e81-418c-997b-771f2f38f63d.jpg?1783911816",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/9/1/912fcd14-5e81-418c-997b-771f2f38f63d.jpg?1783911816"
+   }
+  },
+  "Ruby Medallion": {
+   "name": "Ruby Medallion",
+   "mana_cost": "{2}",
+   "type_line": "Artifact",
+   "oracle_text": "Red spells you cast cost {1} less to cast.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/6/3/630febf5-58ff-4dab-a5a8-575ebc5435a6.jpg?1783911209",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/6/3/630febf5-58ff-4dab-a5a8-575ebc5435a6.jpg?1783911209"
+   }
+  },
+  "Rumble Arena": {
+   "name": "Rumble Arena",
+   "mana_cost": "",
+   "type_line": "Land",
+   "oracle_text": "Vigilance\nWhen this land enters, scry 1. (Look at the top card of your library. You may put it on the bottom.)\n{T}: Add {C}.\n{1}, {T}: Add one mana of any color.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [
+    "Vigilance",
+    "Scry"
+   ],
+   "layout": "normal",
+   "produced_mana": [
+    "B",
+    "C",
+    "G",
+    "R",
+    "U",
+    "W"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/3/f/3f5d2c38-663c-4f64-8cfc-c102462e82ef.jpg?1783904908",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/3/f/3f5d2c38-663c-4f64-8cfc-c102462e82ef.jpg?1783904908"
+   }
+  },
+  "Rundvelt Hordemaster": {
+   "name": "Rundvelt Hordemaster",
+   "mana_cost": "{1}{R}",
+   "type_line": "Creature — Goblin Warrior",
+   "oracle_text": "Other Goblins you control get +1/+1.\nWhenever this creature or another Goblin you control dies, exile the top card of your library. If it's a Goblin creature card, you may cast that card until the end of your next turn.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "1",
+   "toughness": "1",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/f/f/ffee9dbe-af90-4e19-844d-4df1180f24c4.jpg?1783921311",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/f/f/ffee9dbe-af90-4e19-844d-4df1180f24c4.jpg?1783921311"
+   }
+  },
+  "Searslicer Goblin": {
+   "name": "Searslicer Goblin",
+   "mana_cost": "{1}{R}",
+   "type_line": "Creature — Goblin Warrior",
+   "oracle_text": "Raid — At the beginning of your end step, if you attacked this turn, create a 1/1 red Goblin creature token.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Raid"
+   ],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "1",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/9/4/94ad0b97-a318-4e76-ac79-b3e83417c333.jpg?1783909102",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/9/4/94ad0b97-a318-4e76-ac79-b3e83417c333.jpg?1783909102"
+   }
+  },
+  "Secluded Courtyard": {
+   "name": "Secluded Courtyard",
+   "mana_cost": "",
+   "type_line": "Land",
+   "oracle_text": "As this land enters, choose a creature type.\n{T}: Add {C}.\n{T}: Add one mana of any color. Spend this mana only to cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "produced_mana": [
+    "B",
+    "C",
+    "G",
+    "R",
+    "U",
+    "W"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/c/0/c0d17d04-cf0b-4918-bfec-b34b0d98a602.jpg?1783903197",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/c/0/c0d17d04-cf0b-4918-bfec-b34b0d98a602.jpg?1783903197"
+   }
+  },
+  "Secret Tunnel": {
+   "name": "Secret Tunnel",
+   "mana_cost": "",
+   "type_line": "Land — Cave",
+   "oracle_text": "This land can't be blocked.\n{T}: Add {C}.\n{4}, {T}: Two target creatures you control that share a creature type can't be blocked this turn.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "produced_mana": [
+    "C"
+   ],
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/2/d/2d39a0e1-6484-409c-ab05-5b276925a949.jpg?1783904909",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/2/d/2d39a0e1-6484-409c-ab05-5b276925a949.jpg?1783904909"
+   }
+  },
+  "Shattering Spree": {
+   "name": "Shattering Spree",
+   "mana_cost": "{R}",
+   "type_line": "Sorcery",
+   "oracle_text": "Replicate {R} (When you cast this spell, copy it for each time you paid its replicate cost. You may choose new targets for the copies.)\nDestroy target artifact.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Replicate"
+   ],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/d/6/d6dcff21-5900-43c4-a38b-cdc19c704ce4.jpg?1783943498",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/d/6/d6dcff21-5900-43c4-a38b-cdc19c704ce4.jpg?1783943498"
+   }
+  },
+  "Shock Brigade": {
+   "name": "Shock Brigade",
+   "mana_cost": "{1}{R}",
+   "type_line": "Creature — Goblin Soldier",
+   "oracle_text": "Menace (This creature can't be blocked except by two or more creatures.)\nMobilize 1 (Whenever this creature attacks, create a tapped and attacking 1/1 red Warrior creature token. Sacrifice it at the beginning of the next end step.)",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Menace",
+    "Mobilize"
+   ],
+   "layout": "normal",
+   "power": "1",
+   "toughness": "3",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/6/6/66940466-8e9d-4a85-bfb0-e92189b7a121.jpg?1783907354",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/6/6/66940466-8e9d-4a85-bfb0-e92189b7a121.jpg?1783907354"
+   }
+  },
+  "Siege-Gang Commander": {
+   "name": "Siege-Gang Commander",
+   "mana_cost": "{3}{R}{R}",
+   "type_line": "Creature — Goblin",
+   "oracle_text": "When this creature enters, create three 1/1 red Goblin creature tokens.\n{1}{R}, Sacrifice a Goblin: This creature deals 2 damage to any target.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/7/d/7d67e614-03d2-4034-b82f-25962fc378d4.jpg?1783903455",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/7/d/7d67e614-03d2-4034-b82f-25962fc378d4.jpg?1783903455"
+   }
+  },
+  "Spider-Punk": {
+   "name": "Spider-Punk",
+   "mana_cost": "{1}{R}",
+   "type_line": "Legendary Creature — Spider Human Hero",
+   "oracle_text": "Riot (This creature enters with your choice of a +1/+1 counter or haste.)\nOther Spiders you control have riot.\nSpells and abilities can't be countered.\nDamage can't be prevented.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Riot"
+   ],
+   "layout": "normal",
+   "power": "2",
+   "toughness": "1",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/0/b/0bd41879-fcd4-4211-9b98-47e7cdba5399.jpg?1783905333",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/0/b/0bd41879-fcd4-4211-9b98-47e7cdba5399.jpg?1783905333"
+   }
+  },
+  "Spikeshot Goblin": {
+   "name": "Spikeshot Goblin",
+   "mana_cost": "{2}{R}",
+   "type_line": "Creature — Goblin Shaman",
+   "oracle_text": "{R}, {T}: This creature deals damage equal to its power to any target.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "1",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/a/e/ae922301-181d-4824-802d-e3ba1714cade.jpg?1783915642",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/a/e/ae922301-181d-4824-802d-e3ba1714cade.jpg?1783915642"
+   }
+  },
+  "Squee, Goblin Nabob": {
+   "name": "Squee, Goblin Nabob",
+   "mana_cost": "{2}{R}",
+   "type_line": "Legendary Creature — Goblin",
+   "oracle_text": "At the beginning of your upkeep, you may return this card from your graveyard to your hand.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "1",
+   "toughness": "1",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/8/a/8aabc541-ff2a-416f-a973-44eda8ec4706.jpg?1783903770",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/8/a/8aabc541-ff2a-416f-a973-44eda8ec4706.jpg?1783903770"
+   }
+  },
+  "Terramorphic Expanse": {
+   "name": "Terramorphic Expanse",
+   "mana_cost": "",
+   "type_line": "Land",
+   "oracle_text": "{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+   "colors": [],
+   "color_identity": [],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/5/8/58ebd718-982d-4370-b4af-ef49b978d97d.jpg?1793021389",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/5/8/58ebd718-982d-4370-b4af-ef49b978d97d.jpg?1793021389"
+   }
+  },
+  "The Fire Crystal": {
+   "name": "The Fire Crystal",
+   "mana_cost": "{2}{R}{R}",
+   "type_line": "Legendary Artifact",
+   "oracle_text": "Red spells you cast cost {1} less to cast.\nCreatures you control have haste.\n{4}{R}{R}, {T}: Create a token that's a copy of target creature you control. Sacrifice it at the beginning of the next end step.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/e/a/ea430b17-2014-4b8e-b53f-43bcfc06f7cd.jpg?1783906605",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/e/a/ea430b17-2014-4b8e-b53f-43bcfc06f7cd.jpg?1783906605"
+   }
+  },
+  "Treasure Nabber": {
+   "name": "Treasure Nabber",
+   "mana_cost": "{2}{R}",
+   "type_line": "Creature — Goblin Rogue",
+   "oracle_text": "Whenever an opponent taps an artifact for mana, gain control of that artifact until the end of your next turn.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "3",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/5/f/5facc43f-f865-45ad-888b-398f6e07b947.jpg?1783915641",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/5/f/5facc43f-f865-45ad-888b-398f6e07b947.jpg?1783915641"
+   }
+  },
+  "Underfoot Underdogs": {
+   "name": "Underfoot Underdogs",
+   "mana_cost": "{2}{R}",
+   "type_line": "Creature — Goblin Warrior",
+   "oracle_text": "When this creature enters, create a 1/1 red Goblin creature token.\n{1}, {T}: Target creature you control with power 2 or less can't be blocked this turn.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "1",
+   "toughness": "2",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/0/4/049acc79-1d68-410f-a081-88a7d40e823a.jpg?1783907351",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/0/4/049acc79-1d68-410f-a081-88a7d40e823a.jpg?1783907351"
+   }
+  },
+  "Vengeful Possession": {
+   "name": "Vengeful Possession",
+   "mana_cost": "{2}{R}",
+   "type_line": "Sorcery",
+   "oracle_text": "Gain control of target creature until end of turn. Untap it. It gains haste until end of turn. You may discard a card. If you do, draw a card.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/d/6/d6918d50-a4c3-40d8-9480-343f14773a69.jpg?1783909460",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/d/6/d6918d50-a4c3-40d8-9480-343f14773a69.jpg?1783909460"
+   }
+  },
+  "Weaselback Redcap": {
+   "name": "Weaselback Redcap",
+   "mana_cost": "{R}",
+   "type_line": "Creature — Goblin Knight",
+   "oracle_text": "{1}{R}: This creature gets +2/+0 until end of turn.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "1",
+   "toughness": "1",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/7/a/7a2c2107-2965-4ed0-bd93-b2375c765d47.jpg?1783908662",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/7/a/7a2c2107-2965-4ed0-bd93-b2375c765d47.jpg?1783908662"
+   }
+  },
+  "Wild Ride": {
+   "name": "Wild Ride",
+   "mana_cost": "{R}",
+   "type_line": "Sorcery",
+   "oracle_text": "Target creature gets +3/+0 and gains haste until end of turn.\nHarmonize {4}{R} (You may cast this card from your graveyard for its harmonize cost. You may tap a creature you control to reduce that cost by {X}, where X is its power. Then exile this spell.)",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [
+    "Harmonize"
+   ],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/a/b/abc8c6f5-6135-428e-8476-1751f82623f9.jpg?1783907349",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/a/b/abc8c6f5-6135-428e-8476-1751f82623f9.jpg?1783907349"
+   }
+  },
+  "Wisecrack": {
+   "name": "Wisecrack",
+   "mana_cost": "{2}{R}",
+   "type_line": "Instant",
+   "oracle_text": "Target creature deals damage equal to its power to itself. If that creature is attacking, Wisecrack deals 2 damage to that creature's controller.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/0/1/01aab371-0e31-4bf0-a4ef-f18b58c11971.jpg?1783903006",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/0/1/01aab371-0e31-4bf0-a4ef-f18b58c11971.jpg?1783903006"
+   }
+  },
+  "You See a Pair of Goblins": {
+   "name": "You See a Pair of Goblins",
+   "mana_cost": "{2}{R}",
+   "type_line": "Instant",
+   "oracle_text": "Choose one —\n• Charge Them — Creatures you control get +2/+0 until end of turn.\n• Befriend Them — Create two 1/1 red Goblin creature tokens.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/b/6/b69e7200-96ea-4455-83cc-0a497d56efe5.jpg?1783926468",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/b/6/b69e7200-96ea-4455-83cc-0a497d56efe5.jpg?1783926468"
+   }
+  },
+  "Zada, Hedron Grinder": {
+   "name": "Zada, Hedron Grinder",
+   "mana_cost": "{3}{R}",
+   "type_line": "Legendary Creature — Goblin Ally",
+   "oracle_text": "Whenever you cast an instant or sorcery spell that targets only Zada, copy that spell for each other creature you control that the spell could target. Each copy targets a different one of those creatures.",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "keywords": [],
+   "layout": "normal",
+   "power": "3",
+   "toughness": "3",
+   "image_uris": {
+    "normal": "https://cards.scryfall.io/normal/front/d/5/d582b933-adbe-4706-a3c9-c19b6c52fd72.jpg?1783908847",
+    "art_crop": "https://cards.scryfall.io/art_crop/front/d/5/d582b933-adbe-4706-a3c9-c19b6c52fd72.jpg?1783908847"
+   }
+  }
+ }
+}

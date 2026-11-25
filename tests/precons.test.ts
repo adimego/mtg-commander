@@ -8,11 +8,11 @@ const inDeck = (p: Player, id: string) => [...p.library, ...p.hand].filter(c => 
 
 /** Supported-card floors per official Marvel Super Heroes Commander precon. Target is 100/100;
  * these floors only stop regressions. The cards still missing are listed by scripts/precon-check.ts and docs/coverage.md. */
-const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100, 'Multiverse Reforged': 100, 'Namor the Sub-Mariner': 100, "Zurgo, Thunder's Decree": 100 };
+const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100, 'Multiverse Reforged': 100, 'Namor the Sub-Mariner': 100, "Zurgo, Thunder's Decree": 100, 'Krenko, Mob Boss': 100 };
 
 describe('official precons', () => {
   const ps = loadPrecons();
-  it('official precons and the Namor preset load with exact 100-card lists', () => {
+  it('official precons and custom presets load with exact 100-card lists', () => {
     expect(ps.map(p => p.name).sort()).toEqual(Object.keys(FLOOR).sort());
     for (const p of ps) expect(1 + (p.extra?.length ?? 0) + p.cards.length).toBe(100);
   });
@@ -22,7 +22,7 @@ describe('official precons', () => {
   });
   it('Namor is a custom preset; Marvel and Reality Fracture are the official precons', () => {
     expect(ps.filter(isOfficialPrecon).map(p => p.name).sort()).toEqual(['Avengers Assemble', 'Doom Prevails', 'Multiverse Reforged', 'The Fantastic Four', 'Wakanda Forever']);
-    expect(ps.filter(p => !isOfficialPrecon(p)).map(p => p.name)).toEqual(['Namor the Sub-Mariner', "Zurgo, Thunder's Decree"]);
+    expect(ps.filter(p => !isOfficialPrecon(p)).map(p => p.name)).toEqual(['Namor the Sub-Mariner', "Zurgo, Thunder's Decree", 'Krenko, Mob Boss']);
   });
   it('The Fantastic Four and Multiverse Reforged list more than one face commander', () => {
     expect(ps.filter(p => faceCommanders(p).length > 1).map(p => p.name).sort()).toEqual(['Multiverse Reforged', 'The Fantastic Four']);
