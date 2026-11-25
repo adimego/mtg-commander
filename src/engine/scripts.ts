@@ -349,6 +349,11 @@ export const SCRIPTS: Record<string, Record<string, Patch>> = {
     d.spell = { effects: [], modes };
   } },
 
+  'Gogo, Mysterious Mime': { 'at the beginning of combat on your turn, you may have ~ become a copy of another target creature you control until end of turn, except its name is ~. if you do, ~ and that creature each get +2/+0 and gain haste until end of turn and attack this turn if able': d => trig(d, T('beginCombat', [S('gogo')], { pl: 'you', label: 'Gogo may become a copy', tslots: [{ who: 'perm', f: { types: ['Creature'], ctrl: 'you', other: true } }] })) },
+  'Grenzo, Havoc Raiser': { "whenever a creature you control deals combat damage to a player, choose one —\n• goad target creature that player controls.\n• exile the top card of that player's library. until end of turn, you may cast that card and you may spend mana as though it were mana of any color to cast that spell": d => trig(d, T('combatDamagePlayer', [S('grenzo')], { subj: 'any', f: { types: ['Creature'], ctrl: 'you' }, label: 'goad or exile-cast' })) },
+  'Marvin, Murderous Mimic': { "~ has all activated abilities of creatures you control that don't have the same name as ~": d => { d.copyActs = true; } },
+  'Zada, Hedron Grinder': { 'whenever you cast an instant or sorcery spell that targets only ~, copy that spell for each other creature you control that the spell could target. each copy targets a different one of those creatures': d => trig(d, T('cast', [S('zada')], { pl: 'you', f: { types: ['Instant', 'Sorcery'] }, label: 'copy that spell for each other creature' })) },
+
 };
 
 /** Apply scripts for lines the compiler couldn't parse; covered lines are removed from `unparsed`. */

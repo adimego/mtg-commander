@@ -3,7 +3,7 @@ import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretel
   declareAttackers, declareBlockers, canAttack, canBlock, attackers, isCommander, legalTargets, findCard, creatures, canActivate, activate, isMain,
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
   maxX, locate, ctr, manaAvailable, castZone, costOf, planPayment,
-  webRets, omniOn,
+  webRets, omniOn, abilitiesOf, canUnlockDoor, unlockDoor,
 } from './engine';
 import type { Amt, ActAbility, Modes, TSlot } from './types';
 
@@ -159,7 +159,9 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   // web-slinging: return a tapped creature worth less than this one
   const webRet = !normal && !evoke && d.webSling && canCast(g, pid, c, { webSling: true }) ? webRets(g, pid).filter(q => !q.token && cmc(def(q)) < cmc(d)).sort((a, b) => cmc(def(a)) - cmc(def(b)))[0] : undefined;
   const exileAlt = !normal && !omni && !free && !!d.exileAlt && canCast(g, pid, c, { exileAlt: true });
-  if (!free && !normal && !evoke && !webRet && !omni && !surge && !exileAlt) return false;
+  let door: number | undefined;
+  if (d.room) { door = d.room.doors.findIndex((_, i) => canCast(g, pid, c, { door: i })); if (door < 0) return false; }
+  if (!free && !normal && !evoke && !webRet && !omni && !surge && !exileAlt && door === undefined) return false;
   // teamwork: tap creatures that won't attack this turn anyway
   const tw = d.teamwork !== undefined ? teamworkPick(g, pid, c) : null;
   const teamwork = !!tw && (g.active !== pid || g.step === 'main2' || tw.every(x => !canAttack(g, x, true)));
@@ -179,7 +181,9 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
     targets = dense ? ts : slots.map(() => undefined); if (!dense) active.forEach((i, k) => (targets[i] = ts[k]));
   }
   const orPay = !!d.costOr && !p.battlefield.some(q => q !== c && isType(q, 'Creature') && def(q).legendary && !isCommander(g, q));
-  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt });
+  let replicate = 0;
+  if (d.replicate && door === undefined) { while (replicate < 8 && canCast(g, pid, c, { kicked, warp, x, evoke, webSling: !!webRet, omni, surge: surge && !omni && !normal, exileAlt, replicate: replicate + 1 })) replicate++; if (replicate > 2) replicate = 2; }
+  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt, door, replicate: replicate || undefined });
 }
 const isCounter = (d: CardDef) => !!(d.spell?.effects.some(e => e.op === 'counter' || (e.op === 'unless' && e.sub?.some(s => s.op === 'counter'))));
 const isPump = (d: CardDef) => !!d.spell?.effects.some(e => e.op === 'pump') && !d.spell.effects.some(e => HARMFUL.includes(e.op));
@@ -211,7 +215,7 @@ function tryActivate(g: Game, pid: number, c: Card, i: number, a: ActAbility, ph
   if (a.zone === 'hand') { // cycling & co.: only when the card is dead weight
     const dead = isType(c, 'Land') ? lands >= 6 : cmc(def(c)) > lands + 3; if (!dead || phase !== 'eot') return false;
   }
-  if (a.tap && isType(c, 'Creature') && phase === 'main' && g.step === 'main1' && canAttack(g, c, true) && power(g, c) >= 2) return false;
+  if (a.tap && isType(c, 'Creature') && phase === 'main' && g.step === 'main1' && canAttack(g, c, true) && power(g, c) >= 2 && !a.effects.some(e => e.op === 'token' || e.op === 'copyTok' || e.op === 'encore')) return false;
   if (a.equip) { if (c.attachedTo !== undefined && locate(g, c.attachedTo)?.c.owner === pid) return false; const host = (a.tslots ?? []).length ? chooseTargets(g, pid, a.tslots!, [], false, c.uid)?.[0] : undefined; if (!host) return false; USED.set(uk, 9); return activate(g, pid, c.uid, i, { targets: [host] }); }
   if (a.crew !== undefined) {
     // crew / saddle: only before attacking, with creatures that wouldn't attack anyway (or are much weaker than the vehicle)
@@ -233,7 +237,7 @@ function tryActivate(g: Game, pid: number, c: Card, i: number, a: ActAbility, ph
   if (a.loyalty !== undefined) {
     // planeswalkers: tick up when threatened, use minus for removal/value, fire the ultimate when it's safe
     const threat = walkerThreat(g, c); const cost = a.loyX ? -x : a.loyalty; const after = loy + cost;
-    const best = (def(c).abilities ?? []).map((b, j) => ({ b, j })).filter(({ b, j }) => b.loyalty !== undefined && j !== i && canActivate(g, pid, c, j));
+    const best = abilitiesOf(g, c).map((b, j) => ({ b, j })).filter(({ b, j }) => b.loyalty !== undefined && j !== i && canActivate(g, pid, c, j));
     if (cost >= 0) sc += threat >= loy ? 5 : 2;
     else {
       if (after < 1 && sc < 8) return false; // don't throw the walker away for little
@@ -255,7 +259,7 @@ const USED = new Map<string, number>();
 function useAbilities(g: Game, pid: number, phase: 'main' | 'eot' | 'combat'): boolean {
   const p = g.players[pid];
   for (const c of [...p.battlefield, ...p.hand, ...p.graveyard]) {
-    const abs = def(c).abilities ?? [];
+    const abs = abilitiesOf(g, c);
     for (let i = 0; i < abs.length; i++) if (tryActivate(g, pid, c, i, abs[i], phase)) return true;
   }
   return false;
@@ -280,9 +284,10 @@ function mainPhase(g: Game, pid: number): boolean {
   const opts = [...p.hand, ...p.command, ...p.graveyard, ...p.exile].filter(c => castZone(g, pid, c) && (canCast(g, pid, c, { x: def(c).cost.x ? 1 : 0 }) || canCast(g, pid, c, { evoke: true }) || canCast(g, pid, c, { free: true }) || canCast(g, pid, c, { webSling: true })) && !isCounter(def(c)) && !isPump(def(c)))
     .sort((a, b) => (def(b).mana ? 100 : 0) + cmc(def(b)) - ((def(a).mana ? 100 : 0) + cmc(def(a))));
   for (const c of opts) if (tryCast(g, pid, c)) return true;
-  if (g.step === 'main2' || !creatures(p).some(c => canAttack(g, c, true))) { if (useAbilities(g, pid, 'main')) return true; }
+  if (useAbilities(g, pid, 'main')) return true;
+  for (const c of p.battlefield) { const rm = def(c).room; if (!rm) continue; for (let i = 0; i < rm.doors.length; i++) if (canUnlockDoor(g, pid, c, i) && unlockDoor(g, pid, c.uid, i)) return true; }
   if (g.step === 'main2') { const f = p.hand.find(c => canForetell(g, pid, c)); if (f && foretell(g, pid, f.uid)) return true; }
-  else for (const c of p.battlefield) { const abs = def(c).abilities ?? []; for (let i = 0; i < abs.length; i++) if ((abs[i].loyalty !== undefined || abs[i].equip || abs[i].crew !== undefined) && tryActivate(g, pid, c, i, abs[i], 'main')) return true; }
+  else for (const c of p.battlefield) { const abs = abilitiesOf(g, c); for (let i = 0; i < abs.length; i++) if ((abs[i].loyalty !== undefined || abs[i].equip || abs[i].crew !== undefined) && tryActivate(g, pid, c, i, abs[i], 'main')) return true; }
   return false;
 }
 /** Combat tricks after blocks: pump a creature so it survives or wins its fight. */

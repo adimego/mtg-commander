@@ -83,9 +83,30 @@ export function compileScry(c: ScryCard): Classified {
     b.def.id = d.id + '--back'; delete b.def.limited; if (c.layout === 'transform') b.def.cost = { ...d.cost }; if (c.layout === 'adventure') b.def.adventure = true; if (c.layout === 'modal_dfc') d.mdfc = true; d.back = b.def;
     if (b.support !== 'auto') prepUn = (b.unparsed?.length ? b.unparsed : [b.reason ?? 'back face']).map(x => `${c.layout === 'adventure' ? 'adventure' : 'back face'}: ${x}`);
   }
+  else if (f && f.length >= 2 && /Room/.test(c.type_line ?? typeLine)) {
+    const doors = f.map((face, i) => {
+      const fc = compileScry({ ...(face as ScryCard), name: face.name ?? c.name, layout: 'normal', card_faces: undefined, colors: (face as ScryCard).colors ?? c.colors, color_identity: c.color_identity, keywords: (face as ScryCard).keywords ?? [], image_uris: face.image_uris ?? c.image_uris } as ScryCard);
+      const fd = fc.def; delete fd.limited;
+      for (const a of fd.abilities ?? []) a.door = i;
+      for (const st of fd.statics ?? []) st.door = i;
+      for (const m of fd.mana ?? []) m.door = i;
+      for (const tr of fd.triggers ?? []) { tr.door = i; if (tr.ev === 'unlock') tr.ifc = { k: 'evAmt', n: i }; }
+      if (fc.support !== 'auto') prepUn.push(...(fc.unparsed?.length ? fc.unparsed : [fc.reason ?? `door ${i}`]).map(x => `${face.name}: ${x}`));
+      return { name: fd.name, cost: fd.cost, abilities: fd.abilities, triggers: fd.triggers, statics: fd.statics, mana: fd.mana, img: fd.img, art: fd.art };
+    });
+    d.types = ['Enchantment']; d.sub = ['Room']; d.room = { doors };
+    d.abilities = doors.flatMap(x => x.abilities ?? []);
+    d.triggers = doors.flatMap(x => x.triggers ?? []);
+    d.statics = doors.flatMap(x => x.statics ?? []);
+    d.mana = doors.flatMap(x => x.mana ?? []);
+    d.cost = { generic: 0 };
+    // Faces were compiled as their own cards; skip a second compile of the joined text.
+  }
   else if (f) problems.push(`${c.layout ?? 'multi-face'} card: only the front face is used`);
-  if (!exact && front.mana_cost) problems.push(`mana cost ${front.mana_cost} simplified to ${costStr(d.cost)}`);
-  const res = compile({ ...front, name: f ? front.name ?? c.name : c.name, oracle_text: front.oracle_text ?? (f ? '' : c.oracle_text) } as ScryLike, d);
+  if (!exact && front.mana_cost && !d.room) problems.push(`mana cost ${front.mana_cost} simplified to ${costStr(d.cost)}`);
+  const res = d.room
+    ? { unparsed: [] as string[] }
+    : compile({ ...front, name: f ? front.name ?? c.name : c.name, oracle_text: front.oracle_text ?? (f ? '' : c.oracle_text) } as ScryLike, d);
   applyScripts(c.name, d, res.unparsed);
   if (pStar && !d.statics?.some(s => s.k === 'pt' && s.who === 'self' && typeof s.p !== 'number')) { if (!d.toughness) d.toughness = 1; problems.push(`variable power/toughness (${front.power}/${front.toughness}) played as ${d.power}/${d.toughness}`); }
   const basicT: Record<string, string> = { Plains: 'W', Island: 'U', Swamp: 'B', Mountain: 'R', Forest: 'G' };
