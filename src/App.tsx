@@ -1,5 +1,5 @@
 import { ImportDialog } from './ImportDialog';
-import { loadPrecons, isOfficialPrecon, type Precon } from './import/precons';
+import { loadPrecons, isOfficialPrecon, groupOfficialPrecons, type Precon } from './import/precons';
 import { compileScry } from './import/classify';
 import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
@@ -36,6 +36,7 @@ type PendingAct = Flow;
 const SAVED0 = decks.activateAll();
 const PRECONS = loadPrecons();
 const OFFICIAL = PRECONS.filter(isOfficialPrecon);
+const OFFICIAL_SETS = groupOfficialPrecons(OFFICIAL);
 const CUSTOM_PRESETS = PRECONS.filter(d => !isOfficialPrecon(d));
 const AI_SEATS = 3;
 const STARTERS = DECKS.slice(0, 4);
@@ -420,6 +421,8 @@ export default function App() {
   const gref = useRef<Game | null>(null);
   const [, bump] = useReducer((x: number) => x + 1, 0);
   const [deck, setDeck] = useState(() => localStorage.getItem('ca_deck') && DECKS.some(d => d.id === localStorage.getItem('ca_deck')) ? localStorage.getItem('ca_deck')! : DECKS[0].id);
+  const [openSets, setOpenSets] = useState<Set<string>>(() => new Set(OFFICIAL_SETS[0] ? [OFFICIAL_SETS[0].set] : []));
+  const toggleSet = (code: string) => setOpenSets(prev => { const next = new Set(prev); if (next.has(code)) next.delete(code); else next.add(code); return next; });
   const [saved, setSaved] = useState<decks.SavedDeck[]>(SAVED0);
   const [aiPicks, setAiPicks] = useState<string[]>(() => loadAiPicks(SAVED0));
   const [cmdChoice, setCmdChoice] = useState<{ deckId: string; faces: string[] } | null>(null);
@@ -858,7 +861,15 @@ export default function App() {
       <section className="deckgroup official" data-section="official">
         <h3 className="dsec">Official precons</h3>
         <p className="dnote">Wizards of the Coast products from Marvel Super Heroes Commander, Reality Fracture Commander, and Star Trek Commander. A deck that lists several commanders asks you to pick one before the game starts.</p>
-        <div className="deckpick precons">{OFFICIAL.map(d => <PreconTile key={d.id} d={d} on={deck === d.id} pick={() => { setCmdChoice(null); setDeck(d.id); }} dbl={() => newMatch(d.id)} />)}</div>
+        {OFFICIAL_SETS.map(s => { const open = openSets.has(s.set); return (
+          <div key={s.set} className={`setgroup ${open ? 'open' : ''}`} data-set={s.set} data-open={open ? '1' : '0'}>
+            <button type="button" className="sethead" aria-expanded={open} data-set-toggle={s.set} onClick={() => toggleSet(s.set)}>
+              <span className="setchev" aria-hidden="true">{open ? '▾' : '▸'}</span>
+              <span className="settitle">{s.setName} <span className="setcode">({s.set})</span></span>
+              <span className="setcount">{s.decks.length} deck{s.decks.length === 1 ? '' : 's'}</span>
+            </button>
+            {open && <div className="deckpick precons">{s.decks.map(d => <PreconTile key={d.id} d={d} on={deck === d.id} pick={() => { setCmdChoice(null); setDeck(d.id); }} dbl={() => newMatch(d.id)} />)}</div>}
+          </div>); })}
       </section>
       <section className="deckgroup custom" data-section="custom">
         <h3 className="dsec">Custom decks <span className="muted">({CUSTOM_PRESETS.length + saved.length})</span></h3>
@@ -887,7 +898,7 @@ export default function App() {
             <select data-ai={i + 1} aria-label={`AI ${i + 1} deck`} value={pick} onChange={e => setAiPicks(prev => { const next = prev.map((p, j) => j === i ? e.target.value : p); localStorage.setItem('ca_ai_picks', JSON.stringify(next)); return next; })}>
               <option value={AI_RANDOM}>Random</option>
               <optgroup label="Starter decks">{STARTERS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</optgroup>
-              <optgroup label="Official precons">{OFFICIAL.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</optgroup>
+              {OFFICIAL_SETS.map(s => <optgroup key={s.set} label={`${s.setName} (${s.set})`}>{s.decks.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</optgroup>)}
               <optgroup label="Custom decks">{[...CUSTOM_PRESETS, ...saved].map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</optgroup>
             </select></label>)}
         </div>
