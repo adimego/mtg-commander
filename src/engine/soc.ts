@@ -5,6 +5,7 @@ import {
   pay, planPayment, power, sacrifice,
 } from './engine';
 import type { FrcApi } from './frc';
+import { runSocLeftovers } from './soc-leftovers-run';
 
 const nm = (c: { id: string }) => def(c).name;
 const srcCard = (g: Game, ctx: FrcApi['ctx']) => findCard(g, ctx.item.sourceUid);
@@ -209,7 +210,7 @@ export function runSoc(kind: string | undefined, api: FrcApi): boolean {
       return true;
     }
     default:
-      return false;
+      return runSocLeftovers(kind, api);
   }
 }
 

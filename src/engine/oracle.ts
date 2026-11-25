@@ -7,7 +7,7 @@ import type { ActAbility, Amt, CardDef, CEFx, Color, Cond, Cost, Effect, Filter,
 const SUB = new Map<string, string>((SUBTYPES as string[]).map(s => [s.toLowerCase(), s]));
 const TYPES: Record<string, string> = { creature: 'Creature', artifact: 'Artifact', enchantment: 'Enchantment', land: 'Land', planeswalker: 'Planeswalker', instant: 'Instant', sorcery: 'Sorcery', battle: 'Battle', permanent: 'Permanent', legendary: 'Legendary', historic: 'Historic', outlaw: 'Outlaw' };
 const COLOR_OF: Record<string, Color> = { white: 'W', blue: 'U', black: 'B', red: 'R', green: 'G' };
-export const KWS = ['compleated', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'melee', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted', 'riot'];
+export const KWS = ['compleated', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'melee', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted', 'riot', 'protection from creatures', 'protection from multicolored'];
 const IRREG: Record<string, string> = { elves: 'elf', dwarves: 'dwarf', wolves: 'wolf', werewolves: 'werewolf', fungi: 'fungus', mice: 'mouse', sorceries: 'sorcery', allies: 'ally', faeries: 'faerie', zombies: 'zombie', zombie: 'zombie', thieves: 'thief', leeches: 'leech', octopi: 'octopus', 'cyclopes': 'cyclops', 'sphinxes': 'sphinx', 'foxes': 'fox', 'boars': 'boar', 'mercenaries': 'mercenary', 'slivers': 'sliver' };
 function typeWord(w: string | undefined): string | null {
   if (!w) return null;
@@ -181,6 +181,7 @@ function amount(s: string, cx: Cx): Amt | null {
   if (/^your life total$/.test(eq)) return { life: 'you' };
   if ((m = /^the (?:greatest|highest) power among (.+)$/.exec(eq))) { const fp = parseFilter(m[1]); return fp && !fp.card ? { maxPow: fp.f } : null; }
   if (/^the life you've gained this turn$|^the amount of life you gained this turn$/.test(eq)) return { lifeGained: true };
+  if (/^the total power of creatures you control$/.test(eq)) return { powSum: { types: ['Creature'], ctrl: 'you' } };
   if ((m = /^the number of (.+?)$/.exec(eq))) { const fp = parseFilter(m[1]); return fp && !fp.card && !fp.spell ? { count: fp.f } : null; }
   return null;
 }
@@ -194,6 +195,10 @@ function forEach(s: string, cx: Cx): Amt | null {
   if ((m = /^(.*?) ?card in (their|that player's|target player's|target opponent's) graveyard$/.exec(s))) { const fp = m[1] ? parseFilter(m[1]) : { f: {} }; const p = m[2] === 'their' || m[2] === "that player's" ? cx.lastPl ?? cx.thatPl : playerRef(m[2], cx); return fp && p ? { cards: 'graveyard', pl: p, f: fp.f } : null; }
   if ((m = /^(.*?) ?card in your graveyard$/.exec(s))) { const fp = m[1] ? parseFilter(m[1]) : { f: {} }; return fp ? { cards: 'graveyard', pl: 'you', f: fp.f } : null; }
   if ((m = /^(\+1\/\+1|[a-z]+) counter on ~$/.exec(s))) return { ctr: m[1], who: 'self' };
+  if (/^aura attached to (?:it|~)$/.test(s)) return { aurasOnIt: true };
+  if (/^aura you control that's attached to a creature you control$/.test(s)) return { aurasOnYours: true };
+  if (/^aura you control that's attached to a creature$/.test(s)) return { aurasOnYours: true };
+  if (/^instant and sorcery card in your graveyard$/.test(s)) return { cards: 'graveyard', pl: 'you', f: { anyType: ['Instant', 'Sorcery'] } };
   const fp = parseFilter(s); if (fp && !fp.card && !fp.spell) return { count: fp.f };
   return null;
 }
@@ -247,6 +252,8 @@ function cond(s: string, cx: Cx): Cond | null {
   if (/^~ isn't prepared$/.test(s)) return { k: 'not', c: { k: 'prepared' } };
   if (/^~ is untapped$/.test(s)) return { k: 'untapped' };
   if (/^you gained life this turn$|^you've gained life this turn$/.test(s)) return { k: 'lifeGainedThisTurn', n: 1 };
+  if (/^you have the city's blessing$/.test(s)) return { k: 'blessing' };
+  if (/^a card left your graveyard this turn$/.test(s)) return { k: 'leftGyYou' };
   if ((m = /^you(?:'ve)? gained (\d+) or more life this turn$/.exec(s))) return { k: 'lifeGainedThisTurn', n: +m[1] };
   if (/^a creature died this turn$/.test(s)) return { k: 'creatureDiedThisTurn' };
   if (/^you descended this turn$/.test(s)) return { k: 'descended' };
@@ -254,7 +261,7 @@ function cond(s: string, cx: Cx): Cond | null {
   if ((m = /^an opponent has (\d+) or less life$/.exec(s))) return { k: 'oppLifeLE', n: +m[1] };
   if (/^you attacked this turn$/.test(s)) return { k: 'attackedThisTurn' };
   if (/^you created a token this turn$/.test(s)) return { k: 'createdTokenThisTurn' };
-  if ((m = /^(?:~|it) has (\w+) or more ([a-z]+) counters? on it$/.exec(s))) { const n0 = num(m[1]); return typeof n0 === 'number' ? { k: 'ctrGE', kind: m[2], n: n0 } : null; }
+  if ((m = /^(?:~|it) has (\w+) or more (\+1\/\+1|[a-z]+) counters? on it$/.exec(s))) { const n0 = num(m[1]); return typeof n0 === 'number' ? { k: 'ctrGE', kind: m[2], n: n0 } : null; }
   if (/^(that creature|it|~) is attacking$/.test(s)) return { k: 'attacking' };
   if (/^the discarded card wasn't a land card$/.test(s)) return { k: 'chosenNonland' };
   if ((m = /^(?:the creature|it|that creature) had power (\d+) or greater$/.exec(s))) return { k: 'evPowGE', n: +m[1] };
@@ -971,7 +978,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       if (body.includes('§FAIL')) { fail(raw); continue; }
       // mana abilities
       let only: string | undefined;
-      body = body.replace(/\. (?:spend this mana only to (.+)|this mana can't be spent to cast (?:a )?nonartifact spells?)$/, (_, w?: string) => { only = !w ? 'artifact' : ({ 'cast a creature spell of the chosen type': 'ctypeSpell', 'cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type': 'ctypeAny', 'cast a hero spell or to activate an ability of a hero source': 'hero', 'cast a villain spell or to activate an ability of a villain source': 'villain', 'cast a legendary spell': 'legendary', 'cast artifact spells or activate abilities of artifacts': undefined } as Record<string, string | undefined>)[w] ?? '§'; return ''; });
+      body = body.replace(/\. (?:spend this mana only to (.+)|this mana can't be spent to cast (?:a )?nonartifact spells?)$/, (_, w?: string) => { only = !w ? 'artifact' : ({ 'cast a creature spell of the chosen type': 'ctypeSpell', 'cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type': 'ctypeAny', 'cast a hero spell or to activate an ability of a hero source': 'hero', 'cast a villain spell or to activate an ability of a villain source': 'villain', 'cast a legendary spell': 'legendary', 'cast an instant or sorcery spell': 'is', 'cast artifact spells or activate abilities of artifacts': undefined } as Record<string, string | undefined>)[w] ?? '§'; return ''; });
       body = body.replace(/^(add one mana of any color in your commander's color identity)\. when that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1$/, (_, x) => { only = 'path'; return x; });
       if (only === '§') { fail(raw); continue; }
       if (only) { const r = /^add (.+)$/.exec(body) && manaAdd(body.slice(4), newCx()); if (!r || !ab.tap || Object.keys(pc.ab).length !== 1) { fail(raw); continue; } manaLines.push({ add: r.mana, n: r.n, only }); continue; }
@@ -1045,6 +1052,7 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
   let m: RegExpExecArray | null;
   if (KWS.includes(p)) { kws.add(p); return true; }
   if ((m = /^protection from (white|blue|black|red|green)(?: and from (white|blue|black|red|green))?$/.exec(p))) { kws.add('protection from ' + m[1]); if (m[2]) kws.add('protection from ' + m[2]); return true; }
+  if (p === 'protection from creatures' || p === 'protection from multicolored') { kws.add(p); return true; }
   if ((m = /^ward (\{\d+\})$/.exec(p))) { d.ward = parseCost(m[1])!.generic; return true; }
   if ((m = /^equip(?: (.+?))? (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) {
     const c = parseCost(m[2].toUpperCase()); if (!c) return false; let f: Filter = { types: ['Creature'], ctrl: 'you' };
@@ -1109,6 +1117,7 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
 }
 function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>): boolean {
   let m: RegExpExecArray | null; let c: Cond | undefined; let s = l;
+  if (/^as long as ~ is in your graveyard and you control a mountain, creatures you control have haste$/.test(s)) { d.gyHaste = true; return true; }
   if (/^as long as ~ is paired with another creature, each of those creatures has "whenever ~ deals damage to an opponent, draw a card\.?"$/.test(s)) { statics.push({ k: 'soulDraw', who: 'self' }); return true; }
   const cm = /^(.+?) as long as (.+)$/.exec(s) ?? /^as long as (.+?), (.+)$/.exec(s);
   if (cm) { const [body, cs] = s.startsWith('as long as') ? [cm[2], cm[1]] : [cm[1], cm[2]]; const cc = cond(cs, newCx()); if (!cc) return false; c = cc; s = body.replace(/^it (has|gets|can't)\b/, '~ $1'); }
@@ -1155,6 +1164,18 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   if ((m = /^~ enters with (a|an|one|two|three|four|five|six|x|\d+) ([+-]\d\/[+-]\d|[a-z]+) counters? on it(?: if (.+))?$/.exec(s))) { const cc = m[3] ? cond(m[3], newCx()) : undefined; if (m[3] && !cc) return false; d.etbCounters = { kind: m[2], n: num(m[1])! }; if (cc) d.etbCountersIf = cc; return true; }
   if ((m = /^~ enters with a number of \+1\/\+1 counters on it equal to (.+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; d.etbCounters = { kind: '+1/+1', n: a }; return true; }
   if ((m = /^(?:this spell|~) costs \{(\d+)\} less to cast for each (.+)$/.exec(s))) { const a = forEach(m[2], newCx()); if (!a) return false; d.selfCostLess = { n: +m[1], per: a }; return true; }
+  if ((m = /^(?:this spell|~) costs \{(\d+)\} less to cast if (.+)$/.exec(s))) { const cc = cond(m[2], newCx()); if (!cc) return false; d.costLessIf = { n: +m[1], cond: cc }; return true; }
+  if ((m = /^(?:this spell|~) costs \{x\} less to cast, where x is (.+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; d.selfCostLess = { n: 1, per: a }; return true; }
+  if (/^if you would gain life, you gain that much life plus 1 instead$/.test(s) && !c) { statics.push({ k: 'lifePlus1', who: 'self' }); return true; }
+  if ((m = /^(aura|enchantment|artifact|creature|instant|sorcery) spells you cast cost \{(\d+)\} less to cast$/.exec(s)) && !c) {
+    const typ = m[1][0].toUpperCase() + m[1].slice(1);
+    statics.push({ k: 'costLess', who: 'all', n: +m[2], f: { types: [typ], fromHand: true } });
+    return true;
+  }
+  if (/^creatures can't attack you unless their controller pays \{2\} for each creature they control that's attacking you$/.test(s) && !c) { statics.push({ k: 'propaganda', who: 'self' }); return true; }
+  if ((m = /^spells you cast that target a creature cost \{(\d+)\} less to cast$/.exec(s)) && !c) { statics.push({ k: 'costLess', who: 'all', n: +m[1], tgtCreature: true }); return true; }
+  if (/^untap all creatures you control during each other player's untap step$/.test(s) && !c) { statics.push({ k: 'oppUntapCreatures', who: 'self' }); return true; }
+  if (/^as an additional cost to cast (?:this spell|~), sacrifice x creatures$/.test(s) && !c) { d.extraCost = { sacX: true }; return true; }
   if (/^(this spell|~) can't be countered$/.test(s)) { d.uncounterable = true; return true; }
   if ((m = /^~ can't be blocked if you control (?:a|an) (.+)$/.exec(s))) { const fp = parseFilter(m[1]); if (!fp) return false; statics.push({ k: 'unblockable', who: 'self', cond: { k: 'control', f: fp.f, n: 1 } }); return true; }
   const PST: [RegExp, Static['k'], Static['who']][] = [
@@ -1205,6 +1226,12 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   }
   if ((m = /^~'s power and toughness are each equal to (.+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; statics.push({ k: 'pt', who: 'self', p: a, t: a }); return true; }
   if ((m = /^~'s power is equal to (.+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; statics.push({ k: 'pt', who: 'self', p: a, t: 0 }); return true; }
+  if ((m = /^enchanted creature gets \+(\d+)\/\+(\d+), has (.+), and is an? ([a-z]+) in addition to its other types$/.exec(s))) {
+    const k = kwList(m[3]); if (!k) return false;
+    const sub = m[4][0].toUpperCase() + m[4].slice(1);
+    statics.push({ k: 'pt', who: 'attached', p: +m[1], t: +m[2], cond: c }, { k: 'kw', who: 'attached', kws: k, cond: c }, { k: 'addSub', who: 'attached', kws: [sub], cond: c });
+    return true;
+  }
   // subject + predicate
   const sm = /^(.+?) (gets?|get|has|have|can't block|can't attack or block|can't attack|can't be blocked|attacks each combat if able|attack each combat if able)(?: (.+))?$/.exec(s);
   if (!sm) return false;
@@ -1220,11 +1247,19 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
     let p: Amt = +pm[1], t: Amt = +pm[2];
     if (pm[3]) { const fe = forEach(pm[3], newCx()); if (!fe) return false; p = p ? { mul: p as number, of: fe } : 0; t = t ? { mul: t as number, of: fe } : 0; }
     out.push({ k: 'pt', who, f, p, t, cond: c });
-    if (pm[4]) { const kws2 = pm[4].replace(/, and is goaded$/, '').replace(/ and is goaded$/, ''); const k = kwList(kws2); if (k) out.push({ k: 'kw', who, f, kws: k, cond: c }); else if (/^can't block$/.test(pm[4])) return false; else return false; }
+    if (pm[4]) {
+      const kws2 = pm[4].replace(/, and is goaded$/, '').replace(/ and is goaded$/, '');
+      const wm = /^(.*?)(?: and )?ward \{(\d+)\}$/.exec(kws2);
+      const kpart = wm ? wm[1].replace(/ and $/, '').trim() : kws2;
+      const k = kpart ? kwList(kpart) : [];
+      if (kpart && !k) return false;
+      if (k?.length) out.push({ k: 'kw', who, f, kws: k, cond: c });
+      if (wm) out.push({ k: 'wardN', who, f, n: +wm[2], cond: c });
+    }
     if (/and is goaded$/.test(rest)) out.push({ k: 'goad', who, f, cond: c });
   } else if (/^has$|^have$/.test(pred) && /^"\{t\}: add .+"$/.test(rest)) { const mm = /^"\{t\}: add (.+?)\.?"$/.exec(rest)!; const ma = manaAdd(mm[1], newCx()); if (!ma || ma.n) return false; out.push({ k: 'grantMana', who, f, mana: [{ add: ma.mana }], cond: c }); }
   else if (/^has$|^have$/.test(pred) && /^"(.+)"$/.test(rest)) { const body = /^"(.+)"$/.exec(rest)![1]; const ext = tokenAbil(body, CUR_NAME); if (!ext) return false; out.push({ k: 'grantAbil', who, f, grant: ext, cond: c }); }
-  else if (/^has$|^have$/.test(pred)) { const goaded = / and is goaded$/.test(rest); const rest0 = rest.replace(/ and is goaded$/, ''); const wm = /^ward \{(\d+)\}$/.exec(rest0); if (wm) { out.push({ k: 'wardN', who, f, n: +wm[1], cond: c }); if (goaded) out.push({ k: 'goad', who, f, cond: c }); } else { const k = kwList(rest0); if (!k) return false; if (who === 'self' && !c && !goaded) { k.forEach(x => kws.add(x)); return true; } out.push({ k: 'kw', who, f, kws: k, cond: c }); if (goaded) out.push({ k: 'goad', who, f, cond: c }); } }
+  else if (/^has$|^have$/.test(pred)) { const goaded = / and is goaded$/.test(rest); const rest0 = rest.replace(/ and is goaded$/, ''); const wm = /^(.*?)(?: and )?ward \{(\d+)\}$/.exec(rest0); if (wm && (!wm[1] || kwList(wm[1].replace(/ and $/, '').trim()))) { if (wm[1].replace(/ and $/, '').trim()) { const k0 = kwList(wm[1].replace(/ and $/, '').trim())!; if (who === 'self' && !c && !goaded) k0.forEach(x => kws.add(x)); else out.push({ k: 'kw', who, f, kws: k0, cond: c }); } out.push({ k: 'wardN', who, f, n: +wm[2], cond: c }); if (goaded) out.push({ k: 'goad', who, f, cond: c }); } else { const k = kwList(rest0); if (!k) return false; if (who === 'self' && !c && !goaded) { k.forEach(x => kws.add(x)); return true; } out.push({ k: 'kw', who, f, kws: k, cond: c }); if (goaded) out.push({ k: 'goad', who, f, cond: c }); } }
   else if (pred === "can't block") { if (rest) return false; out.push({ k: 'cantBlock', who, f, cond: c }); }
   else if (pred === "can't attack or block") { if (rest) return false; out.push({ k: 'cantBlock', who, f, cond: c }, { k: 'cantAttack', who, f, cond: c }); }
   else if (pred === "can't attack") { if (rest) return false; out.push({ k: 'cantAttack', who, f, cond: c }); }

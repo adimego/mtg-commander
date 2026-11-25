@@ -1,5 +1,6 @@
 /** Exact Oracle patches for Secrets of Strixhaven Commander cards the generic compiler couldn't fully parse. */
 import type { CardDef, Effect, TriggerDef, TSlot, TokenSpec, Filter, Cond } from './types';
+import { SOC_LEFTOVERS } from './soc-leftovers';
 
 type Patch = (d: CardDef) => void;
 const S = (kind: string, extra: Partial<Effect> = {}): Effect => ({ op: 'script', kind, ...extra });
@@ -73,3 +74,5 @@ export const SOC_SCRIPTS: Record<string, Record<string, Patch>> = {
   },
 };
 
+
+Object.assign(SOC_SCRIPTS, SOC_LEFTOVERS);
