@@ -54,7 +54,7 @@ test('30+ identical tokens stack, stay on screen, and N of the stack can attack'
   await expect(stack).toBeVisible();
   await expect(page.locator('.stack-badge, .stack-cap').first()).toContainText(/30/);
   const cap = page.locator('.stack-cap').first();
-  if (await cap.count()) await expect(cap).toContainText(/21 untapped|Goblin ×30/);
+  if (await cap.count()) await expect(cap).toContainText(/21 up|21 untapped|Goblin ×30/);
   await noHorizontalOverflow(page);
 
   const opp = page.locator('[data-player="1"]').first();

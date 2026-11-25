@@ -29,7 +29,7 @@ describe('token stacks', () => {
     expect(tiles[0].kind).toBe('stack');
     if (tiles[0].kind !== 'stack') return;
     expect(tiles[0].cards).toHaveLength(30);
-    expect(stackCaption(g, tiles[0].cards)).toBe('Goblin ×30 · 21 untapped');
+    expect(stackCaption(g, tiles[0].cards)).toBe('Goblin ×30 · 21 up');
     const atk = pickFromStack(tiles[0].cards, 7);
     expect(atk).toHaveLength(7);
     expect(atk.every(c => !c.tapped)).toBe(true);

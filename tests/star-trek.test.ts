@@ -5,7 +5,7 @@ import type { ScryCard } from '../src/import/scryfall';
 import precons from '../src/data/precons.json';
 import {
   activate, addCounters, answerDecision, canActivate, canCast, ctr, def, enter, faceCommanders, flushTriggers, isCommander,
-  isType, layer, newGame, offBfEff, pass, planPayment, power, registerCards, restrOk, startGame, DECKS, toughness, draw,
+  isType, layer, newGame, offBfEff, pass, planPayment, power, registerCards, restrOk, startGame, DECKS, toughness, draw, castSpell,
 } from '../src/engine/engine';
 import type { Card, CardDef, Decision, Game } from '../src/engine/engine';
 import '../src/engine/ai';
@@ -178,5 +178,90 @@ describe('Star Trek Commander precons', () => {
     const kang = card('Kang, Suspicious Captain');
     expect(JSON.stringify(kang.triggers ?? []).includes('kangGoad')).toBe(true);
     expect(JSON.stringify(kang.triggers ?? []).includes('"kang"')).toBe(false);
+  });
+
+  it('Squad is offered at cast and Imperial Hullbreachers ETB creates that many copies', () => {
+    const d = card('Imperial Hullbreachers');
+    expect(d.squad).toEqual({ generic: 2 });
+    const g = setup();
+    const p = g.players[0];
+    const c = mk(g, 0, d);
+    p.hand.push(c);
+    p.pool.push('W', 'C', 'C', 'C', 'C', 'C', 'C');
+    expect(canCast(g, 0, c, { squad: 2 })).toBe(true);
+    expect(canCast(g, 0, c, { squad: 3 })).toBe(false);
+    expect(castSpell(g, 0, c.uid, { squad: 2 })).toBe(true);
+    expect(c.squadN).toBe(2);
+    run(g);
+    const hulls = p.battlefield.filter(x => def(x).name === 'Imperial Hullbreachers');
+    expect(hulls).toHaveLength(3);
+    expect(hulls.filter(x => x.token)).toHaveLength(2);
+  });
+
+  it('prompts a human for Chekov\'s draw replacement and keeps the AI land heuristic', () => {
+    const g = setup();
+    g.players[0].human = true;
+    put(g, 0, card('Pavel Chekov, First Posting'));
+    const p = g.players[0];
+    const land = mk(g, 0, card('Island'));
+    const spell = mk(g, 0, card('Sol Ring'));
+    p.library = [land, spell];
+    p.hand = [];
+    draw(g, 0, 1);
+    expect(p.hand).toEqual([]);
+    expect(g.decision?.kind).toBe('color');
+    expect(g.decision && g.decision.kind === 'color' ? g.decision.options : []).toEqual(['Land', 'Nonland', 'Draw normally']);
+    expect(g.decision?.text).toMatch(/Pavel Chekov/);
+    answerDecision(g, 'Nonland');
+    expect(g.decision).toBeNull();
+    expect(p.hand.map(c => def(c).name)).toEqual(['Sol Ring']);
+    expect(p.library.map(c => def(c).name)).toEqual(['Island']);
+
+    p.hand = [];
+    const land2 = mk(g, 0, card('Island'));
+    const spell2 = mk(g, 0, card('Sol Ring'));
+    p.library = [land2, spell2];
+    draw(g, 0, 1);
+    answerDecision(g, 'Draw normally');
+    expect(p.hand.map(c => def(c).name)).toEqual(['Sol Ring']);
+    expect(p.library.map(c => def(c).name)).toEqual(['Island']);
+
+    p.hand = [];
+    const land3 = mk(g, 0, card('Island'));
+    const spell3 = mk(g, 0, card('Sol Ring'));
+    p.library = [land3, spell3];
+    draw(g, 0, 1);
+    answerDecision(g, 'Land');
+    expect(p.hand.map(c => def(c).name)).toEqual(['Island']);
+    expect(p.library.map(c => def(c).name)).toEqual(['Sol Ring']);
+  });
+
+  it('converge counts every color of mana spent, not only colored pips in the cost', () => {
+    const g = setup();
+    const p = g.players[0];
+    p.pool = ['W', 'U', 'B'];
+    const pay = planPayment(p, { generic: 2, B: 1 });
+    expect(pay).toBeTruthy();
+    expect([...(pay!.cols ?? [])].sort()).toEqual(['B', 'U', 'W']);
+
+    p.pool = ['B', 'C', 'C'];
+    const pay2 = planPayment(p, { generic: 2, B: 1 });
+    expect([...(pay2!.cols ?? [])].sort()).toEqual(['B']);
+
+    p.pool = ['ANY', 'ANY', 'B'];
+    const pay3 = planPayment(p, { generic: 2, B: 1 });
+    expect(pay3!.cols).toHaveLength(3);
+
+    const d = card('Painful Truths');
+    const c = mk(g, 0, d);
+    p.hand.push(c);
+    p.library = [mk(g, 0, card('Island')), mk(g, 0, card('Sol Ring')), mk(g, 0, card('Command Tower'))];
+    p.pool = ['W', 'U', 'B'];
+    p.life = 20;
+    expect(castSpell(g, 0, c.uid)).toBe(true);
+    expect(g.stack[0].spentCols).toBe(3);
+    run(g);
+    expect(p.hand.map(c => def(c).name).sort()).toEqual(['Command Tower', 'Island', 'Sol Ring']);
+    expect(p.life).toBe(17);
   });
 });

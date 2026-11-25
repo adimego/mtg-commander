@@ -31,7 +31,7 @@ const KW_HELP: Record<string, string> = {
 type AbLike = { tap?: boolean; untap?: boolean; mana?: Cost; sac?: boolean; loyalty?: number; loyX?: boolean; sacF?: { n: number }; discard?: number; life?: number; remC?: { kind: string; n: number }; exileGy?: { n: number; self?: boolean }; tapF?: { n: number } };
 const abCost = (a: AbLike) => [a.loyalty !== undefined ? (a.loyX ? '−X' : `${a.loyalty > 0 ? '+' : a.loyalty === 0 ? '±' : '−'}${Math.abs(a.loyalty)}`) : '', a.mana ? costText(a.mana) : '', a.tap ? '{T}' : '', a.untap ? '{Q}' : '', a.sac ? 'Sac' : '', a.sacF ? `Sac ${a.sacF.n}` : '', a.discard ? `Discard ${a.discard}` : '', a.life ? `${a.life} life` : '', a.remC ? `−${a.remC.n} ${a.remC.kind}` : '', a.exileGy ? (a.exileGy.self ? 'Exile from gy' : `Exile ${a.exileGy.n} from gy`) : '', a.tapF ? `Tap ${a.tapF.n}` : ''].filter(Boolean).join(', ');
 /** A cast or activation being set up: kicker → X → modes → one target per active slot. */
-type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; alt?: 'evoke' | 'web' | 'free' | 'overload' | 'omni' | 'surge' | 'exile' | ''; warp?: boolean; morph?: boolean; impending?: boolean; sneak?: boolean; teamwork?: boolean; kicked?: boolean; x?: number; modes?: number[]; orPay?: boolean; door?: number; replicate?: number; ts: (Target | undefined)[] };
+type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; alt?: 'evoke' | 'web' | 'free' | 'overload' | 'omni' | 'surge' | 'exile' | ''; warp?: boolean; morph?: boolean; impending?: boolean; sneak?: boolean; teamwork?: boolean; kicked?: boolean; x?: number; modes?: number[]; orPay?: boolean; door?: number; replicate?: number; squad?: number; ts: (Target | undefined)[] };
 type PendingAct = Flow;
 const SAVED0 = decks.activateAll();
 const PRECONS = loadPrecons();
@@ -523,7 +523,7 @@ export default function App() {
   const flowSlots: TSlot[] = flowModes?.repeat && flow?.modes ? flow.modes.flatMap(i => modeRange(flowModes, i).map(j => flowModes.list.flatMap(md => md.tslots ?? [])[j])) : baseSlots;
   const flowModesEff = flowModes && flow?.kind === 'cast' && g ? { ...flowModes, max: modesMax(g, HUMAN, flowModes, { teamwork: flow.teamwork }) } : flowModes;
   const flowActive = flowModes?.repeat && flow?.modes ? flowSlots.map((_, i) => i) : flowModes ? (flow?.modes ?? []).flatMap(i => modeRange(flowModes, i)) : flowSlots.map((_, i) => i);
-  const flowStage: null | 'alt' | 'or' | 'teamwork' | 'warp' | 'morph' | 'impending' | 'kicker' | 'door' | 'replicate' | 'x' | 'modes' | 'targets' = !g || !flow ? null
+  const flowStage: null | 'alt' | 'or' | 'teamwork' | 'warp' | 'morph' | 'impending' | 'kicker' | 'door' | 'replicate' | 'squad' | 'x' | 'modes' | 'targets' = !g || !flow ? null
     : flow.kind === 'cast' && flowCard && flow.alt === undefined && (def(flowCard).evoke || def(flowCard).webSling || def(flowCard).freeCmdr || def(flowCard).overload || (me!.hand.includes(flowCard) && omniOn(g, HUMAN)) || (!!def(flowCard).surge && canCast(g, HUMAN, flowCard, { surge: true }))) ? 'alt'
     : flow.kind === 'cast' && flowCard && def(flowCard).costOr && flow.orPay === undefined ? 'or'
     : flow.kind === 'cast' && flowCard && flow.warp === undefined && def(flowCard).warp && me!.hand.includes(flowCard) ? 'warp'
@@ -533,6 +533,7 @@ export default function App() {
     : flow.kind === 'cast' && flowCard && def(flowCard).kicker && flow.kicked === undefined ? 'kicker'
     : flow.kind === 'cast' && flowCard && def(flowCard).room && flow.door === undefined ? 'door'
     : flow.kind === 'cast' && flowCard && !!spellReplicate(g, HUMAN, def(flowCard)) && flow.replicate === undefined ? 'replicate'
+    : flow.kind === 'cast' && flowCard && !!def(flowCard).squad && flow.squad === undefined ? 'squad'
     : flow.x === undefined && (flow.kind === 'cast' ? !!flowCard && (!!costOf(g, flowCard).x || !!def(flowCard).extraCost?.lifeX) : flow.kind === 'ability' ? !!flowAb?.mana?.x || !!flowAb?.loyX : false) ? 'x'
     : flowModes && !flow.modes ? 'modes'
     : flow.ts.length < flowActive.length ? 'targets' : null;
@@ -573,7 +574,7 @@ export default function App() {
     setPending(null);
     act(g => {
       if (f.kind === 'trigger') chooseTriggerTargets(g, full, f.modes);
-      else if (f.kind === 'cast') { if (!castSpell(g, HUMAN, f.uid, { targets: full, modes: f.modes, x: f.alt === 'omni' ? 0 : f.x, kicked: f.kicked, free: f.alt === 'free', omni: f.alt === 'omni', surge: f.alt === 'surge', orPay: f.orPay, evoke: f.alt === 'evoke', overload: f.alt === 'overload', webSling: f.alt === 'web', warp: f.warp, morph: f.morph, impending: f.impending, sneak: f.sneak, teamwork: f.teamwork, exileAlt: f.alt === 'exile', door: f.door, replicate: f.replicate })) flash("Couldn't cast that (targets or mana no longer valid)."); }
+      else if (f.kind === 'cast') { if (!castSpell(g, HUMAN, f.uid, { targets: full, modes: f.modes, x: f.alt === 'omni' ? 0 : f.x, kicked: f.kicked, free: f.alt === 'free', omni: f.alt === 'omni', surge: f.alt === 'surge', orPay: f.orPay, evoke: f.alt === 'evoke', overload: f.alt === 'overload', webSling: f.alt === 'web', warp: f.warp, morph: f.morph, impending: f.impending, sneak: f.sneak, teamwork: f.teamwork, exileAlt: f.alt === 'exile', door: f.door, replicate: f.replicate, squad: f.squad })) flash("Couldn't cast that (targets or mana no longer valid)."); }
       else if (!activate(g, HUMAN, f.uid, f.idx!, { targets: full, modes: f.modes, x: f.x })) flash("Couldn't activate that.");
     });
   }
@@ -596,6 +597,7 @@ export default function App() {
     if (d.kicker && f.kicked === undefined) { setPending(f); return; }
     if (d.room && f.door === undefined) { const doors = d.room.doors.map((_, i) => i).filter(i => canCast(g, HUMAN, c, { ...f, door: i })); if (doors.length === 1) f.door = doors[0]; else { setPending(f); return; } }
     if (spellReplicate(g, HUMAN, d) && f.replicate === undefined) { const max = Array.from({ length: 9 }, (_, i) => i).filter(n => canCast(g, HUMAN, c, { kicked: f.kicked, warp: f.warp, door: f.door, x: f.x, replicate: n })).pop() ?? 0; if (max === 0) f.replicate = 0; else { setPending(f); return; } }
+    if (d.squad && f.squad === undefined) { const max = Array.from({ length: 9 }, (_, i) => i).filter(n => canCast(g, HUMAN, c, { kicked: f.kicked, warp: f.warp, door: f.door, x: f.x, replicate: f.replicate, squad: n })).pop() ?? 0; if (max === 0) f.squad = 0; else { setPending(f); return; } }
     if (d.teamwork !== undefined && f.teamwork === undefined) { setPending(f); return; }
     begin2(f, c);
   }
@@ -797,7 +799,7 @@ export default function App() {
       primary = { label: `Confirm (${discardSel.length}/${need})`, run: () => { if (discardSel.length !== need) return; const pick = [...discardSel]; setDiscardSel([]); act(g => { answerDecision(g, pick); }); } };
     }
     else if (humanDecision) { prompt = `❓ ${humanDecision.src ? `${CARDS[humanDecision.src]?.name}: ` : ''}${humanDecision.text}`; tone = 'target'; }
-    else if (flow && flowStage && flowStage !== 'targets') { prompt = `${flowName}: ${flowStage === 'alt' ? 'choose how to cast it' : flowStage === 'warp' ? 'warp it?' : flowStage === 'morph' ? 'cast it face down?' : flowStage === 'impending' ? 'cast it for impending?' : flowStage === 'teamwork' ? 'use teamwork?' : flowStage === 'kicker' ? 'kick it?' : flowStage === 'door' ? 'choose a door to unlock' : flowStage === 'replicate' ? 'how many times to pay replicate?' : flowStage === 'x' ? 'choose X' : 'choose mode(s)'}`; tone = 'target'; }
+    else if (flow && flowStage && flowStage !== 'targets') { prompt = `${flowName}: ${flowStage === 'alt' ? 'choose how to cast it' : flowStage === 'warp' ? 'warp it?' : flowStage === 'morph' ? 'cast it face down?' : flowStage === 'impending' ? 'cast it for impending?' : flowStage === 'teamwork' ? 'use teamwork?' : flowStage === 'kicker' ? 'kick it?' : flowStage === 'door' ? 'choose a door to unlock' : flowStage === 'replicate' ? 'how many times to pay replicate?' : flowStage === 'squad' ? 'how many times to pay squad?' : flowStage === 'x' ? 'choose X' : 'choose mode(s)'}`; tone = 'target'; }
     else if (flow && curSlot) {
       const n = flowActive.length; const k = flow.ts.length + 1;
       prompt = `${flow.kind === 'trigger' ? '⚡ Your trigger' : '🎯'} ${flowName}: choose ${curSlot.label ?? 'a target'}${n > 1 ? ` (target ${k} of ${n})` : ''}${curSlot.who === 'card' ? ' from a graveyard' : ''}. Legal targets glow green.`;
@@ -855,7 +857,7 @@ export default function App() {
           <div className="dimg"><CardFace d={c} /></div><b>{d.name}</b><span>{c.name}</span><small>{c.text.split('\n').slice(-1)[0]}</small></button>); })}</div>
       <section className="deckgroup official" data-section="official">
         <h3 className="dsec">Official precons</h3>
-        <p className="dnote">Wizards of the Coast products from Marvel Super Heroes Commander and Reality Fracture Commander. A deck that lists several commanders asks you to pick one before the game starts.</p>
+        <p className="dnote">Wizards of the Coast products from Marvel Super Heroes Commander, Reality Fracture Commander, and Star Trek Commander. A deck that lists several commanders asks you to pick one before the game starts.</p>
         <div className="deckpick precons">{OFFICIAL.map(d => <PreconTile key={d.id} d={d} on={deck === d.id} pick={() => { setCmdChoice(null); setDeck(d.id); }} dbl={() => newMatch(d.id)} />)}</div>
       </section>
       <section className="deckgroup custom" data-section="custom">
@@ -1032,6 +1034,7 @@ export default function App() {
       {!blockDec && flow && flowStage === 'kicker' && flowCard && <KickerDialog name={flowName} cost={costText(def(flowCard).kicker!)} cancel={() => setPending(null)} pick={k => begin2({ ...flow, kicked: k }, flowCard)} />}
       {!blockDec && flow && flowStage === 'door' && flowCard && def(flowCard).room && <AltCostDialog name={flowName} opts={def(flowCard).room!.doors.map((door, i) => ({ k: String(i), label: `${door.name} (${costText(door.cost)})` })).filter((_, i) => canCast(g, HUMAN, flowCard, { ...flow, door: i }))} pick={k => startCast(flowCard, { ...flow, door: +k })} cancel={() => setPending(null)} />}
       {!blockDec && flow && flowStage === 'replicate' && flowCard && <XDialog name={`${flowName}: replicate`} max={Array.from({ length: 9 }, (_, i) => i).filter(n => canCast(g, HUMAN, flowCard, { kicked: flow.kicked, warp: flow.warp, door: flow.door, x: flow.x, replicate: n })).pop() ?? 0} pick={n => begin2({ ...flow, replicate: n }, flowCard)} cancel={() => setPending(null)} />}
+      {!blockDec && flow && flowStage === 'squad' && flowCard && <XDialog name={`${flowName}: squad`} max={Array.from({ length: 9 }, (_, i) => i).filter(n => canCast(g, HUMAN, flowCard, { kicked: flow.kicked, warp: flow.warp, door: flow.door, x: flow.x, replicate: flow.replicate, squad: n })).pop() ?? 0} pick={n => begin2({ ...flow, squad: n }, flowCard)} cancel={() => setPending(null)} />}
       {!blockDec && flow && flowStage === 'x' && <XDialog name={flowName} max={flow.kind === 'ability' && flowCard && flowAb?.loyX ? ctr(flowCard, 'loyalty') : flow.kind === 'ability' && flowCard ? maxX(g, HUMAN, flowCard, { abil: flowAb!.mana, exclude: flowAb!.tap ? flowCard.uid : undefined }) : flowCard ? maxX(g, HUMAN, flowCard, { kicked: flow.kicked }) : 0} cancel={() => setPending(null)} pick={x => advance({ ...flow, x })} />}
       {!blockDec && flow && flowStage === 'modes' && flowModes && <ModesDialog key={flow.uid} name={flowName} m={flowModesEff!} avail={flowModes.list.map(md => (md.tslots ?? []).every(sl => sl.opt || [...g.players.map(q => ({ player: q.id })), ...g.players.flatMap(q => [...q.battlefield, ...q.graveyard].map(c => ({ card: c.uid }))), ...g.stack.map(it => ({ stack: it.id }))].some(t => validSlot(g, HUMAN, sl, t, tctx))))} cancel={flow.kind === 'trigger' ? undefined : () => setPending(null)} pick={ms => advance({ ...flow, modes: ms })} />}
       {!blockDec && curSlot?.who === 'card' && (() => { const cands = g.players.flatMap(q => [...q.graveyard]).filter(c => validSlot(g, HUMAN, curSlot, { card: c.uid }, tctx)); return (
