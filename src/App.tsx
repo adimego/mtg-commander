@@ -12,6 +12,7 @@ import { needsBack, type BoardViews } from './setup/views';
 import { DecisionDialog, KickerDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
+import { groupTiles, stackCaption, crowdedCardWidth, pickFromStack, type Tile } from './stacks';
 
 const HUMAN = 0;
 const PCOLORS = ['#4fc3f7', '#ef5350', '#ffb300', '#66bb6a'];
@@ -88,7 +89,7 @@ function LifeTotal({ v, big }: { v: number; big?: boolean }) {
 }
 
 interface UI {
-  g: Game; setHover: (h: Hover) => void; clickPerm: (c: Card) => void; permCls: (c: Card) => string; activateAb: (c: Card, i: number) => void;
+  g: Game; setHover: (h: Hover) => void; clickPerm: (c: Card) => void; clickStack?: (cs: Card[]) => void; permCls: (c: Card) => string; activateAb: (c: Card, i: number) => void;
   isTarget: (t: Target) => boolean; cardDown: (c: Card, e: React.PointerEvent) => void; blockCtx: (c: Card, e: React.MouseEvent) => void; why: (c: Card) => string | null; dropOn: (t: Target, e: DragEvent) => void; dragStart: (c: Card, e: DragEvent) => void;
   clickPlayer: (pid: number) => void; atkPlan: Record<number, number>; atkPw: Record<number, number>; atkWalker: number | null; atkTarget?: number; declaring: boolean; openZone: (pid: number, zone: 'graveyard' | 'exile') => void; clickCommand: (c: Card) => void; canTapMana: (cs: Card[]) => boolean; tapMana: (cs: Card[]) => void;
   compact: boolean; wide: boolean; targeting: boolean; viewOpp: number | null; toggleBoard: (pid: number) => void; focusOpp: (pid: number) => void;
@@ -96,7 +97,7 @@ interface UI {
   stackOpen: boolean; toggleStack: () => void;
 }
 
-function Permanent({ ui, c }: { ui: UI; c: Card }) {
+function Permanent({ ui, c, stack }: { ui: UI; c: Card; stack?: Card[] }) {
   const { g } = ui; const d = def(c); const cr = isType(c, 'Creature'); const mine = c.owner === HUMAN;
   const sick = cr && c.sick && !hasKw(c, 'haste') && c.owner === g.active;
   const atkTo = c.attacking ?? ui.atkPlan[c.uid];
@@ -108,11 +109,11 @@ function Permanent({ ui, c }: { ui: UI; c: Card }) {
   const atkW = c.atkPw ?? ui.atkPw[c.uid]; const atkWName = atkW !== undefined ? findCard(g, atkW) && def(findCard(g, atkW)!).name.split(',')[0] : undefined;
   const t = { card: c.uid };
   return (
-    <div className={`slot ${c.tapped ? 'tapped' : ''}`} data-uid={c.uid}
+    <div className={`slot ${c.tapped && !stack ? 'tapped' : ''} ${stack && stack.length > 1 ? 'stack' : ''} ${stack && stack.length > 1 && stack.every(x => x.tapped) ? 'alltapped' : ''}`} data-uid={c.uid} data-stack={stack && stack.length > 1 ? stack.length : undefined} data-untapped={stack ? stack.filter(x => !x.tapped).length : undefined}
       onDragOver={e => { if (ui.isTarget(t) || pwTarget) e.preventDefault(); }} onDrop={e => ui.dropOn(t, e)}>
       <div className={`perm ${walker ? 'walker' : ''} ${pwTarget ? 'atkpick' : ''} ${aimed ? 'atktarget' : ''} ${c.attacking !== undefined ? 'attacking' : ''} ${c.blocking !== undefined ? 'blocking' : ''} ${ui.permCls(c)}`}
         draggable={!ui.compact && mine && ui.declaring && canAttack(g, c)} onDragStart={e => ui.dragStart(c, e)}
-        onPointerDown={e => ui.cardDown(c, e)} onContextMenu={e => ui.blockCtx(c, e)} onClick={e => { if (ui.eat()) return; if (walker && mine && !ui.declaring) setOpen(o => !o); if (pwTarget) e.stopPropagation(); ui.clickPerm(c); }} onMouseEnter={() => ui.setHover(c.faceDown && c.owner !== HUMAN ? { id: 'face-down' } : { id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)}>
+        onPointerDown={e => ui.cardDown(c, e)} onContextMenu={e => ui.blockCtx(c, e)} onClick={e => { if (ui.eat()) return; if (walker && mine && !ui.declaring) setOpen(o => !o); if (pwTarget) e.stopPropagation(); if (stack && stack.length > 1 && ui.clickStack) ui.clickStack(stack); else ui.clickPerm(c); }} onMouseEnter={() => ui.setHover(c.faceDown && c.owner !== HUMAN ? { id: 'face-down' } : { id: c.id, uid: c.uid })} onMouseLeave={() => ui.setHover(null)}>
         <CardFace d={d} />
         {cr && <span className={`pt ${c.damage ? 'hurt' : ''} ${c.pp || c.pt ? 'pumped' : ''}`} title={`Power/toughness${c.damage ? ` (${c.damage} damage marked)` : ''}`}>{power(g, c)}/{toughness(g, c) - c.damage}</span>}
         {sick && <span className="badge sick" title="Summoning sick: can't attack or use {T} abilities this turn">💤</span>}
@@ -128,6 +129,8 @@ function Permanent({ ui, c }: { ui: UI; c: Card }) {
         {c.blocking !== undefined && <span className="badge blk">🛡 Block</span>}
         {isCommander(g, c) && <span className="badge cmdr" title="Commander">★</span>}
         {c.token && <span className="badge tok" title="Token">TOKEN</span>}
+        {stack && stack.length > 1 && <span className="stack-badge" data-count={stack.length} title={stackCaption(ui.g, stack)}>×{stack.length}</span>}
+        {stack && stack.length > 1 && <span className="stack-cap">{stackCaption(ui.g, stack)}</span>}
         {Object.entries(c.counters ?? {}).some(([k, v]) => v && !(walker && k === 'loyalty')) && <div className="ctrs">{Object.entries(c.counters ?? {}).filter(([k, v]) => v && !(walker && k === 'loyalty')).map(([k, v]) => <span key={k} data-counter={k} className={`ctr ${k === '+1/+1' ? 'plus' : k === '-1/-1' ? 'minus' : k === 'loyalty' ? 'loy' : ''}`} title={`${v} ${k} counter${v > 1 ? 's' : ''}`}>{k === 'loyalty' ? `◆${v}` : `${k === '+1/+1' || k === '-1/-1' ? k : k} ×${v}`}</span>)}</div>}
         {c.attachedTo !== undefined && <span className="badge host" title={`Attached to ${findCard(g, c.attachedTo) ? def(findCard(g, c.attachedTo)!).name : '?'}`}>⛓ {findCard(g, c.attachedTo) ? def(findCard(g, c.attachedTo)!).name : ''}</span>}
         {(() => { const att = g.players.flatMap(q => q.battlefield).filter(x => x.attachedTo === c.uid); return att.length ? <div className="attached" data-attached={att.length}>{att.map(x => <span key={x.uid} title={def(x).name}>⚔ {def(x).name}</span>)}</div> : null; })()}
@@ -145,12 +148,17 @@ function LandRow({ ui, cards }: { ui: UI; cards: Card[] }) {
       <div className="landart" style={{ backgroundImage: `url(${d.art})` }} /><span className="landname">{d.name}</span><span className="landcount"><b>{un}</b>/{gr.length}</span>
     </div>); })}</div>;
 }
+function tileRow(ui: UI, cards: Card[], cls: string) {
+  const tiles = groupTiles(ui.g, cards);
+  const cw = crowdedCardWidth('var(--cw)', tiles.length, ui.compact);
+  return <div className={`row ${cls}`} data-tiles={tiles.length} style={tiles.length > 8 ? { ['--cw' as string]: cw } : undefined}>{tiles.length ? tiles.map(t => t.kind === 'stack' ? <Permanent key={t.key} ui={ui} c={t.sample} stack={t.cards} /> : <Permanent key={t.card.uid} ui={ui} c={t.card} />) : <span className="empty">No creatures</span>}</div>;
+}
 function Battlefield({ ui, pid }: { ui: UI; pid: number }) {
   const p = ui.g.players[pid];
   const cr = p.battlefield.filter(c => isType(c, 'Creature')); const other = p.battlefield.filter(c => !isType(c, 'Creature') && !isType(c, 'Land')); const lands = p.battlefield.filter(c => isType(c, 'Land'));
   return (
     <div className="bf">
-      <div className="row crow">{cr.length ? cr.map(c => <Permanent key={c.uid} ui={ui} c={c} />) : <span className="empty">No creatures</span>}</div>
+      {tileRow(ui, cr, 'crow')}
       <div className="row nrow">{other.map(c => <Permanent key={c.uid} ui={ui} c={c} />)}</div>
       <LandRow ui={ui} cards={lands} />
     </div>
@@ -263,7 +271,7 @@ function OppBoardView({ ui, pid }: { ui: UI; pid: number }) {
         {groups.filter(([, , list]) => list.length).map(([id, title, list]) => (
           <section key={id} className="oppview-group" data-group={id}>
             <h3>{title} <span>{list.length}</span></h3>
-            <div className="oppview-grid">{list.map(c => <Permanent key={c.uid} ui={ui} c={c} />)}</div>
+            <div className="oppview-grid" data-tiles={groupTiles(ui.g, list).length}>{groupTiles(ui.g, list).map(t => t.kind === 'stack' ? <Permanent key={t.key} ui={ui} c={t.sample} stack={t.cards} /> : <Permanent key={t.card.uid} ui={ui} c={t.card} />)}</div>
           </section>
         ))}
       </div>
@@ -424,6 +432,7 @@ export default function App() {
   const [atkPlan, setAtkPlan] = useState<Record<number, number>>({});
   const [atkPwPlan, setAtkPwPlan] = useState<Record<number, number>>({});
   const [atkWalker, setAtkWalker] = useState<number | null>(null);
+  const [stackPick, setStackPick] = useState<{ cards: Card[]; mode: 'attack' | 'block' | 'target' | 'view' } | null>(null);
   const [selBlocker, setSelBlocker] = useState<number | null>(null);
   const [blkPlan, setBlkPlan] = useState<Record<number, number>>({});
   const [bdrag, setBdrag] = useState<{ uid: number; x0: number; y0: number; x: number; y: number; over: number | null; moved: boolean; pointer: string } | null>(null);
@@ -637,6 +646,29 @@ export default function App() {
     if (p[c.uid] !== undefined && to === p[c.uid] && pw[c.uid] === w) { delete p[c.uid]; delete pw[c.uid]; }
     else if (canAttack(g!, c) && to !== undefined) { p[c.uid] = to; if (w !== undefined) pw[c.uid] = w; else delete pw[c.uid]; }
     setAtkPlan(p); setAtkPwPlan(pw);
+  }
+  function clickStack(cs: Card[]) {
+    if (eat()) return;
+    if (!g) return;
+    if (spec) { setStackPick({ cards: cs, mode: 'target' }); return; }
+    if (declaring && cs[0].owner === HUMAN) { setStackPick({ cards: cs, mode: 'attack' }); return; }
+    if (blocking && cs[0].owner === HUMAN) { setStackPick({ cards: cs, mode: 'block' }); return; }
+    setHover({ id: cs[0].id, uid: cs[0].uid });
+    if (compact) setZoom({ id: cs[0].id, uid: cs[0].uid });
+    setStackPick({ cards: cs, mode: 'view' });
+  }
+  function applyStackPick(cs: Card[], mode: 'attack' | 'block' | 'target' | 'view') {
+    setStackPick(null);
+    if (mode === 'target') { for (const c of cs) { if (spec) targetClick({ card: c.uid }); } return; }
+    if (mode === 'attack') {
+      const defn = curAtkTarget;
+      if (defn === undefined) { flash('Choose an opponent to attack first, then pick how many of the stack attack.'); return; }
+      const p = { ...atkPlan }; const w = { ...atkPwPlan };
+      for (const c of cs) { if (canAttack(g!, c)) { p[c.uid] = defn; if (atkWalker !== null) w[c.uid] = atkWalker; } }
+      setAtkPlan(p); setAtkPwPlan(w);
+      return;
+    }
+    if (mode === 'block') { if (cs[0]) toggleBlocker(cs[0]); return; }
   }
   function clickPerm(c: Card) {
     if (eat()) return;
@@ -912,7 +944,7 @@ export default function App() {
   }
   const focusOpp = (pid: number) => setViewOpp(pid);
   const wide = layout.wide;
-  const ui: UI = { canTapMana, tapMana, g, cardDown, blockCtx, why, setHover, clickPerm, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand, compact, wide, targeting: !!spec, viewOpp: compact ? viewOpp : null, toggleBoard: pid => setViewOpp(viewOpp === pid ? null : pid), focusOpp, pressStart, eat, peek, previewCard: h => { setHover(h); if (compact) setZoom(h); }, castCommander: c => { setZoom(null); startCast(c); }, unlockDoor: (c, i) => act(g => unlockDoor(g, HUMAN, c.uid, i)), stackOpen, toggleStack: () => setStackOpen(o => !o) };
+  const ui: UI = { canTapMana, tapMana, g, cardDown, blockCtx, why, setHover, clickPerm, clickStack, permCls, activateAb, isTarget, dropOn, dragStart, clickPlayer, atkPlan, atkPw: atkPwPlan, atkWalker, atkTarget: curAtkTarget, declaring, openZone: (pid, zone) => setModal({ pid, zone }), clickCommand: clickHand, compact, wide, targeting: !!spec, viewOpp: compact ? viewOpp : null, toggleBoard: pid => setViewOpp(viewOpp === pid ? null : pid), focusOpp, pressStart, eat, peek, previewCard: h => { setHover(h); if (compact) setZoom(h); }, castCommander: c => { setZoom(null); startCast(c); }, unlockDoor: (c, i) => act(g => unlockDoor(g, HUMAN, c.uid, i)), stackOpen, toggleStack: () => setStackOpen(o => !o) };
   const hand = me.hand; const n = hand.length;
 
   return (
@@ -989,6 +1021,7 @@ export default function App() {
       <Arrows g={g} plan={atkPlan} blk={blkPlan} pw={atkPwPlan} />
       {bdrag?.moved && <DragLine uid={bdrag.uid} x={bdrag.x} y={bdrag.y} color={bdrag.over === null ? '#9ec3ff' : blockReason(g, findCard(g, bdrag.uid)!, findCard(g, bdrag.over)!) ? '#ef5350' : '#42a5f5'} />}
       {toast && <div className="toast">{toast}</div>}
+      {stackPick && g && <StackPicker g={g} cards={stackPick.cards} mode={stackPick.mode} defender={curAtkTarget !== undefined ? g.players[curAtkTarget]?.name : undefined} Face={CardFace} onCancel={() => setStackPick(null)} onPick={(cs, mode) => applyStackPick(cs, mode)} />}
       {blockDec && <DecisionDialog key={blockDec.key + blockDec.kind} g={g} d={blockDec} castNow={u => { const c = g.players[HUMAN].exile.find(x => x.uid === u); if (c) startCast(c); }} answer={a => act(g => { answerDecision(g, a); })} Face={CardFace} setHover={id => setHover(id ? { id } : null)} />}
       {!blockDec && flow && flowStage === 'alt' && flowCard && <AltCostDialog name={flowName} opts={[...(canCast(g, HUMAN, flowCard) ? [{ k: '', label: `Cast normally: ${costText(def(flowCard).cost)}` }] : []), ...(def(flowCard).exileAlt && canCast(g, HUMAN, flowCard, { exileAlt: true }) ? [{ k: 'exile', label: `Exile ${def(flowCard).exileAlt!.n} blue cards instead of paying its mana cost` }] : []), ...(me.hand.includes(flowCard) && omniOn(g, HUMAN) && canCast(g, HUMAN, flowCard, { omni: true }) ? [{ k: 'omni', label: 'Cast without paying its mana cost (Omniscience)' }] : []), ...(def(flowCard).surge && canCast(g, HUMAN, flowCard, { surge: true }) ? [{ k: 'surge', label: `Surge: ${costText(def(flowCard).surge!)}` }] : []), ...(def(flowCard).freeCmdr && canCast(g, HUMAN, flowCard, { free: true }) ? [{ k: 'free', label: 'Cast it free (you control a commander)' }] : []), ...(def(flowCard).evoke && canCast(g, HUMAN, flowCard, { evoke: true }) ? [{ k: 'evoke', label: `Evoke: ${costText(def(flowCard).evoke!)} — sacrificed when it enters` }] : []), ...(def(flowCard).overload && canCast(g, HUMAN, flowCard, { overload: true }) ? [{ k: 'overload', label: `Overload: ${costText(def(flowCard).overload!.cost)} — "target" becomes "each"` }] : []), ...(def(flowCard).webSling && canCast(g, HUMAN, flowCard, { webSling: true }) ? [{ k: 'web', label: `Web-slinging: ${costText(def(flowCard).webSling!)} — return a tapped creature you control to hand` }] : [])]} cancel={() => setPending(null)} pick={k => startCast(flowCard, { alt: k as Flow['alt'] })} />}
       {!blockDec && flow && flowStage === 'or' && flowCard && <AltCostDialog name={flowName} opts={[{ k: 'sac', label: 'Sacrifice a legendary creature' }, { k: 'pay', label: `Pay {${def(flowCard).costOr!.pay}} instead` }]} cancel={() => setPending(null)} pick={k => startCast(flowCard, { ...flow, orPay: k === 'pay' })} />}
@@ -1025,6 +1058,38 @@ export default function App() {
         <ul className="tiplist">{TIPS.map(([i, t]) => <li key={t}><span>{i}</span>{t}</li>)}</ul>
         <button className="big" onClick={() => { localStorage.setItem('ca_tips_seen', '1'); setModal(null); }}>Got it, let's play</button>
       </div></div>}
+    </div>
+  );
+}
+
+function StackPicker({ g, cards, mode, defender, Face, onCancel, onPick }: { g: Game; cards: Card[]; mode: 'attack' | 'block' | 'target' | 'view'; defender?: string; Face: (p: { d: CardDef }) => ReactElement; onCancel: () => void; onPick: (cs: Card[], mode: 'attack' | 'block' | 'target' | 'view') => void }) {
+  const un = cards.filter(c => !c.tapped);
+  const max = mode === 'attack' ? un.filter(c => canAttack(g, c)).length : mode === 'block' ? un.length : cards.length;
+  const [n, setN] = useState(Math.max(1, mode === 'view' ? cards.length : max));
+  const title = def(cards[0]).name;
+  const go = () => {
+    const pool = mode === 'attack' ? un.filter(c => canAttack(g, c)) : mode === 'block' ? un : cards;
+    onPick(pickFromStack(pool, n, true), mode);
+  };
+  return (
+    <div className="stack-picker" data-stack-picker={mode} onClick={onCancel}>
+      <div className="box" onClick={e => e.stopPropagation()}>
+        <h3>{title} ×{cards.length}</h3>
+        <p className="muted">{stackCaption(g, cards)}{mode === 'attack' && defender ? ` · attacking ${defender}` : ''}</p>
+        {mode !== 'view' && <div className="nrow">
+          <button className="sec" type="button" onClick={() => setN(Math.max(0, n - 1))}>−</button>
+          <input type="range" min={0} max={max} value={Math.min(n, max)} onChange={e => setN(+e.target.value)} />
+          <button className="sec" type="button" onClick={() => setN(Math.min(max, n + 1))}>+</button>
+          <b className="nval" data-n={n}>{n}</b>
+        </div>}
+        <div className="cbtns">
+          {mode === 'attack' && <button className="big" data-ans="attack" onClick={go}>Attack with {n}</button>}
+          {mode === 'block' && <button className="big" data-ans="block" onClick={go}>Block with {n}</button>}
+          {mode === 'target' && <button className="big" data-ans="target" onClick={go}>Choose {n}</button>}
+          {mode === 'view' && <button className="sec" onClick={onCancel}>Close</button>}
+          {mode !== 'view' && <button className="sec" onClick={onCancel}>Cancel</button>}
+        </div>
+      </div>
     </div>
   );
 }

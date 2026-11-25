@@ -1862,11 +1862,24 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
       if (e.rest === 'graveyard') P.graveyard.push(...rest); else if (e.rest === 'hand') P.hand.push(...rest); else { shuffle(g, rest); P.library.unshift(...rest); }
       break;
     }
-    case 'revealUntil': { // reveal until a matching card; it goes to dest, the rest to the bottom in a random order
+    case 'revealUntil': { // reveal until a matching card; dest or (if pl is opponents) stash for assimilate
+      if (e.pl && e.pl !== 'you') {
+        const pls = refPlayers(g, ctx, e.pl);
+        const found: Card[] = [];
+        once('ru', () => {
+          for (const pid of pls) {
+            const q = g.players[pid]; const pile: Card[] = [];
+            while (q.library.length) { const c = q.library.pop()!; pile.push(c); log(g, `${q.name} reveals ${nm(c)}.`); if (matches(g, c, e.f ?? { types: ['Creature'] }, me)) { found.push(c); break; } }
+            for (const c of pile) { q.exile.push(c); c.exBy = ctx.item.sourceUid; }
+          }
+          ctx.chosen.push(...found);
+        });
+        break;
+      }
       const seen: Card[] = []; let hit: Card | undefined;
       while (P.library.length) { const c = P.library.pop()!; if (matches(g, c, e.f, me)) { hit = c; break; } seen.push(c); }
       log(g, `${P.name} reveals ${[...seen, ...(hit ? [hit] : [])].map(nm).join(', ') || 'nothing'}${hit ? ` and takes ${nm(hit)}` : ''}.`);
-      if (hit) { ctx.chosen.push(hit); if (e.dest === 'battlefield') enter(g, hit, me, {}); else P.hand.push(hit); }
+      if (hit) { ctx.chosen.push(hit); if (e.dest === 'battlefield') enter(g, hit, me, {}); else if (e.dest !== 'exile') P.hand.push(hit); else { P.exile.push(hit); hit.exBy = ctx.item.sourceUid; } }
       shuffle(g, seen); P.library.unshift(...seen); break;
     }
     case 'lifeBecomes': { const k = n(); for (const pid of refPlayers(g, ctx, e.pl)) { const q = g.players[pid]; if (q.teferi) { log(g, `${q.name}'s life total can't change.`); continue; } if (k < q.life) { q.lostLife += q.life - k; } q.life = k; log(g, `${q.name}'s life total becomes ${k}.`); } break; }
@@ -2155,26 +2168,6 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
       const pick = e.kind === 'one' && cs.length > 1 ? (() => { const u = ask<number[]>(g, ctx, key, { pid: me, kind: 'pick', cards: cs, min: 1, max: 1, zone: 'exile', text: `${srcName}: assimilate a creature card.` })[0]; return cs.filter(c => c.uid === u); })() : cs;
       for (const c of pick) assimilateCard(g, c, me, ctx.item.sourceUid);
     }); break;
-    case 'revealUntil': {
-      const pls = refPlayers(g, ctx, e.pl ?? 'opps');
-      const found: Card[] = [];
-      once('x', () => {
-        for (const pid of pls) {
-          const q = g.players[pid]; const pile: Card[] = [];
-          while (q.library.length) { const c = q.library.pop()!; pile.push(c); log(g, `${q.name} reveals ${nm(c)}.`); if (matches(g, c, e.f ?? { types: ['Creature'] }, me)) { found.push(c); break; } }
-          const rest = pile.filter(c => !found.includes(c));
-          // stash revealed on the player temporarily via exile with a mark, then we'll put rest on bottom
-          for (const c of rest) { q.exile.push(c); c.exBy = ctx.item.sourceUid; }
-          for (const c of pile.filter(c => found.includes(c))) { if (e.reveal) { q.exile.push(c); c.exBy = ctx.item.sourceUid; } else { q.exile.push(c); c.exBy = ctx.item.sourceUid; } }
-        }
-        ctx.chosen.push(...found);
-      });
-      // after choosing? assimilate is a following effect. For revealUntil alone, put non-chosen on bottom at the end of this op if e.rest==='bottom' and no follow-up. Follow-up assimilate uses chosen.
-      if (e.rest === 'bottom') {
-        // don't put back yet if a later assimilate needs to pick; use delayed cleanup via same op kind 'putBackExBy'
-      }
-      break;
-    }
     case 'putBackExBy': once('x', () => {
       const keep = new Set((e.who ? who() : ctx.chosen).map(c => c.uid));
       for (const q of g.players) {
@@ -2205,8 +2198,6 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
       if (locate(g, c.uid)?.zone === 'exile' || locate(g, c.uid)) moveCard(g, c, 'battlefield', { ctl: owner });
       log(g, `${nm(c)} is exiled and returned to the battlefield under ${g.players[owner].name}'s control.`);
     }); break;
-    case 'noop':
-    case 'chooseColor': break;
     case 'delayExile': once('x', () => {
       const at = e.kind === 'combat' ? 'endCombat' : 'endStep';
       for (const c of (e.who === 'created' ? ctx.created : who())) addDelayed(g, ctx, { at: at as 'endStep', label: `exile ${nm(c)}`, effects: [{ op: 'exileUid', n: c.uid }] });

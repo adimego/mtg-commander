@@ -1,4 +1,5 @@
 import { CARDS, attackers, blockReason, canAttack, canCast, costOf, costText, ctr, def, hasKw, hasPriority, instantSpeed, isType, power, sorceryTiming, toughness, type Card, type Game } from './engine/engine';
+import { groupTiles, stackCaption } from './stacks';
 
 const PAIR = ['#ef5350', '#42a5f5', '#ffb300', '#66bb6a', '#ab47bc', '#26c6da', '#ff7043', '#8d6e63'];
 const SHOW_KW = ['flying', 'reach', 'menace', 'trample', 'deathtouch', 'first strike', 'double strike', 'vigilance', 'lifelink', 'haste', 'defender', 'hexproof'];
@@ -12,6 +13,7 @@ type DuoUi = {
   viewOpp: number | null;
   toggleBoard: (pid: number) => void;
   clickPerm: (c: Card) => void;
+  clickStack?: (cs: Card[]) => void;
   openZone: (pid: number, zone: 'graveyard' | 'exile') => void;
   eat: () => boolean;
   previewCard: (h: { id: string; uid?: number }) => void;
@@ -67,14 +69,14 @@ function CommandStrip({ ui }: { ui: DuoUi }) {
 const kwsOf = (c: Card) => (def(c).keywords ?? []).filter(k => SHOW_KW.includes(k));
 const shortName = (c: Card) => def(c).name.split(',')[0];
 
-function Tile({ ui, c, count }: { ui: DuoUi; c: Card; count?: number }) {
+function Tile({ ui, c, count, stack }: { ui: DuoUi; c: Card; count?: number; stack?: Card[] }) {
   const { g } = ui;
   const cr = isType(c, 'Creature');
   const counters = Object.entries(c.counters ?? {}).filter(([, v]) => v);
   const atk = c.attacking !== undefined ? g.players[c.attacking]?.name : undefined;
   return (
-    <button type="button" className={`gtile ${c.tapped ? 'tapped' : ''} ${c.attacking !== undefined ? 'attacking' : ''} ${c.blocking !== undefined ? 'blocking' : ''} ${c.sick && !hasKw(c, 'haste') ? 'sick' : ''}`} data-uid={c.uid} data-attacking-name={atk} onClick={() => { if (ui.eat()) return; ui.clickPerm(c); }}>
-      <span className="gname">{shortName(c)}{count && count > 1 ? ` ×${count}` : ''}</span>
+    <button type="button" className={`gtile ${c.tapped && !(stack && stack.length > 1) ? 'tapped' : ''} ${stack && stack.every(x => x.tapped) ? 'alltapped' : ''} ${c.attacking !== undefined ? 'attacking' : ''} ${c.blocking !== undefined ? 'blocking' : ''} ${c.sick && !hasKw(c, 'haste') ? 'sick' : ''}`} data-uid={c.uid} data-stack={stack && stack.length > 1 ? stack.length : undefined} data-attacking-name={atk} onClick={() => { if (ui.eat()) return; if (stack && stack.length > 1 && ui.clickStack) ui.clickStack(stack); else ui.clickPerm(c); }}>
+      <span className="gname">{stack && stack.length > 1 ? stackCaption(ui.g, stack) : <>{shortName(c)}{count && count > 1 ? ` ×{count}` : ''}</>}</span>
       {cr && <span className="gpt">{power(g, c)}/{toughness(g, c) - c.damage}</span>}
       {c.sick && !hasKw(c, 'haste') && <i className="gsick" title="Summoning sick">z</i>}
       {atk && <span className="gatk">⚔ {atk}{c.atkPw !== undefined ? ' ◆' : ''}</span>}
@@ -85,25 +87,14 @@ function Tile({ ui, c, count }: { ui: DuoUi; c: Card; count?: number }) {
   );
 }
 
-function stacksOf(cards: Card[], expand: boolean) {
-  if (expand) return cards.map(c => [c]);
-  const out: Card[][] = [];
-  const idx = new Map<string, number>();
-  for (const c of cards) {
-    if (!c.token) { out.push([c]); continue; }
-    const key = `${c.id}|${c.tapped ? 1 : 0}|${c.attacking ?? ''}|${c.blocking ?? ''}|${JSON.stringify(c.counters ?? {})}`;
-    const i = idx.get(key);
-    if (i === undefined) { idx.set(key, out.length); out.push([c]); }
-    else out[i].push(c);
-  }
-  return out;
+function stacksOf(g: Game, cards: Card[]) {
+  return groupTiles(g, cards).map(t => t.kind === 'stack' ? t.cards : [t.card]);
 }
 
 /** Compact board for the wide foldable: every player's state fits in one viewport. */
 export function GlanceBoard({ ui, pid }: { ui: DuoUi; pid: number }) {
   const { g } = ui;
   const p = g.players[pid];
-  const expand = ui.targeting || ui.declaring;
   const creatures = p.battlefield.filter(c => isType(c, 'Creature') && !isType(c, 'Land'));
   const lands = p.battlefield.filter(c => isType(c, 'Land') && !isType(c, 'Creature'));
   const other = p.battlefield.filter(c => !creatures.includes(c) && !lands.includes(c));
@@ -133,11 +124,11 @@ export function GlanceBoard({ ui, pid }: { ui: DuoUi; pid: number }) {
       {pid === 0 && <CommandStrip ui={ui} />}
       <div className="glance-body">
         <div className="gzone" data-group="creatures">
-          {stacksOf(creatures, expand).map(cs => <Tile key={cs[0].uid} ui={ui} c={cs[0]} count={cs.length} />)}
+          {stacksOf(g, creatures).map(cs => <Tile key={cs[0].uid} ui={ui} c={cs[0]} count={cs.length} stack={cs} />)}
           {!creatures.length && <span className="gempty">No creatures</span>}
         </div>
         <div className="gzone" data-group="other">
-          {stacksOf(other, expand).map(cs => <Tile key={cs[0].uid} ui={ui} c={cs[0]} count={cs.length} />)}
+          {stacksOf(g, other).map(cs => <Tile key={cs[0].uid} ui={ui} c={cs[0]} count={cs.length} stack={cs} />)}
         </div>
         <div className="gzone glands" data-group="lands">
           {[...landGroups].map(([name, cs]) => {
