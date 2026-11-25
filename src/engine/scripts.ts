@@ -5,6 +5,7 @@
 import type { CardDef, Effect, TriggerDef, TSlot, TokenSpec, Filter } from './types';
 import { GINGER, JACE_TOK } from './frc';
 import { TREK_SCRIPTS } from './trek-scripts';
+import { SOC_SCRIPTS } from './soc-scripts';
 
 type Patch = (d: CardDef) => void;
 const S = (kind: string, extra: Partial<Effect> = {}): Effect => ({ op: 'script', kind, ...extra });
@@ -358,6 +359,7 @@ export const SCRIPTS: Record<string, Record<string, Patch>> = {
 };
 
 Object.assign(SCRIPTS, TREK_SCRIPTS);
+Object.assign(SCRIPTS, SOC_SCRIPTS);
 
 /** Apply scripts for lines the compiler couldn't parse; covered lines are removed from `unparsed`. */
 export function applyScripts(name: string, d: CardDef, unparsed: string[]) {

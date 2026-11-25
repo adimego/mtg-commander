@@ -73,7 +73,7 @@ export function parseFilter(s0: string): FP | null {
     else if (x === 'attacking') f.attacking = true; else if (x === 'blocking') f.blocking = true; else if (x === 'atkblk') f.atkOrBlk = true;
     else if (x === 'legendary' && w.length > 1) f.legendary = true; else if (x === 'nonlegendary') f.nonlegendary = true;
     else if (x === 'basic') f.basic = true; else if (x === 'nonbasic') f.nonbasic = true;
-    else if (x === 'nontoken') f.nontoken = true; else if (x === 'colorless') f.colorless = true; else if (x === 'multicolored') f.multicolor = true;
+    else if (x === 'nontoken') f.nontoken = true; else if (x === 'colorless') f.colorless = true; else if (x === 'multicolored') f.multicolor = true; else if (x === 'monocolored') f.monocolor = true;
     else if (COLOR_OF[x]) cols.push(COLOR_OF[x]);
     else if (x === 'or' && cols.length && COLOR_OF[w[1]]) { /* "white or black creature" */ }
     else if (/^non-?/.test(x) && COLOR_OF[x.replace(/^non-?/, '')]) notC.push(COLOR_OF[x.replace(/^non-?/, '')]);
@@ -221,6 +221,8 @@ function cond(s: string, cx: Cx): Cond | null {
   if ((m = /^you have (\d+) or less life$/.exec(s))) return { k: 'lifeLE', n: +m[1] };
   if (/^you have no cards in hand$/.test(s)) return { k: 'noCardsHand' };
   if ((m = /^you have (\w+) or fewer cards in hand$/.exec(s))) return { k: 'handLE', n: num(m[1]) as number };
+  if ((m = /^a player has (\w+) or fewer cards in hand$/.exec(s))) return { k: 'anyHandLE', n: num(m[1]) as number };
+  if (/^a modified creature died under your control this turn$/.test(s)) return { k: 'modDiedYou' };
   if ((m = /^you have (\w+) or more cards in hand$/.exec(s))) return { k: 'handGE', n: num(m[1]) as number };
   if ((m = /^there are (\w+) or more (.*?) ?cards in your graveyard$|^(\w+) or more (.*?) ?cards are in your graveyard$/.exec(s))) { const fp = (m[2] ?? m[4]) ? parseFilter((m[2] ?? m[4])) : { f: {} }; return fp ? { k: 'gyGE', n: num(m[1] ?? m[3]) as number, f: fp.f } : null; }
   if ((m = /^an opponent controls more (.+?) than you$/.exec(s))) { const fp = parseFilter(m[1]); return fp ? { k: 'oppControlsMore', f: { ...fp.f, ctrl: undefined } } : null; }
@@ -426,6 +428,8 @@ const PATS: Pat[] = [
   [/^return (?:that card|it) to the battlefield(?: under (its owner's|your) control)? at the beginning of the next end step$/, (m, cx) => [{ op: 'delayRet', who: cx.that ?? cx.it ?? 'ev', zone: 'graveyard', ctl: m[1] === 'your' ? 'you' : undefined }]],
   [/^draw (\w+) cards, then put (?:a|one) card from your hand on the bottom of your library$/, m => { const k = num(m[1]); return typeof k === 'number' ? [{ op: 'draw', n: k, pl: 'you' }, { op: 'putBack', n: 1, dest: 'bottom' }] : null; }],
   [/^each opponent loses life equal to the life that player lost this turn$/, () => [{ op: 'loseEachLost' }]],
+  [/^populate$/, () => [{ op: 'script', kind: 'populate' }]],
+  [/^until end of turn, any time you could activate a mana ability, you may pay 1 life. if you do, add \{c\}$/, () => [{ op: 'script', kind: 'channel' }]],
   [/^§uginx (?:a |an )?(.+?) tokens?$/, mm => { const t = tokenSpec(mm[1]); return t ? [{ op: 'exileLinkTok', tok: t }] : null; }],
   [/^§exilecast (free)?\|(.+)$/, (mm, cx) => { const e = clause(mm[2], cx); return e ? [{ op: 'exileTopCast', free: !!mm[1], else: e }] : null; }],
   [/^§searchexilefree (.+)$/, mm => { const fp = parseFilter(mm[1] + ' card'); return fp ? [{ op: 'search', n: 99, f: fp.f, dest: 'exile', text: mm[1] + ' card' }, { op: 'mayCastFree', who: 'chosen' }] : null; }],
@@ -473,7 +477,8 @@ const PATS: Pat[] = [
   [/^(.+?) deals? damage to (.+?) equal to (.+)$/, (m, cx) => { const a = amount(m[3], cx); return a === null ? null : dmg(m[1], a, m[2], cx); }],
   [/^destroy (target [a-z ]+?) and (target [a-z ]+)$/, (m, cx) => { const a = obj(m[1], cx, true); const b = a && obj(m[2], cx, true); return a && b && !a.card && !b.card ? [{ op: 'destroy', who: a.ref }, { op: 'destroy', who: b.ref }] : null; }],
   [/^destroy (.+?)$/, (m, cx) => { const o = obj(m[1], cx, true); return o && !o.card ? [{ op: 'destroy', who: o.ref }] : null; }],
-  [/^exile (.+?)(?: until ~ leaves the battlefield)?$/, (m, cx) => { if (/until/.test(m[0])) return null; const o = obj(m[1], cx, true); return o ? [{ op: 'exile', who: o.ref }] : null; }],
+  [/^exile (.+?) until ~ leaves the battlefield$/, (m, cx) => { const o = obj(m[1], cx, true); return o ? [{ op: 'script', kind: 'ring', who: o.ref }] : null; }],
+  [/^exile (.+?)$/, (m, cx) => { if (/until/.test(m[0])) return null; const o = obj(m[1], cx, true); return o ? [{ op: 'exile', who: o.ref }] : null; }],
   [/^return (a|an) (land|creature|permanent|nonland permanent|artifact|enchantment) you control to its owner's hand$/, m => { const fp = parseFilter(m[2]); return fp ? [{ op: 'sac', f: { ...fp.f, ctrl: 'you' }, n: 1, pl: 'you', dest: 'hand' }] : null; }],
   [/^return (.+?) to (?:its owner's|their owners'|your|their owner's) hands?$/, (m, cx) => { const o = (/\btarget .*graveyard$/.test(m[1]) ? obj(m[1], cx, false) : null) ?? obj(m[1].replace(/ from your graveyard$| from a graveyard$/, ''), cx, !/graveyard/.test(m[1])); if (!o) { const o2 = gyObj(m[1], cx); return o2 ? [{ op: 'ret', who: o2, dest: 'hand' }] : null; } return [{ op: o.card || /graveyard/.test(m[1]) ? 'ret' : 'bounce', who: o.ref, dest: 'hand' }]; }],
   [/^return (.+?) to the battlefield( tapped)?(?: under (your|its owner's|their owners'|their owner's) control)?( tapped)?$/, (m, cx) => { const o = (/\btarget .*graveyard$/.test(m[1]) ? obj(m[1], cx, false) : null) ?? obj(m[1].replace(/ from your graveyard$| from a graveyard$/, ''), cx, false) ?? (gyObj(m[1], cx) ? { ref: gyObj(m[1], cx)! } : null); return o ? [{ op: 'ret', who: o.ref, dest: 'battlefield', tapped: !!(m[2] || m[4]), ctl: m[3] === 'your' ? 'you' : undefined }] : null; }],
@@ -488,6 +493,7 @@ const PATS: Pat[] = [
   [new RegExp(`^put (${N}|that many|x|an additional) ([+-]\\d\\/[+-]\\d|[a-z]+) counters? on (.+?)(?: for each (.+))?$`), (m, cx) => { const k = m[2]; const harm = k === '-1/-1'; const o = obj(m[3], cx, harm); const a = m[1] === 'an additional' ? 1 : num(m[1]) ?? 'ev'; const n = withForEach(a, m[4], cx); return o && !o.card && n !== null ? [{ op: 'addC', kind: k, n, who: o.ref }] : null; }],
   [/^remove (a|an|one|two|three|x|all) ([+-]\d\/[+-]\d|[a-z]+) counters? from (.+)$/, (m, cx) => { const o = obj(m[3], cx, false); return o ? [{ op: 'remC', kind: m[2], n: m[1] === 'all' ? 99 : num(m[1])!, who: o.ref }] : null; }],
   [/^proliferate$/, () => [{ op: 'proliferate' }]],
+  [/^proliferate x times$/, () => [{ op: 'proliferate', n: 'X' }]],
   [/^you become the monarch$/, () => [{ op: 'monarch', pl: 'you' }]],
   [/^choose a creature type( §keep)?$/, m => [{ op: 'chooseType', text: m[1] ? 'keep' : undefined }]],
   [new RegExp(`^put (${N}) ([+-]\\d\\/[+-]\\d|[a-z]+) counters? on (.+?) and (${N}) ([+-]\\d\\/[+-]\\d|[a-z]+) counters? on (.+)$`), (m, cx) => { const a = obj(m[3], cx, m[2] === '-1/-1'); const b = a && obj(m[6], cx, m[5] === '-1/-1'); const x = num(m[1]), y = num(m[4]); return a && b && !a.card && !b.card && typeof x === 'number' && typeof y === 'number' ? [{ op: 'addC', kind: m[2], n: x, who: a.ref }, { op: 'addC', kind: m[5], n: y, who: b.ref }] : null; }],
@@ -761,6 +767,7 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if (/^~ enters untapped$/.test(h)) return { defs: [{ ev: 'etb', subj: 'self', ifc: { k: 'enteredUntapped' } }], cx: { it: 'self' } };
   if (/^~ enters$/.test(h)) return self('etb');
   if (/^~ enters or attacks$|^~ attacks or enters$/.test(h)) return { defs: [{ ev: 'etb', subj: 'self' }, { ev: 'attacks', subj: 'self' }], cx: { it: 'self' } };
+  if ((m = /^~ enters and whenever (.+)$/.exec(h))) { const a = trigger('~ enters'); const b = trigger(m[1]); if (a && b) return { defs: [...a.defs, ...b.defs], cx: a.cx }; }
   if (/^~ dies$|^~ is put into a graveyard from the battlefield$/.test(h)) return self('dies');
   if (/^~ enters or dies$/.test(h)) return { defs: [{ ev: 'etb', subj: 'self' }, { ev: 'dies', subj: 'self' }], cx: { it: 'self' } };
   if (/^~ leaves the battlefield$/.test(h)) return self('ltb');
@@ -785,22 +792,26 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if (/^a spell or ability you control counters a spell$/.test(h)) return { defs: [{ ev: 'counters', pl: 'you' }], cx: { it: 'self' } };
   if ((m = /^you attack with (\w+) or more creatures$/.exec(h))) { const n = num(m[1]); if (typeof n !== 'number') return null; return { defs: [{ ev: 'youAttack', pl: 'you', ifc: { k: 'evAmtGE', n } }], cx: { it: 'self' } }; }
   if ((m = /^one or more (.+?) you control attack a player$/.exec(h))) { const fp = parseFilter(m[1]); if (!fp) return null; fp.f.ctrl = 'you'; return { defs: [{ ev: 'attackPlayer', f: fp.f }], cx: { it: 'self' } }; }
+  if ((m = /^you cast an? (.+?) spell with mana value (\d+) or greater from your hand$/.exec(h))) { const fp = parseFilter(m[1] + ' spell'); if (!fp) return null; return { defs: [{ ev: 'cast', subj: 'any', f: { ...fp.f, mvGE: +m[2], fromHand: true }, pl: 'you' }], cx: { it: 'ev', that: 'ev' } }; }
+  if ((m = /^you cast your first spell with \{x\} in its mana cost each turn$/.exec(h))) return { defs: [{ ev: 'cast', subj: 'any', f: { hasX: true }, pl: 'you', nth: { k: 'x', n: 1 } }], cx: { it: 'ev', that: 'ev' } } as never;
   if ((m = /^(you|an opponent|a player|target opponent) casts? (?:an|a|your first)\b ?(.*?) ?spell(?: this turn)?$/.exec(h.replace(/ spell of the chosen type$/, ' of the chosen type spell').replace(/^(.+?) spell (with mana value \d+ or (?:greater|less))$/, '$1 $2 spell')))) { if (/first/.test(h)) return null; const fp = m[2] ? parseFilter(/ with /.test(m[2]) ? m[2].replace(' with ', ' spell with ') : m[2] + ' spell') : { f: {} }; if (!fp) return null; return { defs: [{ ev: 'cast', subj: 'any', f: fp.f, pl: m[1] === 'you' ? 'you' : m[1] === 'a player' ? 'any' : 'notyou' }], cx: { it: 'ev', that: 'ev', thatPl: 'evp' } }; }
   if ((m = /^your commander (enters or attacks|enters|attacks|deals combat damage to a player|dies)$/.exec(h))) { const r = trigger(`a commander creature you own ${m[1]}`); if (r) for (const d0 of r.defs) if (d0.ev === 'attacks' || d0.ev === 'combatDamagePlayer') d0.f = { ...d0.f, ctrl: 'you' }; return r; }
   if (/^you attack with your commander$/.test(h)) { const r = trigger('a commander creature you own attacks'); if (r) for (const d0 of r.defs) d0.f = { ...d0.f, ctrl: 'you' }; return r; }
+  if (/^one or more cards leave your graveyard$/.test(h)) return { defs: [{ ev: 'leaveGy', pl: 'you', batch: true }], cx: { it: 'self' } };
   if (/^you cast ~$/.test(h)) return { defs: [{ ev: 'castSelf', subj: 'self' }], cx: { it: 'self' } };
   if ((m = /^(you|an opponent) casts? (?:your|their) (first|second|third|fourth) ?(noncreature|instant, sorcery, or villain|) spell each turn$/.exec(h))) { const k = m[3] === '' ? 'n' : m[3] === 'noncreature' ? 'nonc' : 'isv'; const f: Filter = m[3] === 'noncreature' ? { notTypes: ['Creature'] } : m[3] ? { anyType: ['Instant', 'Sorcery', 'Villain'] } : {}; return { defs: [{ ev: 'cast', subj: 'any', f, pl: m[1] === 'you' ? 'you' : 'notyou', nth: { k, n: ORD[m[2]] } }], cx: { it: 'ev', that: 'ev', thatPl: 'evp' } } as never; }
   if ((m = /^(you|an opponent) draws? (?:your|their) (first|second|third) card each turn$/.exec(h))) return { defs: [{ ev: 'drawCard', pl: m[1] === 'you' ? 'you' : 'notyou', nth: { k: 'draw', n: ORD[m[2]] } }], cx: { it: 'self', thatPl: 'evp' } } as never;
   if ((m = /^an? ([a-z ]+?) (?:is|are) put into your graveyard from the battlefield$/.exec(h))) { const fp = parseFilter(m[1]); return fp && !fp.card ? { defs: [{ ev: 'dies', subj: 'any', f: { ...fp.f, ctrl: 'you' } }], cx: { it: 'ev', that: 'ev' } } : null; }
   if (/^you cast your commander$/.test(h)) return { defs: [{ ev: 'cast', subj: 'any', pl: 'you', filter: 'commander' }], cx: { it: 'ev' } };
   if (/^the beginning of combat on your turn$/.test(h)) return { defs: [{ ev: 'beginCombat', pl: 'you' }], cx: { it: 'self', thatPl: 'evp' } };
-  if ((m = /^the beginning of (your|each|each opponent's|each player's|the) (upkeep|end step|draw step|combat on your turn|combat)$/.exec(h))) {
-    const ev = { upkeep: 'upkeep', 'end step': 'endStep', 'draw step': 'drawStep', 'combat on your turn': 'beginCombat', combat: 'beginCombat' }[m[2]]!;
+  if ((m = /^the beginning of (your|each|each opponent's|each player's|the) (upkeep|end step|draw step|combat on your turn|combat|first main phase)$/.exec(h))) {
+    const ev = { upkeep: 'upkeep', 'end step': 'endStep', 'draw step': 'drawStep', 'combat on your turn': 'beginCombat', combat: 'beginCombat', 'first main phase': 'firstMain' }[m[2]]!;
     const p = m[1] === 'your' || m[2] === 'combat on your turn' ? 'you' : m[1] === "each opponent's" ? 'notyou' : 'any';
     return { defs: [{ ev, pl: p as TriggerDef['pl'] }], cx: { it: 'self', thatPl: 'evp' } };
   }
   if (/^you gain life$/.test(h)) return { defs: [{ ev: 'gainLife', pl: 'you' }], cx: { it: 'self' } };
   if (/^you lose life$/.test(h)) return { defs: [{ ev: 'loseLife', pl: 'you' }], cx: { it: 'self' } };
+  if (/^you lose life for the first time each turn$/.test(h)) return { defs: [{ ev: 'loseLife', pl: 'you', ifc: { k: 'firstLoseLife' } }], cx: { it: 'self' } };
   if (/^an opponent loses life$/.test(h)) return { defs: [{ ev: 'loseLife', pl: 'notyou' }], cx: { it: 'self', thatPl: 'evp' } };
   if (/^you draw a card$/.test(h)) return { defs: [{ ev: 'drawCard', pl: 'you' }], cx: { it: 'self' } };
   if (/^a player draws a card$/.test(h)) return { defs: [{ ev: 'drawCard', pl: 'any' }], cx: { it: 'self', thatPl: 'evp' } };
@@ -889,6 +900,13 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
     // keyword line
     { const fl = /^flashback—(\{[^}]+\}(?:\{[^}]+\})*), pay (\d+) life\.?$/.exec(l); if (fl) { const c = parseCost(fl[1].toUpperCase()); if (c) { d.flashback = c; d.flashbackLife = +fl[2]; continue; } } }
     if (l === 'cascade') { const mvv = d.cost.generic + (['W', 'U', 'B', 'R', 'G', 'C'] as const).reduce((a, k) => a + (d.cost[k] ?? 0), 0) + (d.cost.hyb?.length ?? 0); triggers.push({ on: 'x', label: 'Cascade', ev: 'castSelf', subj: 'self', effects: [{ op: 'discover', kind: 'cascade', n: mvv }] } as TriggerDef); continue; }
+    if (l === 'demonstrate') { triggers.push({ on: 'x', label: 'Demonstrate', ev: 'castSelf', subj: 'self', effects: [{ op: 'script', kind: 'demonstrate' }] } as TriggerDef); continue; }
+    if (l === 'myriad') { triggers.push({ on: 'x', label: 'Myriad', ev: 'attacks', subj: 'self', effects: [{ op: 'script', kind: 'myriad' }] } as TriggerDef); continue; }
+    if (l === 'gravestorm') { triggers.push({ on: 'x', label: 'Gravestorm', ev: 'castSelf', subj: 'self', effects: [{ op: 'script', kind: 'gravestorm' }] } as TriggerDef); continue; }
+    { const an = /^annihilator (\d+)$/.exec(l); if (an) { triggers.push({ on: 'x', label: `Annihilator ${an[1]}`, ev: 'attacks', subj: 'self', effects: [{ op: 'script', kind: 'annihilator', n: +an[1] }] } as TriggerDef); continue; } }
+    { const eh = /^echo (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(l); if (eh) { const c = parseCost(eh[1].toUpperCase()); if (!c) { fail(raw); continue; } d.echo = c; triggers.push({ on: 'x', label: 'Echo', ev: 'upkeep', pl: 'you', effects: [{ op: 'script', kind: 'echo' }] } as TriggerDef); continue; } }
+    { const es = /^escape[—\-]?(\{[^}]+\}(?:\{[^}]+\})*), exile (\w+) other cards? from your graveyard$/.exec(l); if (es) { const c = parseCost(es[1].toUpperCase()); if (!c) { fail(raw); continue; } d.escape = { cost: c, n: (num(es[2]) as number) }; continue; } }
+    { const esc2 = /^~ escapes with (a|an|one|two|three|four|five|six|x|\d+) ([+-]\d\/[+-]\d|[a-z]+) counters? on it$/.exec(l); if (esc2) { d.escapeCtr = { kind: esc2[2], n: num(esc2[1])! }; continue; } }
     const kparts = l.split(/[,;] /);
     if (kparts.every(p => isKeyword(p.trim(), d, kws, abilities, sc))) continue;
     // modal
@@ -1073,6 +1091,20 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
   if ((m = /^multikicker (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.multikicker = (c.generic ?? 0) || 1; return true; }
   if ((m = /^hideaway (\d+)$/.exec(p))) { d.hideaway = +m[1]; return true; }
   if ((m = /^suspend (\d+)[—-]((?:\{[^}]+\})+)$/.exec(p))) { const c = parseCost(m[2].toUpperCase()); if (!c) return false; d.suspend = { n: +m[1], cost: c }; return true; }
+  if (p === 'delve') { d.delve = true; return true; }
+  if (p === 'retrace' && (d.types.includes('Instant') || d.types.includes('Sorcery'))) { d.retrace = true; return true; }
+  if (p === 'living weapon') { d.livingWeapon = true; return true; }
+  if ((m = /^echo (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.echo = c; return true; }
+  if (p === 'skulk') { kws.add('skulk'); return true; }
+  if (p === '~ can block only creatures with flying') { kws.add('_onlyblockflying'); return true; }
+  if (p === "creatures with power less than ~'s power can't block it") { kws.add('_noblockltpow'); return true; }
+  if (p === 'ascend') { d.ascend = true; return true; }
+  if ((m = /^devour (\d+)$/.exec(p))) { d.devour = +m[1]; return true; }
+  if ((m = /^backup (\d+)$/.exec(p))) { d.backup = +m[1]; return true; }
+  if ((m = /^escape[—\-]?(\{[^}]+\}(?:\{[^}]+\})*), exile (\w+) other cards? from your graveyard$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.escape = { cost: c, n: num(m[2]) as number }; return true; }
+  if ((m = /^bestow (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.bestow = c; return true; }
+  if (p === 'strive') { d.strive = true; return true; }
+  if (p === 'demonstrate' || p === 'myriad' || p === 'gravestorm' || /^annihilator \d+$/.test(p) || p === 'populate') return false;
   void sc; return false;
 }
 function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>): boolean {
@@ -1094,6 +1126,7 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   if ((m = /^as an additional cost to cast (?:this spell|~), sacrifice an? (.+?) or pay \{(\d+)\}$/.exec(s))) { const fp = parseFilter(m[1]); if (!fp) return false; d.costOr = { sacF: { f: fp.f, n: 1 }, pay: +m[2] }; return true; }
   if ((m = /^as an additional cost to cast (?:this spell|~), discard a card or pay (\d+) life$/.exec(s))) { d.discardOrLife = { life: +m[1], discard: 1 }; return true; }
   if ((m = /^([a-z]+) spells and ([a-z]+) spells you cast cost \{(\d+)\} less to cast$/.exec(s))) { const a = typeWord(m[1]); const b = typeWord(m[2]); if (!a || !b) return false; statics.push({ k: 'costLess', who: 'all', n: +m[3], spellF: { anyType: [a, b] } }); return true; }
+  if ((m = /^instant and sorcery spells you cast cost \{(\d+)\} less to cast$/.exec(s))) { statics.push({ k: 'costLess', who: 'all', n: +m[1], spellF: { anyType: ['Instant', 'Sorcery'] } }); return true; }
   if (!c && /^if another source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus 1 instead$/.test(s)) { statics.push({ k: 'dmgPlus1', who: 'self' }); return true; }
   if (!c && /^if equipped creature would be dealt damage, prevent that damage and put that many \+1\/\+1 counters on it$/.test(s)) { statics.push({ k: 'preventToAttachedCtr', who: 'attached' }); return true; }
   if (!c && (m = /^if a source an opponent controls would deal damage to you, prevent (\d+) of that damage$/.exec(s))) { statics.push({ k: 'preventOppToYou', who: 'self', n: +m[1] }); return true; }
@@ -1136,6 +1169,7 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   ];
   for (const [re, k, who] of PST) if (re.test(s)) { statics.push({ k, who, cond: c }); return true; }
   if (/^you have (hexproof|shroud)$/.test(s) && !c) { statics.push({ k: 'playerHexproof', who: 'self', kws: [s.slice(9)] }); return true; }
+  if (/^commanders you control have hexproof$/.test(s) && !c) { statics.push({ k: 'kw', who: 'all', f: { ctrl: 'you', cmdr: 'own' }, kws: ['hexproof'] }); return true; }
   if (/^you have no maximum hand size$/.test(s)) { statics.push({ k: 'noMaxHand', who: 'self' }); return true; }
   if (/^you can't lose the game and your opponents can't win the game$/.test(s)) { statics.push({ k: 'noGameEnd', who: 'self' }); return true; }
   if (/^your opponents can't gain life$/.test(s)) { statics.push({ k: 'noLifeGain', who: 'self' }); return true; }
@@ -1154,6 +1188,16 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   if (/^untap all artifacts you control during each other player's untap step$/.test(s) && !c) { statics.push({ k: 'oppUntapArts', who: 'self' }); return true; }
   if (/^whenever you tap a permanent for \{c\}, add an additional \{c\}$/.test(s) && !c) { statics.push({ k: 'extraC', who: 'self' }); return true; }
 
+  if ((m = /^if one or more \+1\/\+1 counters would be put on (?:another |an? )?(.+?), that many plus one \+1\/\+1 counters are put on (?:it|that permanent) instead$/.exec(s)) && !c) {
+    const who = m[1];
+    const fp = parseFilter(who); if (!fp) return false;
+    statics.push({ k: 'plusP1P1', who: 'all', f: { ...fp.f, other: / on another /.test(s) || undefined, ctrl: 'you' } }); return true;
+  }
+  if ((m = /^spells you cast from anywhere other than your hand cost \{(\d+)\} less to cast$/.exec(s)) && !c) { statics.push({ k: 'costLess', who: 'all', n: +m[1], fromNotHand: true }); return true; }
+  if (/^enchantment spells you cast have affinity for auras$/.test(s) && !c) { const a = forEach('aura you control', newCx()); if (!a) return false; statics.push({ k: 'costLess', who: 'all', spellF: { types: ['Enchantment'] }, p: a }); return true; }
+  if ((m = /^the first spell you cast with \{x\} in its mana cost each turn costs \{(\d+)\} less to cast for each \+1\/\+1 counter on ~$/.exec(s)) && !c) { statics.push({ k: 'costLess', who: 'all', firstX: true, p: { ctr: '+1/+1', who: 'self' } }); return true; }
+  if (/^~ enters with twice x \+1\/\+1 counters on it$/.test(s) && !c) { d.etbCounters = { kind: '+1/+1', n: { mul: 2, of: 'X' } }; return true; }
+  if ((m = /^(nontoken creatures you control) enter with an additional \+1\/\+1 counter on them for each creature that died under your control this turn$/.exec(s)) && !c) { statics.push({ k: 'etbExtra', who: 'all', f: { types: ['Creature'], ctrl: 'you', nontoken: true }, kws: ['+1/+1'], p: { diedYou: true } }); return true; }
   if ((m = /^(.*?)spells (you cast|your opponents cast|cost) ?(?:cost )?\{(\d)\} (less|more) to cast$/.exec(s))) {
     const fp = m[1].trim() ? parseFilter(m[1].trim() + ' spell') : { f: {} }; if (!fp) return false;
     if (m[2] === 'your opponents cast' && m[4] === 'less') return false; if (m[2] === 'you cast' && m[4] === 'more') return false;
@@ -1172,14 +1216,15 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   if (/^gets?$|^get$/.test(pred)) {
     const xm = /^([+-])x\/([+-](?:\d+|x)), where x is (.+)$/.exec(rest);
     if (xm) { const a = amount(xm[3], newCx()); if (a === null) return false; const p: Amt = xm[1] === '-' ? { mul: -1, of: a } : a; out.push({ k: 'pt', who, f, p, t: 0, cond: c }); statics.push(...out); return true; }
-    const pm = /^([+-]\d+)\/([+-]\d+)(?: for each (.+?))?(?: and (?:has|have) (.+))?$/.exec(rest); if (!pm) return false;
+    const pm = /^([+-]\d+)\/([+-]\d+)(?: for each (.+?))?(?:,? (?:and )?(?:has|have) (.+?))?(?:,? and is goaded)?$/.exec(rest); if (!pm) return false;
     let p: Amt = +pm[1], t: Amt = +pm[2];
     if (pm[3]) { const fe = forEach(pm[3], newCx()); if (!fe) return false; p = p ? { mul: p as number, of: fe } : 0; t = t ? { mul: t as number, of: fe } : 0; }
     out.push({ k: 'pt', who, f, p, t, cond: c });
-    if (pm[4]) { const k = kwList(pm[4]); if (k) out.push({ k: 'kw', who, f, kws: k, cond: c }); else if (/^can't block$/.test(pm[4])) return false; else return false; }
+    if (pm[4]) { const kws2 = pm[4].replace(/, and is goaded$/, '').replace(/ and is goaded$/, ''); const k = kwList(kws2); if (k) out.push({ k: 'kw', who, f, kws: k, cond: c }); else if (/^can't block$/.test(pm[4])) return false; else return false; }
+    if (/and is goaded$/.test(rest)) out.push({ k: 'goad', who, f, cond: c });
   } else if (/^has$|^have$/.test(pred) && /^"\{t\}: add .+"$/.test(rest)) { const mm = /^"\{t\}: add (.+?)\.?"$/.exec(rest)!; const ma = manaAdd(mm[1], newCx()); if (!ma || ma.n) return false; out.push({ k: 'grantMana', who, f, mana: [{ add: ma.mana }], cond: c }); }
   else if (/^has$|^have$/.test(pred) && /^"(.+)"$/.test(rest)) { const body = /^"(.+)"$/.exec(rest)![1]; const ext = tokenAbil(body, CUR_NAME); if (!ext) return false; out.push({ k: 'grantAbil', who, f, grant: ext, cond: c }); }
-  else if (/^has$|^have$/.test(pred)) { const wm = /^ward \{(\d+)\}$/.exec(rest); if (wm) out.push({ k: 'wardN', who, f, n: +wm[1], cond: c }); else { const k = kwList(rest); if (!k) return false; if (who === 'self' && !c) { k.forEach(x => kws.add(x)); return true; } out.push({ k: 'kw', who, f, kws: k, cond: c }); } }
+  else if (/^has$|^have$/.test(pred)) { const goaded = / and is goaded$/.test(rest); const rest0 = rest.replace(/ and is goaded$/, ''); const wm = /^ward \{(\d+)\}$/.exec(rest0); if (wm) { out.push({ k: 'wardN', who, f, n: +wm[1], cond: c }); if (goaded) out.push({ k: 'goad', who, f, cond: c }); } else { const k = kwList(rest0); if (!k) return false; if (who === 'self' && !c && !goaded) { k.forEach(x => kws.add(x)); return true; } out.push({ k: 'kw', who, f, kws: k, cond: c }); if (goaded) out.push({ k: 'goad', who, f, cond: c }); } }
   else if (pred === "can't block") { if (rest) return false; out.push({ k: 'cantBlock', who, f, cond: c }); }
   else if (pred === "can't attack or block") { if (rest) return false; out.push({ k: 'cantBlock', who, f, cond: c }, { k: 'cantAttack', who, f, cond: c }); }
   else if (pred === "can't attack") { if (rest) return false; out.push({ k: 'cantAttack', who, f, cond: c }); }
