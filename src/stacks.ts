@@ -35,7 +35,7 @@ export function stackCaption(g: Game, cards: Card[]): string {
   const n = cards.length;
   const un = cards.filter(c => !c.tapped).length;
   if (un === 0) return `${name} ×${n} · all tapped`;
-  return `${name} ×${n} · ${un} untapped`;
+  return `${name} ×${n} · ${un} up`;
 }
 
 /** Shrink battlefield card width as the zone gets crowded. Floor is a readable minimum. */

@@ -107,6 +107,7 @@ export interface Game { /** Galvanic Iteration: copy the next instant/sorcery th
   /** creature-linked delayed triggers ('whenever any of those creatures deals combat damage …') */ watch?: Watch[];
   /** additional combat phases pending after this main phase (Seize the Day) */ extraCombats?: number; combatAfter?: boolean;
   /** symbols produced by the most recent mana ability */ lastMana?: string[]; /** Merciful Mandate: end the current combat after this spell resolves */ endCombatNow?: boolean;
+  /** After a human Chekov replacement prompt, finish the draw step. */ chekovAfter?: 'drawStep'; chekovAns?: Record<string, unknown>; chekovSeq?: number; drawOpen?: { pid: number; n: number; done: number };
   players: Player[]; active: number; step: Step; turn: number; log: string[]; seed: number; nextUid: number; winner: number | null; started: boolean;
   stack: StackItem[]; priority: number | null; passes: number; awaiting: 'attack' | 'block' | null; blockersDone: number[];
   pending: Pending[]; choice: (Pending & { needModes?: boolean }) | null; res: ResCtx | null; decision: Decision | null; died: number; ordered?: boolean; steals?: { uid: number; back: number; t?: number }[];
@@ -236,14 +237,25 @@ export function mulligan(g: Game, pid: number) {
 export function startGame(g: Game) { g.started = true; beginTurn(g, 0); }
 
 /** Pavel Chekov: replace a draw by revealing until a land or nonland. */
-function chekovDraw(g: Game, pid: number): boolean {
+function chekovKind(g: Game, pid: number, i: number): 'land' | 'nonland' | 'normal' | 'wait' {
   const p = g.players[pid];
-  const lands = p.battlefield.filter(c => isType(c, 'Land')).length;
-  const wantLand = lands < 5;
-  const ok = (c: Card) => wantLand ? isType(c, 'Land') : !isType(c, 'Land');
+  if (!p.human || !g.started) return p.battlefield.filter(c => isType(c, 'Land')).length < 5 ? 'land' : 'nonland';
+  const key = `chekov:${pid}:${g.chekovSeq ?? 0}:${i}`;
+  const ans = (g.res?.ans ?? (g.chekovAns ??= {}))[key];
+  if (ans !== undefined) {
+    const s = String(ans);
+    return s === 'Land' || s === 'land' ? 'land' : s === 'Nonland' || s === 'nonland' ? 'nonland' : 'normal';
+  }
+  const src = p.battlefield.find(q => def(q).chekov);
+  if (!g.decision) g.decision = { key, pid, kind: 'color', options: ['Land', 'Nonland', 'Draw normally'], text: `${src ? def(src).name : 'Pavel Chekov, First Posting'}: replace this draw? You may reveal cards from the top of your library until you reveal a land or a nonland card, put that card into your hand, and put the rest on the bottom in a random order.`, src: src?.id };
+  if (g.res) throw WAIT;
+  return 'wait';
+}
+function applyChekov(g: Game, pid: number, wantLand: boolean): boolean {
+  const p = g.players[pid];
   const rest: Card[] = [];
   let hit: Card | undefined;
-  while (p.library.length) { const c = p.library.pop()!; if (ok(c)) { hit = c; break; } rest.push(c); }
+  while (p.library.length) { const c = p.library.pop()!; if (wantLand ? isType(c, 'Land') : !isType(c, 'Land')) { hit = c; break; } rest.push(c); }
   if (hit) p.hand.push(hit);
   shuffle(g, rest); p.library.unshift(...rest);
   log(g, `${p.name} applies Pavel Chekov, First Posting (${wantLand ? 'land' : 'nonland'}${hit ? `: ${def(hit).name}` : ': none found'}).`);
@@ -251,12 +263,26 @@ function chekovDraw(g: Game, pid: number): boolean {
 }
 export function draw(g: Game, pid: number, n: number) {
   const p = g.players[pid];
-  for (let i = 0; i < n; i++) {
+  const ans = g.res?.ans;
+  const open = (ans?._drawOpen as { pid: number; n: number; done: number } | undefined) ?? (!ans ? g.drawOpen : undefined);
+  const resuming = !!(open && open.pid === pid && open.n === n && open.done < n);
+  let done = resuming ? open!.done : 0;
+  if (!resuming) g.chekovSeq = (g.chekovSeq ?? 0) + 1;
+  const cur = { pid, n, done };
+  if (ans) ans._drawOpen = cur; else g.drawOpen = cur;
+  for (let i = done; i < n; i++) {
     if (p.drawn?.turn !== g.turn) p.drawn = { turn: g.turn, n: 0 };
     if (p.drawn.n >= 1 && g.started && hasPStatic(g, oppIds(g, pid), 'drawLimit')) { log(g, `${p.name} can't draw more than one card this turn.`); break; }
-    if (g.started && p.library.length && p.battlefield.some(q => def(q).chekov) && chekovDraw(g, pid)) { p.drawn.n++; emit(g, 'drawCard', { player: pid, amount: p.drawn.n }); continue; }
+    if (g.started && p.library.length && p.battlefield.some(q => def(q).chekov)) {
+      const kind = chekovKind(g, pid, i);
+      if (kind === 'wait') return;
+      if (kind !== 'normal' && applyChekov(g, pid, kind === 'land')) { p.drawn.n++; emit(g, 'drawCard', { player: pid, amount: p.drawn.n }); cur.done = i + 1; continue; }
+    }
     const c = p.library.pop(); if (!c) { if (g.started && hasPStatic(g, [pid], 'winOnEmptyDraw')) { winGame(g, pid); break; } p.drewEmpty = true; break; } p.drawn.n++; p.hand.push(c); if (g.started) emit(g, 'drawCard', { player: pid, amount: p.drawn.n });
-    if (g.started && p.drawn.n === 1 && !isType(c, 'Land') && p.battlefield.some(q => def(q).miracle0)) { const mm = p.battlefield.find(q => def(q).miracle0)!; g.pending.push({ controller: pid, sourceId: mm.id, sourceUid: mm.uid, trig: { on: 'x', label: `Miracle — you may cast ${nm(c)} for {0}`, effects: [{ op: 'script', kind: 'miracle', n: c.uid } as Effect] }, event: { player: pid } }); } }
+    if (g.started && p.drawn.n === 1 && !isType(c, 'Land') && p.battlefield.some(q => def(q).miracle0)) { const mm = p.battlefield.find(q => def(q).miracle0)!; g.pending.push({ controller: pid, sourceId: mm.id, sourceUid: mm.uid, trig: { on: 'x', label: `Miracle — you may cast ${nm(c)} for {0}`, effects: [{ op: 'script', kind: 'miracle', n: c.uid } as Effect] }, event: { player: pid } }); }
+    cur.done = i + 1;
+  }
+  if (!ans && g.drawOpen === cur && cur.done >= n) delete g.drawOpen;
 }
 
 // ---------------- turn structure & priority ----------------
@@ -296,7 +322,7 @@ function enterStep(g: Game, s: Step) {
   switch (s) {
     case 'untap': return enterStep(g, 'upkeep');
     case 'upkeep': suspendTick(g); fireDelayed(g, 'upkeep'); emit(g, 'upkeep', { player: g.active }); break;
-    case 'draw': if (g.turn > 1 || g.players.length > 2) draw(g, g.active, 1); emit(g, 'drawStep', { player: g.active }); checkState(g); break;
+    case 'draw': if (g.turn > 1 || g.players.length > 2) { draw(g, g.active, 1); if (g.decision) { g.chekovAfter = 'drawStep'; return; } } emit(g, 'drawStep', { player: g.active }); checkState(g); break;
     case 'main1': for (const c of [...act.battlefield]) if (def(c).saga) addCounters(g, c, 'lore', 1); emit(g, 'firstMain', { player: g.active }); break;
     case 'beginCombat': if (!creatures(act).some(c => canAttack(g, c, true))) return enterStep(g, 'main2'); fireDelayed(g, 'beginCombat'); emit(g, 'beginCombat', { player: g.active }); if (!g.pending.length) return enterStep(g, 'attackers'); break;
     case 'attackers':
@@ -570,11 +596,11 @@ const unitsOf = (c: Card, i = 0) => { const m = def(c).mana![i]; const n = m.n !
 /** Mana symbols of `col` in a card's printed mana cost. Hybrid and Phyrexian symbols that include the color each count as one. */
 export function colorPips(d: CardDef, col: Color): number { return (d.cost[col] ?? 0) + (d.cost.phy?.filter(x => x === col).length ?? 0) + (d.cost.hyb?.filter(h => h.split('|').includes(col)).length ?? 0); }
 export const manaAvailable = (p: Player) => p.pool.length + manaSources(p).filter(c => !def(c).mana![0].sac).reduce((s, c) => s + unitsOf(c).length, 0);
-export function costOf(g: Game, c: Card, o: { kicked?: boolean; flashback?: boolean; x?: number; warp?: boolean; sneak?: boolean; evoke?: boolean; mayhem?: boolean; webSling?: boolean; free?: boolean; omni?: boolean; surge?: boolean; morph?: boolean; impending?: boolean; door?: number; replicate?: number } = {}): Cost {
+export function costOf(g: Game, c: Card, o: { kicked?: boolean; flashback?: boolean; x?: number; warp?: boolean; sneak?: boolean; evoke?: boolean; mayhem?: boolean; webSling?: boolean; free?: boolean; omni?: boolean; surge?: boolean; morph?: boolean; impending?: boolean; door?: number; replicate?: number; squad?: number } = {}): Cost {
   const k0 = costOf0(g, c, o); if (!c.anyMana || !g.players.some(q => q.exile.includes(c))) return k0;
   const cs = ['W', 'U', 'B', 'R', 'G', 'C'] as const; const k = { ...k0 }; for (const s of cs) { k.generic += k[s] ?? 0; delete k[s]; } k.generic += k.hyb?.length ?? 0; delete k.hyb; return k;
 }
-function costOf0(g: Game, c: Card, o: { kicked?: boolean; flashback?: boolean; x?: number; warp?: boolean; sneak?: boolean; evoke?: boolean; mayhem?: boolean; webSling?: boolean; free?: boolean; omni?: boolean; surge?: boolean; morph?: boolean; impending?: boolean; door?: number; replicate?: number } = {}): Cost {
+function costOf0(g: Game, c: Card, o: { kicked?: boolean; flashback?: boolean; x?: number; warp?: boolean; sneak?: boolean; evoke?: boolean; mayhem?: boolean; webSling?: boolean; free?: boolean; omni?: boolean; surge?: boolean; morph?: boolean; impending?: boolean; door?: number; replicate?: number; squad?: number } = {}): Cost {
   const d = def(c); const p = g.players[c.owner];
   if (o.free && d.freeCmdr) return o.kicked && d.kicker ? { ...d.kicker } : { generic: 0 };
   if ((g.castNow?.uid === c.uid && g.castNow.free) || (c.mayFree === g.turn && p.exile.includes(c)) || (c.playFree && g.players.some(q => q.exile.includes(c)))) return o.kicked && d.kicker ? { ...d.kicker } : { generic: 0 }; // without paying its mana cost
@@ -584,6 +610,7 @@ function costOf0(g: Game, c: Card, o: { kicked?: boolean; flashback?: boolean; x
   if (d.multikicker && !o.flashback) base.x = (base.x ?? 0) + d.multikicker;
   if (o.kicked && d.kicker) for (const k of ['generic', ...COLORS, 'C'] as const) (base as unknown as Record<string, number>)[k] = ((base as unknown as Record<string, number>)[k] ?? 0) + ((d.kicker as unknown as Record<string, number>)[k] ?? 0);
   const repC = spellReplicate(g, g.priority ?? g.active, d) ?? d.replicate; if ((o.replicate ?? 0) > 0 && repC) for (let i = 0; i < o.replicate!; i++) for (const k of ['generic', ...COLORS, 'C'] as const) (base as unknown as Record<string, number>)[k] = ((base as unknown as Record<string, number>)[k] ?? 0) + ((repC as unknown as Record<string, number>)[k] ?? 0);
+  if ((o.squad ?? 0) > 0 && d.squad) for (let i = 0; i < o.squad!; i++) for (const k of ['generic', ...COLORS, 'C'] as const) (base as unknown as Record<string, number>)[k] = ((base as unknown as Record<string, number>)[k] ?? 0) + ((d.squad as unknown as Record<string, number>)[k] ?? 0);
   if (o.omni) delete base.x; else if (base.x) base.generic += (o.x ?? 0) * base.x;
   if (o.flashback && d.flashback && d.flashbackLife) base.life = d.flashbackLife;
   if (d.costLessIf && condOk(g, c.owner, d.costLessIf.cond, c)) base.generic = Math.max(0, base.generic - d.costLessIf.n);
@@ -604,7 +631,7 @@ function costOf0(g: Game, c: Card, o: { kicked?: boolean; flashback?: boolean; x
   }
   return base;
 }
-export interface Payment { /** which mana ability of each src */ abs?: number[]; /** restriction tags of mana used */ tags?: string[]; srcs: Card[]; pool: number[]; life: number; left: string[]; conv: Card[] }
+export interface Payment { /** which mana ability of each src */ abs?: number[]; /** restriction tags of mana used */ tags?: string[]; /** unique colors of mana actually spent (converge) */ cols?: string[]; srcs: Card[]; pool: number[]; life: number; left: string[]; conv: Card[] }
 /** Mana abilities don't use the stack: choose floating mana and sources (lands, rocks, dorks) that pay the cost. */
 export function planPayment(p: Player, cost: Cost, o: PayOpts = {}): Payment | null {
   type Src = { c?: Card; i?: number; pi?: number; units: string[][]; rank: number };
@@ -617,12 +644,19 @@ export function planPayment(p: Player, cost: Cost, o: PayOpts = {}): Payment | n
   if (o.wb) { let k = 0; for (const c of p.battlefield) if (k < o.wb && !c.tapped && c.uid !== o.exclude && (isType(c, 'Creature') || isType(c, 'Artifact')) && !srcs.some(s => s.c === c)) { srcs.push({ c, units: [['WB']], rank: 4 }); k++; } }
   const flex = (s: Src) => new Set(s.units.flat()).size;
   const chosen = new Set<Src>(); const pool: string[][] = []; let life = 0;
-  const take = (ok: (u: string[]) => boolean, generic: boolean, remaining: number) => {
-    const i = pool.findIndex(ok); if (i >= 0) { pool.splice(i, 1); return true; }
+  const spentCols = new Set<string>();
+  const record = (u: string[], want?: string[]) => {
+    const cols = u.filter(x => (COLORS as readonly string[]).includes(x));
+    if (!cols.length) return;
+    const pick = (want && want.length ? cols.find(c => want.includes(c)) : undefined) ?? cols.find(c => !spentCols.has(c)) ?? cols[0];
+    if (pick) spentCols.add(pick);
+  };
+  const take = (ok: (u: string[]) => boolean, generic: boolean, remaining: number, want?: string[]) => {
+    const i = pool.findIndex(ok); if (i >= 0) { record(pool[i], want); pool.splice(i, 1); return true; }
     const cand = srcs.filter(s => !chosen.has(s) && !(s.c && [...chosen].some(x => x.c === s.c)) && s.units.some(ok))
       .sort((a, b) => a.rank - b.rank || flex(a) - flex(b) || (generic ? (remaining >= 2 ? b.units.length - a.units.length : a.units.length - b.units.length) : 0))[0];
     if (!cand) return false;
-    chosen.add(cand); const u = [...cand.units]; u.splice(u.findIndex(ok), 1); pool.push(...u); return true;
+    chosen.add(cand); const u = [...cand.units]; const j = u.findIndex(ok); record(u[j], want); u.splice(j, 1); pool.push(...u); return true;
   };
   const avail = (k: string) => srcs.some(s => s.units.some(u => u.includes(k)));
   let generic = cost.generic;
@@ -631,14 +665,14 @@ export function planPayment(p: Player, cost: Cost, o: PayOpts = {}): Payment | n
   for (const h of cost.hyb ?? []) { const [a, b] = h.split('|'); if (a === '2') { if (avail(b)) req.push([b]); else generic += 2; } else req.push([a, b]); }
   for (const k of cost.phy ?? []) { if (avail(k)) req.push([k]); else if (p.teferi) return null; else life += 2; }
   req.sort((a, b) => a.length - b.length);
-  for (const r of req) if (!take(u => u.some(x => r.includes(x)), false, 0)) return null;
+  for (const r of req) if (!take(u => u.some(x => r.includes(x)), false, 0, r)) return null;
   for (let i = 0; i < generic; i++) if (!take(() => true, true, generic - i)) return null;
   if ((life || cost.life) && p.teferi) return null;
   if (life && p.life <= life) return null;
   if (cost.life) { if (p.life < life + cost.life) return null; life += cost.life; }
   const all = [...chosen];
   const used = all.filter(s => s.c && s.rank < 4);
-  return { abs: used.map(s => s.i ?? 0), tags: all.flatMap(s => s.units.map(u => (u as Tagged).tag).filter((t): t is string => !!t)), srcs: used.map(s => s.c!), pool: all.filter(s => s.pi !== undefined).map(s => s.pi!), life, left: pool.map(u => (u.length >= 5 ? 'ANY' : u.join('|')) + ((u as Tagged).tag ? '@' + (u as Tagged).tag : '')), conv: all.filter(s => s.rank === 4).map(s => s.c!) };
+  return { abs: used.map(s => s.i ?? 0), tags: all.flatMap(s => s.units.map(u => (u as Tagged).tag).filter((t): t is string => !!t)), cols: [...spentCols], srcs: used.map(s => s.c!), pool: all.filter(s => s.pi !== undefined).map(s => s.pi!), life, left: pool.map(u => (u.length >= 5 ? 'ANY' : u.join('|')) + ((u as Tagged).tag ? '@' + (u as Tagged).tag : '')), conv: all.filter(s => s.rank === 4).map(s => s.c!) };
 }
 type Tagged = string[] & { tag?: string };
 /** What mana is being spent on (for "spend this mana only to …" restrictions). */
@@ -828,7 +862,7 @@ export function castZone(g: Game, pid: number, c: Card): 'hand' | 'command' | 'f
   if (p.graveyard.includes(c)) return def(c).flashback || def(c).harmonize ? 'flashback' : def(c).mayhem && c.discarded === g.turn ? 'mayhem' : c.mayPlay ? 'graveyard' : null;
   return null;
 }
-export interface CastOpts { /** cast face down for {3} */ morph?: boolean; /** cast for its impending cost */ impending?: boolean; /** cast for its overload cost */ overload?: boolean; /** cast without paying its mana cost (if you control a commander) */ free?: boolean; /** Omniscience: cast from hand without paying its mana cost */ omni?: boolean; /** cast for its surge cost */ surge?: boolean; /** Louisoix's Sacrifice: pay {2} instead of sacrificing */ orPay?: boolean; evoke?: boolean; webSling?: boolean; webRet?: number; harmTap?: number; /** cast the back face (modal DFC) or the Adventure */ back?: boolean; sneak?: boolean; sneakRet?: number; teamwork?: boolean | number[]; warp?: boolean; sacs?: number[]; discards?: number[]; targets?: (Target | undefined)[]; modes?: number[]; x?: number; kicked?: boolean; flashback?: boolean; /** exile cards from hand rather than pay mana (Commandeer) */ exileAlt?: boolean; door?: number; replicate?: number }
+export interface CastOpts { /** cast face down for {3} */ morph?: boolean; /** cast for its impending cost */ impending?: boolean; /** cast for its overload cost */ overload?: boolean; /** cast without paying its mana cost (if you control a commander) */ free?: boolean; /** Omniscience: cast from hand without paying its mana cost */ omni?: boolean; /** cast for its surge cost */ surge?: boolean; /** Louisoix's Sacrifice: pay {2} instead of sacrificing */ orPay?: boolean; evoke?: boolean; webSling?: boolean; webRet?: number; harmTap?: number; /** cast the back face (modal DFC) or the Adventure */ back?: boolean; sneak?: boolean; sneakRet?: number; teamwork?: boolean | number[]; warp?: boolean; sacs?: number[]; discards?: number[]; targets?: (Target | undefined)[]; modes?: number[]; x?: number; kicked?: boolean; flashback?: boolean; /** exile cards from hand rather than pay mana (Commandeer) */ exileAlt?: boolean; door?: number; replicate?: number; squad?: number }
 const isTarget = (o: unknown): o is Target => !!o && typeof o === 'object' && ('player' in o || 'card' in o || 'stack' in o);
 function modesOk(g: Game, pid: number, m: Modes, x: TCtx) { const n = m.list.filter(md => slotsFillable(g, pid, md.tslots, x)).length; return m.repeat ? n >= 1 : n >= m.min; }
 const wardCost = (g: Game, pid: number, ts: (Target | undefined)[]) => ts.reduce((s, t) => { const c = t?.card !== undefined ? findCard(g, t.card) : undefined; return s + (c && ctl(c) !== pid ? def(c).ward ?? 0 : 0); }, 0);
@@ -869,7 +903,7 @@ export function canCast(g: Game, pid: number, c: Card, o: CastOpts = {}): boolea
   if (o.webSling && (!d.webSling || !webRets(g, pid).length)) return false;
   if (d.room) { if (o.door === undefined) return d.room.doors.some((_, i) => canCast(g, pid, c, { ...o, door: i })); if (!d.room.doors[o.door]) return false; }
   if (o.exileAlt) { const alt = d.exileAlt; if (!alt || z !== 'hand') return false; return p.hand.filter(q => q !== c && def(q).colors.includes(alt.color)).length >= alt.n; }
-  const cost = costOf(g, c, { kicked: o.kicked, flashback: z === 'flashback', mayhem: z === 'mayhem', x: o.omni ? 0 : o.x ?? 0, warp: o.warp, sneak: o.sneak, evoke: o.evoke, webSling: o.webSling, free: o.free, omni: o.omni, surge: o.surge, morph: o.morph, impending: o.impending, door: o.door, replicate: o.replicate });
+  const cost = costOf(g, c, { kicked: o.kicked, flashback: z === 'flashback', mayhem: z === 'mayhem', x: o.omni ? 0 : o.x ?? 0, warp: o.warp, sneak: o.sneak, evoke: o.evoke, webSling: o.webSling, free: o.free, omni: o.omni, surge: o.surge, morph: o.morph, impending: o.impending, door: o.door, replicate: o.replicate, squad: o.squad });
   if (d.costOr && o.orPay) cost.generic += d.costOr.pay;
   const conv = !!d.convoke || (d.types.includes('Creature') && hasPStatic(g, [pid], 'convokeSpells'));
   if (d.costOrLife) { const mana = { ...cost, generic: cost.generic + d.costOrLife.pay }; const life = { ...cost, life: (cost.life ?? 0) + d.costOrLife.life }; if (o.orPay) return !!planPayment(p, mana, { convoke: conv, spend: { spell: d, commander: isCommander(g, c) } }); return !!planPayment(p, life, { convoke: conv, spend: { spell: d, commander: isCommander(g, c) } }) || !!planPayment(p, mana, { convoke: conv, spend: { spell: d, commander: isCommander(g, c) } }); }
@@ -935,7 +969,7 @@ export function castSpell(g: Game, pid: number, uid: number, opt?: Target | Cast
   if (o.overload) { const oid = overloadId(c.id); if (!oid) return false; const id0 = c.id; c.id = oid; c.face = id0; const ok = castSpell(g, pid, uid, { ...o, overload: false }); if (!ok) { c.id = id0; delete c.face; } else log(g, `(${nm(c)} was cast for its overload cost.)`); return ok; }
   if (o.back) { if (!backCastable(g, pid, c)) return false; flipFace(c); const ok = castSpell(g, pid, uid, { ...o, back: false }); if (!ok) frontFace(c); return ok; }
   const now = isCastNow(g, pid, c); const z = castZone(g, pid, c); const fb = z === 'flashback';
-  if (!canCast(g, pid, c, { kicked: o.kicked, x: o.x, warp: o.warp, morph: o.morph, impending: o.impending, sneak: o.sneak, evoke: o.evoke, webSling: o.webSling, free: o.free, omni: o.omni, surge: o.surge, orPay: o.orPay, exileAlt: o.exileAlt, door: o.door, replicate: o.replicate })) return false;
+  if (!canCast(g, pid, c, { kicked: o.kicked, x: o.x, warp: o.warp, morph: o.morph, impending: o.impending, sneak: o.sneak, evoke: o.evoke, webSling: o.webSling, free: o.free, omni: o.omni, surge: o.surge, orPay: o.orPay, exileAlt: o.exileAlt, door: o.door, replicate: o.replicate, squad: o.squad })) return false;
   const sneakRet = o.sneak ? (sneakRets(g, pid).find(q => q.uid === o.sneakRet) ?? sneakRets(g, pid).sort((a, b) => valueOf(g, a) - valueOf(g, b))[0]) : undefined;
   const d = def(c); let slots = spellSlots(d); const ts0 = o.targets ?? [];
   let modes: number[] | undefined; let active = slots.map((_, i) => i); let repFx: Effect[] | undefined;
@@ -951,7 +985,7 @@ export function castSpell(g: Game, pid: number, uid: number, opt?: Target | Cast
   }
   const ts = d.spell?.modes?.repeat ? ts0 : ts0;
   if (!checkTargets(g, pid, slots, ts, active, { srcId: c.id })) return false;
-  const cost = costOf(g, c, { kicked: o.kicked, flashback: fb, mayhem: z === 'mayhem', x: o.omni ? 0 : o.x ?? 0, warp: o.warp, sneak: o.sneak, evoke: o.evoke, webSling: o.webSling, free: o.free, omni: o.omni, surge: o.surge, morph: o.morph, impending: o.impending, door: o.door, replicate: o.replicate }); cost.generic += wardCost(g, pid, active.map(i => ts[i])) + merfolkTax(g, pid, active.map(i => ts[i]), 'taxSpell'); cost.life = (cost.life ?? 0) + wardLifeCost(g, pid, active.map(i => ts[i]));
+  const cost = costOf(g, c, { kicked: o.kicked, flashback: fb, mayhem: z === 'mayhem', x: o.omni ? 0 : o.x ?? 0, warp: o.warp, sneak: o.sneak, evoke: o.evoke, webSling: o.webSling, free: o.free, omni: o.omni, surge: o.surge, morph: o.morph, impending: o.impending, door: o.door, replicate: o.replicate, squad: o.squad }); cost.generic += wardCost(g, pid, active.map(i => ts[i])) + merfolkTax(g, pid, active.map(i => ts[i]), 'taxSpell'); cost.life = (cost.life ?? 0) + wardLifeCost(g, pid, active.map(i => ts[i]));
   if (d.tierCosts && modes?.length === 1) { const tc = d.tierCosts[modes[0]]; if (tc) { cost.generic += tc.generic; for (const k of COLORS) if (tc[k]) cost[k] = (cost[k] ?? 0) + tc[k]!; } }
   let payInstead = !!o.orPay; const orCost = d.costOr; if (orCost && (payInstead || !p.battlefield.some(q => q !== c && matches(g, q, orCost.sacF.f, pid)))) { cost.generic += orCost.pay; payInstead = true; }
   if (d.costOrLife && (o.orPay || p.teferi || p.life < d.costOrLife.life)) cost.generic += d.costOrLife.pay; else if (d.costOrLife) cost.life = (cost.life ?? 0) + d.costOrLife.life;
@@ -960,7 +994,7 @@ export function castSpell(g: Game, pid: number, uid: number, opt?: Target | Cast
   let harm: Card | null = null;
   if (fb && !d.flashback && d.harmonize && (o.harmTap !== undefined || !planPayment(p, cost, { convoke: conv, spend: { spell: d, commander: isCommander(g, c) } }))) { harm = harmPick(g, pid, cost, d, o.harmTap); if (!harm) return false; cost.generic = Math.max(0, cost.generic - power(g, harm)); harm.tapped = true; log(g, `${p.name} taps ${nm(harm)} for harmonize.`); }
   let team: Card[] | null = null; if (o.teamwork) { team = teamworkPick(g, pid, c, Array.isArray(o.teamwork) ? o.teamwork : []); if (!team) return false; }
-  const plan = o.exileAlt && d.exileAlt ? (() => { const blues = p.hand.filter(q => q !== c && def(q).colors.includes(d.exileAlt!.color)).sort((a, b) => cmc(def(a)) - cmc(def(b))).slice(0, d.exileAlt!.n); if (blues.length < d.exileAlt!.n) return null; for (const q of blues) { p.hand = p.hand.filter(x => x !== q); p.exile.push(q); log(g, `${p.name} exiles ${nm(q)} rather than pay ${d.name}'s mana cost.`); } return { srcs: [] as Card[], pool: [] as number[], life: 0, left: [...p.pool], conv: [] as Card[], tags: [] as string[] } satisfies Payment; })() : planPayment(p, cost, { convoke: conv, spend: { spell: d, commander: isCommander(g, c) } }); if (!plan) return false;
+  const plan = o.exileAlt && d.exileAlt ? (() => { const blues = p.hand.filter(q => q !== c && def(q).colors.includes(d.exileAlt!.color)).sort((a, b) => cmc(def(a)) - cmc(def(b))).slice(0, d.exileAlt!.n); if (blues.length < d.exileAlt!.n) return null; for (const q of blues) { p.hand = p.hand.filter(x => x !== q); p.exile.push(q); log(g, `${p.name} exiles ${nm(q)} rather than pay ${d.name}'s mana cost.`); } return { srcs: [] as Card[], pool: [] as number[], life: 0, left: [...p.pool], conv: [] as Card[], tags: [] as string[], cols: [] as string[] } satisfies Payment; })() : planPayment(p, cost, { convoke: conv, spend: { spell: d, commander: isCommander(g, c) } }); if (!plan) return false;
   let esc: Card[] = []; if (d.spell?.modes?.escalate && modes && modes.length > 1) { esc = p.battlefield.filter(x => isType(x, 'Creature') && !x.tapped && !plan.srcs.includes(x)).sort((a, b) => power(g, a) - power(g, b)).slice(0, modes.length - 1); if (esc.length < modes.length - 1) return false; }
   const dmDisc = z === 'graveyard' && !!d.gyDiscard && !c.mayPlay; if (dmDisc && !p.hand.some(x => x !== c)) return false;
   if (!o.exileAlt) payPlan(g, p, plan); c.convokedBy = plan.conv?.map(x => x.uid); if (z === 'exile') emit(g, 'playExile', { player: pid }, c);
@@ -1003,7 +1037,7 @@ export function castSpell(g: Game, pid: number, uid: number, opt?: Target | Cast
   const targets = slots.map((_, i) => (active.includes(i) ? ts[i] : undefined));
   if (o.morph) hideMorphSpell(c);
   const pub = o.morph ? FACE_DOWN_RULES : d;
-  const item: StackItem = { id: g.nextUid++, kind: 'spell', controller: pid, sourceId: c.id, sourceUid: c.uid, card: c, effects, targetSpec: d.spell?.target, target: targets.find(Boolean), targets, tslots: slots, modes, modeDef: d.spell?.modes, x: o.x ?? 0, kicked: !!o.kicked, flashback: fb, rebound: z === 'hand' && !!d.rebound && !prepSrc || undefined, label: o.morph ? 'Face-down creature' : d.name, uncounterable: o.morph ? undefined : d.uncounterable, faceDown: o.morph || undefined, evCard: extraSac, spentCols: (['W','U','B','R','G'] as const).filter(k => (cost[k] ?? 0) > 0).length };
+  const item: StackItem = { id: g.nextUid++, kind: 'spell', controller: pid, sourceId: c.id, sourceUid: c.uid, card: c, effects, targetSpec: d.spell?.target, target: targets.find(Boolean), targets, tslots: slots, modes, modeDef: d.spell?.modes, x: o.x ?? 0, kicked: !!o.kicked, flashback: fb, rebound: z === 'hand' && !!d.rebound && !prepSrc || undefined, label: o.morph ? 'Face-down creature' : d.name, uncounterable: o.morph ? undefined : d.uncounterable, faceDown: o.morph || undefined, evCard: extraSac, spentCols: (plan.cols ?? (['W','U','B','R','G'] as const).filter(k => (cost[k] ?? 0) > 0)).length };
   delete c.onAdv; delete c.foretold; c.kicked = !!o.kicked; c.x = o.x ?? 0; c.teamwork = !!team; item.teamwork = !!team; item.event = { player: pid, spent };
   g.stack.push(item); emitTargeted(g, item);
   const tdesc = targets.filter(Boolean).map(t => describeTarget(g, t)).join(', ');
@@ -1013,6 +1047,7 @@ export function castSpell(g: Game, pid: number, uid: number, opt?: Target | Cast
   p.spells.n++; if (!pub.types.includes('Creature')) p.spells.nonc++; if (pub.types.includes('Instant') || pub.types.includes('Sorcery') || isTypeOrSub(pub, 'Villain')) p.spells.isv++; if (pub.types.includes('Instant') || pub.types.includes('Sorcery')) p.spells.ins++;
   emit(g, 'cast', { player: pid, mv: cmc(pub), spent, nth: { ...p.spells } }, c);
   if (!o.morph) for (const t of d.triggers ?? []) if (t.on === 'x' && t.ev === 'castSelf') g.pending.push({ controller: pid, sourceId: c.id, sourceUid: c.uid, trig: t, event: { player: pid }, evCard: c });
+  if ((o.squad ?? 0) > 0) c.squadN = o.squad;
   if ((o.replicate ?? 0) > 0) {
     const slots0 = item.tslots ?? (item.targetSpec ? [slotOf(item.targetSpec)] : []);
     const ts0 = item.targets ?? (item.target ? [item.target] : []);
@@ -1620,6 +1655,18 @@ function continueRes(g: Game): boolean {
 /** Answer the current decision (human). */
 export function answerDecision(g: Game, a: unknown) {
   const d = g.decision; if (!d) return false; g.decision = null;
+  if (d.key.startsWith('chekov:') && !g.res) {
+    (g.chekovAns ??= {})[d.key] = a;
+    draw(g, d.pid, g.drawOpen?.n ?? 1);
+    if (g.decision) return true;
+    if (g.chekovAfter === 'drawStep') {
+      delete g.chekovAfter;
+      emit(g, 'drawStep', { player: d.pid });
+      checkState(g);
+      if (g.winner === null) givePriority(g);
+    }
+    return true;
+  }
   if (d.kind === 'cast') delete g.castNow;
   if (d.kind === 'order') {
     const order = (a as number[]).map(i => d.items[i]).filter(Boolean); const rest = d.items.filter(x => !order.includes(x));
