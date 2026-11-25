@@ -8,7 +8,7 @@ const inDeck = (p: Player, id: string) => [...p.library, ...p.hand].filter(c => 
 
 /** Supported-card floors per official Marvel Super Heroes Commander precon. Target is 100/100;
  * these floors only stop regressions. The cards still missing are listed by scripts/precon-check.ts and docs/coverage.md. */
-const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100, 'Multiverse Reforged': 100, 'Namor the Sub-Mariner': 100, "Zurgo, Thunder's Decree": 100, 'Krenko, Mob Boss': 100, 'Federation Fleet': 82, 'Landing Party': 75, 'Klingon Fury': 80, 'We Are the Borg': 84 };
+const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100, 'Multiverse Reforged': 100, 'Namor the Sub-Mariner': 100, "Zurgo, Thunder's Decree": 100, 'Krenko, Mob Boss': 100, 'Federation Fleet': 100, 'Landing Party': 100, 'Klingon Fury': 100, 'We Are the Borg': 100 };
 
 describe('official precons', () => {
   const ps = loadPrecons();

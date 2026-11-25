@@ -5,7 +5,7 @@ import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
 import { createPortal } from 'react-dom';
 import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
-import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, locate, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell, log, checkState, abilitiesOf, canUnlockDoor, unlockDoor } from './engine/engine';
+import { backCastable, flipFace, frontFace, canForetell, foretell, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, locate, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell, log, checkState, abilitiesOf, canUnlockDoor, unlockDoor, spellReplicate } from './engine/engine';
 import { AI_RANDOM, buildAiPool, normalizeAiPicks, resolveAiDecks } from './setup/aiDecks';
 import { AttackDock, BlockDock, GlanceBoard, commanderCastInfo } from './Duo';
 import { needsBack, type BoardViews } from './setup/views';
@@ -532,7 +532,7 @@ export default function App() {
     : flow.kind === 'cast' && flowCard && def(flowCard).teamwork !== undefined && flow.teamwork === undefined ? 'teamwork'
     : flow.kind === 'cast' && flowCard && def(flowCard).kicker && flow.kicked === undefined ? 'kicker'
     : flow.kind === 'cast' && flowCard && def(flowCard).room && flow.door === undefined ? 'door'
-    : flow.kind === 'cast' && flowCard && def(flowCard).replicate && flow.replicate === undefined ? 'replicate'
+    : flow.kind === 'cast' && flowCard && !!spellReplicate(g, HUMAN, def(flowCard)) && flow.replicate === undefined ? 'replicate'
     : flow.x === undefined && (flow.kind === 'cast' ? !!flowCard && (!!costOf(g, flowCard).x || !!def(flowCard).extraCost?.lifeX) : flow.kind === 'ability' ? !!flowAb?.mana?.x || !!flowAb?.loyX : false) ? 'x'
     : flowModes && !flow.modes ? 'modes'
     : flow.ts.length < flowActive.length ? 'targets' : null;
@@ -595,7 +595,7 @@ export default function App() {
     if (d.impending && f.impending === undefined) { const n = canCast(g, HUMAN, c), w = canCast(g, HUMAN, c, { impending: true }); if (n && !w) f.impending = false; else if (w && !n) f.impending = true; else { setPending(f); return; } }
     if (d.kicker && f.kicked === undefined) { setPending(f); return; }
     if (d.room && f.door === undefined) { const doors = d.room.doors.map((_, i) => i).filter(i => canCast(g, HUMAN, c, { ...f, door: i })); if (doors.length === 1) f.door = doors[0]; else { setPending(f); return; } }
-    if (d.replicate && f.replicate === undefined) { const max = Array.from({ length: 9 }, (_, i) => i).filter(n => canCast(g, HUMAN, c, { kicked: f.kicked, warp: f.warp, door: f.door, x: f.x, replicate: n })).pop() ?? 0; if (max === 0) f.replicate = 0; else { setPending(f); return; } }
+    if (spellReplicate(g, HUMAN, d) && f.replicate === undefined) { const max = Array.from({ length: 9 }, (_, i) => i).filter(n => canCast(g, HUMAN, c, { kicked: f.kicked, warp: f.warp, door: f.door, x: f.x, replicate: n })).pop() ?? 0; if (max === 0) f.replicate = 0; else { setPending(f); return; } }
     if (d.teamwork !== undefined && f.teamwork === undefined) { setPending(f); return; }
     begin2(f, c);
   }

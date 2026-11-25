@@ -26,7 +26,7 @@ export type Ref = string | { all: Filter; zone?: 'graveyard' };
 /** Player reference: you, opps, all, evp (event player), tctl (controller of target 0), t0 (player target slot 0), ctl:tN, def (defending), owner:tN. */
 export type PRef = string;
 export interface Cond {
-  k: 'atkMonarch' | 'cmdrAttacking' | 'evByYou' | 'attackedLastTurn' | 'atkMoreLife' | 'subjAtkMonarchOpp' | 'evAtkMonarch' | 'yourTurnPreAtk' | 'srcDamagedEv' | 'ctrCross' | 'discardedThisTurn' | 'ctlCommander' | 'monstrous' | 'yourTurn' | 'notYourTurn' | 'control' | 'controlNo' | 'lifeGE' | 'lifeLE' | 'kicked' | 'handLE' | 'handGE' | 'gyGE' | 'oppControlsMore' | 'attacking' | 'tapped' | 'untapped' | 'evCtlYou' | 'evCtlOpp' | 'evIs' | 'xGE' | 'lifeGainedThisTurn' | 'cardsInGyGE' | 'noCardsHand' | 'manaSpent' | 'oppLifeLE' | 'gotCounters' | 'creatureDiedThisTurn' | 'descended' | 'oppsGE' | 'not' | 'enteredThisTurn' | 'prepared' | 'ctrGE' | 'maxSpeed' | 'void' | 'saddled' | 'oppLandsGE' | 'incr' | 'spentGE' | 'leftYours' | 'enduring' | 'chosenNonland' | 'teamwork' | 'evAmt' | 'evAmtGE' | 'enteredUntapped' | 'ctrIn' | 'ctrEq' | 'sneakPaid' | 'webSlung' | 'libEmpty' | 'attachedCreature' | 'refIs' | 'castNoncThisTurn' | 'oppCastThisTurn' | 'monarch' | 'noMonarch' | 'handHas' | 'otherLandsLE' | 'yourUpkeep' | 'atkMeGE' | 'wasCast' | 'yourMain' | 'atkGE' | 'oppPoisonGE' | 'toughSumGE' | 'attackedThisTurn' | 'createdTokenThisTurn' | 'evPowGE' | 'doorOpen';
+  k: 'atkMonarch' | 'cmdrAttacking' | 'evByYou' | 'attackedLastTurn' | 'atkMoreLife' | 'subjAtkMonarchOpp' | 'evAtkMonarch' | 'yourTurnPreAtk' | 'srcDamagedEv' | 'ctrCross' | 'discardedThisTurn' | 'ctlCommander' | 'monstrous' | 'yourTurn' | 'notYourTurn' | 'control' | 'controlNo' | 'lifeGE' | 'lifeLE' | 'kicked' | 'handLE' | 'handGE' | 'gyGE' | 'oppControlsMore' | 'attacking' | 'tapped' | 'untapped' | 'evCtlYou' | 'evCtlOpp' | 'evIs' | 'xGE' | 'lifeGainedThisTurn' | 'cardsInGyGE' | 'noCardsHand' | 'manaSpent' | 'oppLifeLE' | 'gotCounters' | 'creatureDiedThisTurn' | 'descended' | 'oppsGE' | 'not' | 'enteredThisTurn' | 'prepared' | 'ctrGE' | 'maxSpeed' | 'void' | 'saddled' | 'oppLandsGE' | 'incr' | 'spentGE' | 'leftYours' | 'enduring' | 'chosenNonland' | 'teamwork' | 'evAmt' | 'evAmtGE' | 'enteredUntapped' | 'ctrIn' | 'ctrEq' | 'sneakPaid' | 'webSlung' | 'libEmpty' | 'attachedCreature' | 'refIs' | 'castNoncThisTurn' | 'oppCastThisTurn' | 'monarch' | 'noMonarch' | 'handHas' | 'otherLandsLE' | 'yourUpkeep' | 'atkMeGE' | 'wasCast' | 'yourMain' | 'atkGE' | 'oppPoisonGE' | 'toughSumGE' | 'attackedThisTurn' | 'createdTokenThisTurn' | 'evPowGE' | 'doorOpen' | 'coven' | 'goadedAttack' | 'attackersStep';
   f?: Filter; n?: number; max?: number; ref?: Ref; c?: Cond; kind?: string;
 }
 export interface TokenSpec { name: string; p?: number; t?: number; colors: Color[]; types: string[]; sub?: string[]; kws?: string[]; legendary?: boolean; /** compiled quoted abilities (\"{t}: add {g}.\") */ ext?: Pick<CardDef, 'text' | 'mana' | 'abilities' | 'triggers' | 'statics' | 'keywords'>; preset?: 'Lander' | 'Heartwood' | 'Treasure' | 'Food' | 'Clue' | 'Blood' | 'Map' | 'Gold' | 'Powerstone' | 'Vibranium'; /** printed mana value (Gingerbrute is a {1} token) */ mv?: number }
@@ -81,6 +81,11 @@ export interface CardDef {
   /** Suspend N—cost */ suspend?: { n: number; cost: Cost };
   /** additional cost: discard a card or pay N life */ discardOrLife?: { life: number; discard: number };
   /** land ETB triggers of permanents you control trigger an additional time */ landTrigTwice?: boolean;
+  /** Augur of Autumn coven: cast creature spells from the top if 3+ different powers */ covenTopCast?: boolean;
+  /** Combat Celebrant: may exert as it attacks for an extra combat */ celebrant?: boolean;
+  /** Pavel Chekov: replacement on draws */ chekov?: boolean;
+  /** Koloth: all Tribbles are goaded */ koloth?: boolean;
+  /** Hugh, First of Many: artifact spells you cast have replicate {2}{U} */ hughReplicate?: boolean;
 
   /** Riot: ETB choose a +1/+1 counter or haste. */ riot?: boolean;
   /** Mentor: on attack, +1/+1 on target attacking creature with lesser power. */ mentor?: boolean;
