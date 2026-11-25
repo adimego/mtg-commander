@@ -60,6 +60,18 @@ aside{display:flex;flex-direction:column;min-height:0;background:#060a09d9;borde
 /* battlefield rows */
 .bf{display:flex;flex-direction:column;gap:.5vh;min-width:0;min-height:0}
 .row{display:flex;gap:.45vw;align-items:flex-end;min-width:0;height:calc(var(--cw)*1.4 + .4vh)}.row:empty{display:none}
+.crow,.nrow{flex-wrap:wrap;height:auto;max-height:100%;overflow-x:hidden;overflow-y:auto;align-items:flex-start;align-content:flex-start;min-height:calc(var(--cw)*1.4)}
+.stack-badge{position:absolute;top:3%;left:3%;z-index:5;background:#0d47a0ee;color:#fff;font-weight:900;font-size:calc(var(--cw)*.18);line-height:1;padding:.15em .35em;border-radius:.35em;border:1px solid #fff8;box-shadow:0 .1em .3em #0008}
+.stack-cap{position:absolute;left:50%;bottom:-.15rem;transform:translateX(-50%);z-index:5;background:#000e;color:#ffe082;font-weight:800;font-size:max(9px,calc(var(--cw)*.12));padding:.1em .4em;border-radius:.4em;white-space:nowrap;max-width:140%;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.slot.stack{width:var(--cw);min-width:var(--cw)}
+.slot.stack.alltapped .perm{filter:brightness(.62) grayscale(.2)}
+.opp .slot.stack.alltapped .perm,.oppview .slot.stack.alltapped .perm{filter:grayscale(.85) brightness(.72);opacity:.78;transform:none}
+.stack-picker{position:fixed;inset:0;z-index:80;background:#000a;display:flex;align-items:center;justify-content:center;padding:4vh 4vw}
+.stack-picker .box{background:var(--panel,#1b2420);border:1px solid var(--line,#385046);border-radius:.6rem;padding:1rem 1.2rem;max-width:40rem;width:min(92vw,40rem);max-height:86vh;overflow:auto}
+.stack-picker .nrow{display:flex;align-items:center;gap:.8rem;margin:.8rem 0;flex-wrap:nowrap;overflow:visible}
+.stack-picker .nval{font-size:1.5rem;color:var(--gold);min-width:3rem;text-align:right}
+.stack-picker .which{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0}
+
 .opp .crow{--cw:var(--ocw)}.opp .nrow{--cw:var(--onw)}.me .crow{--cw:var(--mcw)}.me .nrow{--cw:var(--mnw)}
 .empty{color:#ffffff2a;font-style:italic;align-self:center;font-size:.9rem}
 .slot{position:relative;width:var(--cw);height:calc(var(--cw)*1.4);flex:0 1 auto;min-width:calc(var(--cw)*.3);transition:width .2s}
@@ -362,7 +374,7 @@ html.compact .table{
 html.compact.short .table{grid-template-rows:auto auto minmax(0,1fr) minmax(78px,max-content) auto}
 html.compact .opps{grid-row:1;display:flex;flex-wrap:nowrap;gap:.35rem;overflow-x:auto;overflow-y:hidden;min-height:0;max-height:22dvh;padding:.25rem .35rem;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-x}
 html.compact .opps:has(.atkrow){max-height:none;overflow:visible;flex-wrap:wrap}
-html.compact .atkrow{display:flex;gap:.35rem;overflow-x:auto;--cw:72px;padding:.1rem 0 .2rem;touch-action:pan-x;-webkit-overflow-scrolling:touch}
+html.compact .atkrow{display:flex;flex-wrap:wrap;gap:.35rem;overflow-x:hidden;overflow-y:auto;--cw:72px;padding:.1rem 0 .2rem;touch-action:pan-y;-webkit-overflow-scrolling:touch;max-height:28vh}
 html.compact .atkrow .slot{flex:0 0 auto;width:var(--cw);min-width:var(--cw);height:calc(var(--cw) * 1.4);min-height:calc(var(--cw) * 1.4)}
 html.compact .atkrow .slot.tapped,html.compact .opp .slot.tapped{width:var(--cw);min-width:var(--cw)}
 html.compact.short .opps{max-height:112px}
@@ -414,7 +426,7 @@ html.compact.portrait .me .nrow{--cw:64px}
 html.compact.short .me .crow{--cw:58px}
 html.compact.short .me .nrow{--cw:46px}
 html.compact.short.wide .me .crow{--cw:66px}
-html.compact .row{height:auto;min-height:calc(var(--cw) * 1.4);overflow-x:auto;flex-wrap:nowrap;align-items:flex-start;-webkit-overflow-scrolling:touch;touch-action:pan-x;overscroll-behavior-x:contain}
+html.compact .row{height:auto;min-height:calc(var(--cw) * 1.4);overflow-x:hidden;overflow-y:auto;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain}
 html.compact .row:not(:has(.slot)){min-height:0;height:auto}
 html.compact.short .row:not(:has(.slot)){display:none}
 html.compact .slot{flex:0 0 auto;min-width:var(--cw);height:auto;min-height:calc(var(--cw) * 1.4)}

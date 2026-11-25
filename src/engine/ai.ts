@@ -3,7 +3,7 @@ import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretel
   declareAttackers, declareBlockers, canAttack, canBlock, attackers, isCommander, legalTargets, findCard, creatures, canActivate, activate, isMain,
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
   maxX, locate, ctr, manaAvailable, castZone, costOf, planPayment,
-  webRets, omniOn, abilitiesOf, canUnlockDoor, unlockDoor,
+  webRets, omniOn, abilitiesOf, canUnlockDoor, unlockDoor, spellReplicate,
 } from './engine';
 import type { Amt, ActAbility, Modes, TSlot } from './types';
 
@@ -182,7 +182,7 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   }
   const orPay = !!d.costOr && !p.battlefield.some(q => q !== c && isType(q, 'Creature') && def(q).legendary && !isCommander(g, q));
   let replicate = 0;
-  if (d.replicate && door === undefined) { while (replicate < 8 && canCast(g, pid, c, { kicked, warp, x, evoke, webSling: !!webRet, omni, surge: surge && !omni && !normal, exileAlt, replicate: replicate + 1 })) replicate++; if (replicate > 2) replicate = 2; }
+  if (spellReplicate(g, pid, d) && door === undefined) { while (replicate < 8 && canCast(g, pid, c, { kicked, warp, x, evoke, webSling: !!webRet, omni, surge: surge && !omni && !normal, exileAlt, replicate: replicate + 1 })) replicate++; if (replicate > 2) replicate = 2; }
   return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt, door, replicate: replicate || undefined });
 }
 const isCounter = (d: CardDef) => !!(d.spell?.effects.some(e => e.op === 'counter' || (e.op === 'unless' && e.sub?.some(s => s.op === 'counter'))));
@@ -271,7 +271,9 @@ function mainPhase(g: Game, pid: number): boolean {
   const lands = p.hand.filter(c => canPlayLand(g, pid, c));
   if (lands.length) {
     const need = (col: string) => p.hand.filter(c => (def(c).cost as unknown as Record<string, number>)[col]).length;
-    const score = (c: Card) => (def(c).mana?.[0].add ?? []).reduce((s, m) => s + (m === 'IDENTITY' || m === 'ANY' ? 10 : m.split('|').reduce((x, k) => Math.max(x, need(k)), 0)), 0) - (def(c).etbTapped ? 1 : 0);
+    const snw = p.battlefield.some(c => /strange new worlds|differently named lands/i.test(def(c).text ?? ''));
+    const named = new Set(p.battlefield.filter(c => isType(c, 'Land')).map(c => def(c).name));
+    const score = (c: Card) => (def(c).mana?.[0].add ?? []).reduce((s, m) => s + (m === 'IDENTITY' || m === 'ANY' ? 10 : m.split('|').reduce((x, k) => Math.max(x, need(k)), 0)), 0) - (def(c).etbTapped ? 1 : 0) + (snw && !named.has(def(c).name) ? 20 : 0);
     return playLand(g, pid, lands.sort((a, b) => score(b) - score(a))[0].uid);
   }
   { const mdfcLand = p.hand.find(c => canPlayLand(g, pid, c, true) && (!canCast(g, pid, c) || p.battlefield.filter(x => isType(x, 'Land')).length < 6)); if (mdfcLand && playLand(g, pid, mdfcLand.uid, true)) return true; }
@@ -349,12 +351,13 @@ export function aiAttack(g: Game, pid: number) {
   const p = g.players[pid]; const opp = opponents(g, pid);
   const threat = Math.max(0, ...opp.map(o => boardPower(g, o)));
   let elig = creatures(p).filter(c => canAttack(g, c)).sort((a, b) => power(g, b) - power(g, a));
-  const forced = (c: Card) => !!def(c).mustAttack || !!c.goad || hasKw(c, '_mustattack');
+  const forced = (c: Card) => !!def(c).mustAttack || !!c.goad || hasKw(c, '_mustattack') || ((def(c).sub ?? []).includes('Tribble') && g.players.some(q => q.battlefield.some(s => def(s).koloth)));
   if (p.life <= threat * 1.5) { const keep = Math.ceil(elig.filter(c => !hasKw(c, 'vigilance')).length / 2); elig = elig.filter((c, i) => hasKw(c, 'vigilance') || forced(c) || i < elig.length - keep); }
   const plan: { uid: number; defender: number; pw?: number }[] = []; const onW: Record<number, number> = {};
   for (const c of elig) {
     const pw = power(g, c), tg = toughness(g, c);
     const cands = c.goad ? opp.filter(o => o.id !== c.goad!.by) : opp; const pool = cands.length ? cands : opp;
+    const battlefront = p.battlefield.some(s => /battlefront|opponents you attacked/i.test(def(s).text ?? ''));
     if (!forced(c) && (pw <= 0 || (def(c).mana && pw <= 1))) continue; // keep mana dorks home
     const safe = pool.filter(o => {
       const bl = creatures(o).filter(b => !b.tapped && canBlock(g, b, c));
@@ -363,7 +366,7 @@ export function aiAttack(g: Game, pid: number) {
     });
     const choice = safe.length ? safe : forced(c) ? pool : [];
     if (!choice.length) continue;
-    choice.sort((a, b) => (a.life - b.life) - (boardPower(g, a) - boardPower(g, b)) * 0.3);
+    choice.sort((a, b) => (battlefront ? ((plan.some(x => x.defender === a.id) ? 1 : 0) - (plan.some(x => x.defender === b.id) ? 1 : 0)) : 0) || (a.life - b.life) - (boardPower(g, a) - boardPower(g, b)) * 0.3);
     // go after opposing planeswalkers when it kills one (or the walker is close to its ultimate)
     const ws = choice.flatMap(o => o.battlefield.filter(w => isType(w, 'Planeswalker') && !isType(w, 'Creature')).map(w => ({ o, w, left: ctr(w, 'loyalty') - (onW[w.uid] ?? 0) })))
       .filter(x => x.left > 0 && (x.left <= pw || ctr(x.w, 'loyalty') >= 5 || x.o.life > 20)).sort((a, b) => (a.left <= pw ? 0 : 1) - (b.left <= pw ? 0 : 1) || b.left - a.left);

@@ -4,14 +4,22 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const SETS = [
   { file: 'scripts/data/msc-decklists.html', set: 'MSC', setName: 'Marvel Super Heroes Commander', ncmd: { 'The Fantastic Four': 4 } },
   { file: 'scripts/data/frc-decklist.html', set: 'FRC', setName: 'Reality Fracture Commander', ncmd: { 'Multiverse Reforged': 2 } },
+  { file: 'scripts/data/trc-decklists.html', set: 'TRC', setName: 'Star Trek Commander', ncmd: { 'Federation Fleet': 2, 'Landing Party': 2, 'Klingon Fury': 2, 'We Are the Borg': 2 } },
 ];
 const un = s => s.replace(/&#39;|&#x27;/g, "'").replace(/&amp;/g, '&').replace(/&quot;/g, '"');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function collection(names) {
   const out = new Map();
   for (let i = 0; i < names.length; i += 70) {
-    const r = await fetch('https://api.scryfall.com/cards/collection', { method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'mtg-commander/1.0', Accept: 'application/json' }, body: JSON.stringify({ identifiers: names.slice(i, i + 70).map(name => ({ name })) }) });
-    const j = await r.json(); for (const c of j.data) out.set(c.name, c); for (const n of j.not_found ?? []) out.set('?' + n.name, null); await sleep(150);
+    let j, tries = 0;
+    while (true) {
+      const r = await fetch('https://api.scryfall.com/cards/collection', { method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'mtg-commander/1.0', Accept: 'application/json' }, body: JSON.stringify({ identifiers: names.slice(i, i + 70).map(name => ({ name })) }) });
+      j = await r.json();
+      if (Array.isArray(j.data)) break;
+      if (++tries >= 8) throw new Error('Scryfall collection failed: ' + JSON.stringify(j).slice(0, 400));
+      const wait = j.details && /60 seconds/.test(j.details) ? 65000 : 800 * tries; console.warn("Scryfall retry", tries, "waiting", wait); await sleep(wait);
+    }
+    for (const c of j.data) out.set(c.name, c); for (const n of j.not_found ?? []) out.set('?' + n.name, null); await sleep(200);
   }
   return out;
 }

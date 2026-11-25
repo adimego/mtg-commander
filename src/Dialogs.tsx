@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { groupTiles, stackCaption, pickFromStack } from './stacks';
 import { Game, Card, Decision, def, CARDS } from './engine/engine';
 import type { Modes } from './engine/types';
 
@@ -34,8 +35,20 @@ export function DecisionDialog({ g, d, answer, Face, setHover, castNow }: { g: G
         <button className="big" data-ans="yes" onClick={() => answer(true)}>Yes</button><button className="sec" data-ans="no" onClick={() => answer(false)}>No</button></div></Box>;
     case 'pick': {
       const ok = sel.length >= d.min && sel.length <= d.max;
+      const tiles = groupTiles(g, d.cards);
+      const oneStack = tiles.length === 1 && tiles[0].kind === 'stack' && tiles[0].cards.length === d.cards.length;
       return <Box wide title={src ? `${src}: choose` : 'Choose cards'} sub={`${d.text} ${d.min === d.max ? `Pick exactly ${d.min}.` : `Pick ${d.min ? `${d.min}–` : 'up to '}${d.max}.`}`}>
-        {d.cards.length ? <CardPick cards={d.cards} sel={sel} toggle={u => toggle(u, d.max)} Face={Face} setHover={setHover} /> : <p className="muted">No matching cards.</p>}
+        {oneStack && <p className="muted" data-stack-caption>{stackCaption(g, d.cards)}</p>}
+        {d.cards.length ? <CardPick cards={oneStack ? [d.cards[0]] : d.cards} sel={sel} toggle={u => {
+          if (oneStack) {
+            const next = sel.length >= d.max ? 0 : Math.min(d.max, sel.length + 1);
+            setSel(pickFromStack(d.cards, next).map(c => c.uid));
+          } else toggle(u, d.max);
+        }} Face={Face} setHover={setHover} badge={oneStack ? () => `×${Math.max(sel.length, 1)} of ${d.cards.length}` : undefined} /> : <p className="muted">No matching cards.</p>}
+        {oneStack && <div className="xrow"><button className="sec" type="button" onClick={() => setSel(pickFromStack(d.cards, Math.max(d.min, sel.length - 1)).map(c => c.uid))}>−</button>
+          <input type="range" min={d.min} max={d.max} value={sel.length} onChange={e => setSel(pickFromStack(d.cards, +e.target.value).map(c => c.uid))} />
+          <button className="sec" type="button" onClick={() => setSel(pickFromStack(d.cards, Math.min(d.max, sel.length + 1)).map(c => c.uid))}>+</button>
+          <b className="xval" data-n={sel.length}>{sel.length}</b></div>}
         <div className="cbtns"><button className="big" disabled={!ok} data-ans="confirm" onClick={() => answer(sel)}>Confirm ({sel.length})</button>
           {d.min === 0 && <button className="sec" onClick={() => answer([])}>Choose none</button>}</div>
       </Box>;

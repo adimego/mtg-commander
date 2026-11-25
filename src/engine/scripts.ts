@@ -4,6 +4,7 @@
 // the card honestly falls back to limited support.
 import type { CardDef, Effect, TriggerDef, TSlot, TokenSpec, Filter } from './types';
 import { GINGER, JACE_TOK } from './frc';
+import { TREK_SCRIPTS } from './trek-scripts';
 
 type Patch = (d: CardDef) => void;
 const S = (kind: string, extra: Partial<Effect> = {}): Effect => ({ op: 'script', kind, ...extra });
@@ -355,6 +356,8 @@ export const SCRIPTS: Record<string, Record<string, Patch>> = {
   'Zada, Hedron Grinder': { 'whenever you cast an instant or sorcery spell that targets only ~, copy that spell for each other creature you control that the spell could target. each copy targets a different one of those creatures': d => trig(d, T('cast', [S('zada')], { pl: 'you', f: { types: ['Instant', 'Sorcery'] }, label: 'copy that spell for each other creature' })) },
 
 };
+
+Object.assign(SCRIPTS, TREK_SCRIPTS);
 
 /** Apply scripts for lines the compiler couldn't parse; covered lines are removed from `unparsed`. */
 export function applyScripts(name: string, d: CardDef, unparsed: string[]) {
