@@ -212,7 +212,14 @@ html,body,#root,.app,.table{overflow:clip!important}
 .deckpick{margin:.6vh 0}
 .deckpick .deckopt{width:19vh}
 .deckpick .dimg{height:24vh;overflow:hidden;border-radius:.6rem}
-.deckpick.mine{flex-wrap:wrap;justify-content:center;max-width:92vw}
+.deckpick.mine,.deckpick.precons{flex-wrap:wrap;justify-content:center;max-width:92vw}
+.setgroup{width:100%;margin:.35rem 0 .15rem;text-align:center}
+.sethead{display:flex;align-items:center;justify-content:center;gap:.55rem;width:100%;margin:0;padding:.45rem .6rem;background:transparent;border:0;border-bottom:1px solid #f2c14e44;color:var(--gold);cursor:pointer;font:inherit;letter-spacing:.04em;text-transform:uppercase;min-height:44px}
+.sethead:hover,.sethead:focus-visible{background:#f2c14e18}
+.setchev{width:1rem;flex:0 0 auto;font-size:1rem;line-height:1}
+.settitle{font-weight:800;font-size:1rem}
+.setcode{font-weight:700;letter-spacing:.06em;color:#ffe082cc}
+.setcount{font-size:.85rem;color:#c5d4cc;letter-spacing:.03em;text-transform:none}
 .deckopt.saved{cursor:pointer;width:24vh;position:relative;text-align:center}
 .deckopt.saved b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dart{height:13vh;border-radius:.6rem;background:#223 center/cover;position:relative}
@@ -574,6 +581,9 @@ html.compact .deckopt small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box
 html.compact .dart{height:76px}
 html.compact .deckgroup{width:100%;padding:.2rem .35rem .5rem}
 html.compact .dnote{font-size:.85rem}
+html.compact .sethead{gap:.4rem;padding:.4rem .35rem;font-size:.95rem}
+html.compact .settitle{font-size:.9rem}
+html.compact .setcount{font-size:.8rem}
 html.compact .dacts button{min-height:44px;padding:.35rem .55rem}
 html.compact .deckopt.addnew{min-height:8rem;width:calc(50% - .6rem)}
 html.compact .startbar{
