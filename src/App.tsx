@@ -860,7 +860,7 @@ export default function App() {
           <div className="dimg"><CardFace d={c} /></div><b>{d.name}</b><span>{c.name}</span><small>{c.text.split('\n').slice(-1)[0]}</small></button>); })}</div>
       <section className="deckgroup official" data-section="official">
         <h3 className="dsec">Official precons</h3>
-        <p className="dnote">Wizards of the Coast products from Marvel Super Heroes Commander, Reality Fracture Commander, and Star Trek Commander. A deck that lists several commanders asks you to pick one before the game starts.</p>
+        <p className="dnote">Wizards of the Coast products from Marvel Super Heroes Commander, Reality Fracture Commander, Star Trek Commander, and Secrets of Strixhaven Commander. A deck that lists several commanders asks you to pick one before the game starts.</p>
         {OFFICIAL_SETS.map(s => { const open = openSets.has(s.set); return (
           <div key={s.set} className={`setgroup ${open ? 'open' : ''}`} data-set={s.set} data-open={open ? '1' : '0'}>
             <button type="button" className="sethead" aria-expanded={open} data-set-toggle={s.set} onClick={() => toggleSet(s.set)}>

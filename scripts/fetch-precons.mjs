@@ -5,6 +5,7 @@ const SETS = [
   { file: 'scripts/data/msc-decklists.html', set: 'MSC', setName: 'Marvel Super Heroes Commander', released: '2026-06-26', ncmd: { 'The Fantastic Four': 4 } },
   { file: 'scripts/data/frc-decklist.html', set: 'FRC', setName: 'Reality Fracture Commander', released: '2026-10-02', ncmd: { 'Multiverse Reforged': 2 } },
   { file: 'scripts/data/trc-decklists.html', set: 'TRC', setName: 'Star Trek Commander', released: '2026-11-13', ncmd: { 'Federation Fleet': 2, 'Landing Party': 2, 'Klingon Fury': 2, 'We Are the Borg': 2 } },
+  { file: 'scripts/data/soc-decklists.html', set: 'SOC', setName: 'Secrets of Strixhaven Commander', released: '2026-04-24', ncmd: { 'Silverquill Influence': 2, 'Prismari Artistry': 2, 'Witherbloom Pestilence': 2, 'Lorehold Spirit': 2, 'Quandrix Unlimited': 2 } },
 ];
 const un = s => s.replace(/&#39;|&#x27;/g, "'").replace(/&amp;/g, '&').replace(/&quot;/g, '"');
 const sleep = ms => new Promise(r => setTimeout(r, ms));

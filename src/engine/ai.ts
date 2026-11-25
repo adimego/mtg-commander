@@ -4,7 +4,7 @@ import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretel
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
   maxX, locate, ctr, manaAvailable, castZone, costOf, planPayment,
   webRets, omniOn, abilitiesOf, canUnlockDoor, unlockDoor, spellReplicate,
-} from './engine';
+  isGoaded, goadBy } from './engine';
 import type { Amt, ActAbility, Modes, TSlot } from './types';
 
 const num = (a: Amt | undefined, x = 0): number => (typeof a === 'number' ? a : a === 'X' ? x : 0);
@@ -353,12 +353,12 @@ export function aiAttack(g: Game, pid: number) {
   const p = g.players[pid]; const opp = opponents(g, pid);
   const threat = Math.max(0, ...opp.map(o => boardPower(g, o)));
   let elig = creatures(p).filter(c => canAttack(g, c)).sort((a, b) => power(g, b) - power(g, a));
-  const forced = (c: Card) => !!def(c).mustAttack || !!c.goad || hasKw(c, '_mustattack') || ((def(c).sub ?? []).includes('Tribble') && g.players.some(q => q.battlefield.some(s => def(s).koloth)));
+  const forced = (c: Card) => !!def(c).mustAttack || isGoaded(g, c) || hasKw(c, '_mustattack');
   if (p.life <= threat * 1.5) { const keep = Math.ceil(elig.filter(c => !hasKw(c, 'vigilance')).length / 2); elig = elig.filter((c, i) => hasKw(c, 'vigilance') || forced(c) || i < elig.length - keep); }
   const plan: { uid: number; defender: number; pw?: number }[] = []; const onW: Record<number, number> = {};
   for (const c of elig) {
     const pw = power(g, c), tg = toughness(g, c);
-    const cands = c.goad ? opp.filter(o => o.id !== c.goad!.by) : opp; const pool = cands.length ? cands : opp;
+    const gb = goadBy(g, c); const cands = gb !== undefined ? opp.filter(o => o.id !== gb) : opp; const pool = cands.length ? cands : opp;
     const battlefront = p.battlefield.some(s => /battlefront|opponents you attacked/i.test(def(s).text ?? ''));
     if (!forced(c) && (pw <= 0 || (def(c).mana && pw <= 1))) continue; // keep mana dorks home
     const safe = pool.filter(o => {
