@@ -7,7 +7,7 @@ import type { ActAbility, Amt, CardDef, CEFx, Color, Cond, Cost, Effect, Filter,
 const SUB = new Map<string, string>((SUBTYPES as string[]).map(s => [s.toLowerCase(), s]));
 const TYPES: Record<string, string> = { creature: 'Creature', artifact: 'Artifact', enchantment: 'Enchantment', land: 'Land', planeswalker: 'Planeswalker', instant: 'Instant', sorcery: 'Sorcery', battle: 'Battle', permanent: 'Permanent', legendary: 'Legendary', historic: 'Historic', outlaw: 'Outlaw' };
 const COLOR_OF: Record<string, Color> = { white: 'W', blue: 'U', black: 'B', red: 'R', green: 'G' };
-export const KWS = ['compleated', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'melee', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted', 'riot', 'protection from creatures', 'protection from multicolored'];
+export const KWS = ['compleated', 'wither', 'persist', 'myriad', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'melee', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted', 'riot', 'protection from creatures', 'protection from multicolored'];
 const IRREG: Record<string, string> = { elves: 'elf', dwarves: 'dwarf', wolves: 'wolf', werewolves: 'werewolf', fungi: 'fungus', mice: 'mouse', sorceries: 'sorcery', allies: 'ally', faeries: 'faerie', zombies: 'zombie', zombie: 'zombie', thieves: 'thief', leeches: 'leech', octopi: 'octopus', 'cyclopes': 'cyclops', 'sphinxes': 'sphinx', 'foxes': 'fox', 'boars': 'boar', 'mercenaries': 'mercenary', 'slivers': 'sliver' };
 function typeWord(w: string | undefined): string | null {
   if (!w) return null;
@@ -177,6 +177,7 @@ function amount(s: string, cx: Cx): Amt | null {
   if (/^the number of differently named lands you control$/.test(eq)) return { uniqLands: true };
   if (/^the greatest mana value among commanders you control$/.test(eq)) return { mvMaxCmd: true };
   if (/^the number of colors of mana spent to cast (?:this spell|~)$/.test(eq)) return { spentCols: true };
+  if (/^the number of colors among permanents you control$/.test(eq)) return { permColors: true };
   if (/^the greatest mana value among cards revealed this way$/.test(eq)) return 'revMaxMv' as Amt;
   if (/^your life total$/.test(eq)) return { life: 'you' };
   if ((m = /^the (?:greatest|highest) power among (.+)$/.exec(eq))) { const fp = parseFilter(m[1]); return fp && !fp.card ? { maxPow: fp.f } : null; }
@@ -845,6 +846,7 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if (/^you create (?:a|one or more) tokens?$/.test(h)) return { defs: [{ ev: 'tokenCreated', subj: 'any', pl: 'you' }], cx: { it: 'ev', that: 'ev' } };
   if ((m = /^you create one or more (creature )?tokens?$/.exec(h))) return { defs: [{ ev: 'tokenCreated', subj: 'any', f: m[1] ? { types: ['Creature'], token: true } : { token: true }, pl: 'you', batch: true }], cx: { it: 'ev', that: 'ev' } };
   if ((m = /^(?:one or more|a) \+1\/\+1 counters? (?:is|are) put on (~|a creature you control|another creature you control)$/.exec(h))) return { defs: [{ ev: 'counterPut', kindF: '+1/+1', subj: m[1] === '~' ? 'self' : m[1].startsWith('another') ? 'other' : 'any', f: { types: ['Creature'], ctrl: 'you' } }], cx: { it: m[1] === '~' ? 'self' : 'ev', that: 'ev' } };
+  if ((m = /^(?:one or more|a) -1\/-1 counters? (?:is|are) put on (a creature|~)$/.exec(h))) return { defs: [{ ev: 'counterPut', kindF: '-1/-1', subj: m[1] === '~' ? 'self' : 'any', f: { types: ['Creature'] } }], cx: { it: m[1] === '~' ? 'self' : 'ev', that: 'ev' } };
   if ((m = /^a land enters you control$/.exec(h))) return { defs: [{ ev: 'etb', subj: 'any', f: { types: ['Land'], ctrl: 'you' } }], cx: { it: 'self', that: 'ev' } };
   return null;
 }
@@ -886,7 +888,8 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       else if ((x = /^firebending (\w+(?:, where x is .+)?)$/.exec(l))) l = `whenever ~ attacks, §firebend ${x[1]}`;
       else if (/^job select$/.test(l)) l = 'when ~ enters, §jobselect';
       // The engine has no effects that copy spells, so "cast or copy" triggers only on casts (exact while that holds).
-      l = l.replace(/^whenever you cast or copy /, 'whenever you cast ').replace(/^void — /, '').replace(/^whenever ~ attacks while saddled, /, 'whenever ~ attacks, if ~ is saddled, ').replace(/^whenever ~ attacks while (.+?), /, 'whenever ~ attacks, if $1, ');
+      l = l.replace(/^whenever you cast or copy /, 'whenever you cast ').replace(/^void — /, '').replace(/^vivid — /, '').replace(/^whenever ~ attacks while saddled, /, 'whenever ~ attacks, if ~ is saddled, ').replace(/^whenever ~ attacks while (.+?), /, 'whenever ~ attacks, if $1, ');
+      if (/^companion[—\- ]/.test(l)) continue;
       if (/^increment$/.test(l)) l = 'whenever you cast a spell, if §incr, put a +1/+1 counter on ~';
       { const cl = /^(\{[^:]+\}): level (\d+)$/.exec(l); if (cl && d.sub?.includes('Class')) { const c = parseCost(cl[1].toUpperCase()); if (!c) { fail(raw); continue; } cls = +cl[2]; abilities.push({ label: `Level ${cls}`, mana: c, sorcery: true, cond: { k: 'ctrEq', kind: 'class', n: cls - 1 }, effects: [{ op: 'classLevel', n: cls }] }); continue; } }
       { const lr = /^level (\d+)(?:-(\d+)|\+)$/.exec(l); if (lr) { lvl = { k: 'ctrIn', kind: 'level', n: +lr[1], max: lr[2] ? +lr[2] : 999 } as Cond; continue; } }
@@ -916,9 +919,9 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
     if (/^whenever a creature entering under an opponent's control causes a triggered ability of that creature to trigger, you may copy that ability/.test(l)) { d.copyOppEtb = true; continue; }
     // keyword line
     { const fl = /^flashback—(\{[^}]+\}(?:\{[^}]+\})*), pay (\d+) life\.?$/.exec(l); if (fl) { const c = parseCost(fl[1].toUpperCase()); if (c) { d.flashback = c; d.flashbackLife = +fl[2]; continue; } } }
-    if (l === 'cascade') { const mvv = d.cost.generic + (['W', 'U', 'B', 'R', 'G', 'C'] as const).reduce((a, k) => a + (d.cost[k] ?? 0), 0) + (d.cost.hyb?.length ?? 0); triggers.push({ on: 'x', label: 'Cascade', ev: 'castSelf', subj: 'self', effects: [{ op: 'discover', kind: 'cascade', n: mvv }] } as TriggerDef); continue; }
+    if (l === 'cascade' || l === 'cascade, cascade') { const times = l.includes(',') ? 2 : 1; const mvv = d.cost.generic + (['W', 'U', 'B', 'R', 'G', 'C'] as const).reduce((a, k) => a + (d.cost[k] ?? 0), 0) + (d.cost.hyb?.length ?? 0); for (let i = 0; i < times; i++) triggers.push({ on: 'x', label: 'Cascade', ev: 'castSelf', subj: 'self', effects: [{ op: 'discover', kind: 'cascade', n: mvv }] } as TriggerDef); continue; }
     if (l === 'demonstrate') { triggers.push({ on: 'x', label: 'Demonstrate', ev: 'castSelf', subj: 'self', effects: [{ op: 'script', kind: 'demonstrate' }] } as TriggerDef); continue; }
-    if (l === 'myriad') { triggers.push({ on: 'x', label: 'Myriad', ev: 'attacks', subj: 'self', effects: [{ op: 'script', kind: 'myriad' }] } as TriggerDef); continue; }
+    if (l === 'myriad') { kws.add('myriad'); continue; }
     if (l === 'gravestorm') { triggers.push({ on: 'x', label: 'Gravestorm', ev: 'castSelf', subj: 'self', effects: [{ op: 'script', kind: 'gravestorm' }] } as TriggerDef); continue; }
     { const an = /^annihilator (\d+)$/.exec(l); if (an) { triggers.push({ on: 'x', label: `Annihilator ${an[1]}`, ev: 'attacks', subj: 'self', effects: [{ op: 'script', kind: 'annihilator', n: +an[1] }] } as TriggerDef); continue; } }
     { const eh = /^echo (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(l); if (eh) { const c = parseCost(eh[1].toUpperCase()); if (!c) { fail(raw); continue; } d.echo = c; triggers.push({ on: 'x', label: 'Echo', ev: 'upkeep', pl: 'you', effects: [{ op: 'script', kind: 'echo' }] } as TriggerDef); continue; } }
@@ -989,7 +992,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       if (body.includes('§FAIL')) { fail(raw); continue; }
       // mana abilities
       let only: string | undefined;
-      body = body.replace(/\. (?:spend this mana only to (.+)|this mana can't be spent to cast (?:a )?nonartifact spells?)$/, (_, w?: string) => { only = !w ? 'artifact' : ({ 'cast a creature spell of the chosen type': 'ctypeSpell', 'cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type': 'ctypeAny', 'cast a hero spell or to activate an ability of a hero source': 'hero', 'cast a villain spell or to activate an ability of a villain source': 'villain', 'cast a legendary spell': 'legendary', 'cast an instant or sorcery spell': 'is', 'cast artifact spells or activate abilities of artifacts': undefined } as Record<string, string | undefined>)[w] ?? '§'; return ''; });
+      body = body.replace(/\. (?:spend this mana only to (.+)|this mana can't be spent to (?:cast (?:a )?nonartifact spells?|pay generic mana costs))$/, (_, w?: string) => { only = !w ? (/generic mana costs/.test(body) ? 'nongeneric' : 'artifact') : ({ 'cast a creature spell of the chosen type': 'ctypeSpell', 'cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type': 'ctypeAny', 'cast a hero spell or to activate an ability of a hero source': 'hero', 'cast a villain spell or to activate an ability of a villain source': 'villain', 'cast a legendary spell': 'legendary', 'cast an instant or sorcery spell': 'is', 'cast artifact spells or activate abilities of artifacts': undefined, 'cast a creature spell': 'creature', 'cast elemental spells or activate abilities of elemental sources': 'elemental', 'cast an elemental spell or activate an ability of an elemental': 'elemental', 'cast elemental spells or activate abilities of elementals': 'elemental' } as Record<string, string | undefined>)[w] ?? '§'; return ''; });
       body = body.replace(/^(add one mana of any color in your commander's color identity)\. when that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1$/, (_, x) => { only = 'path'; return x; });
       if (only === '§') { fail(raw); continue; }
       if (only) { const r = /^add (.+)$/.exec(body) && manaAdd(body.slice(4), newCx()); if (!r || !ab.tap || Object.keys(pc.ab).length !== 1) { fail(raw); continue; } manaLines.push({ add: r.mana, n: r.n, only }); continue; }
@@ -1080,6 +1083,12 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
   if ((m = /^ninjutsu (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && d.types.includes('Creature')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.ninjutsu = c; return true; }
   if (p === 'evolve') { d.evolve = true; return true; }
   if (p === 'undying') { kws.add('undying'); return true; }
+  if (p === 'persist') { kws.add('persist'); return true; }
+  if (p === 'wither') { kws.add('wither'); return true; }
+  if (p === 'myriad') { kws.add('myriad'); return true; }
+  { const wb = /^ward[—\-]blight (\d+)$/.exec(p); if (wb) { d.wardBlight = +wb[1]; return true; } }
+  { const evx = /^evoke[—\-]exile an? (white|blue|black|red|green) card from your hand$/.exec(p); if (evx && d.types.includes('Creature')) { const C: Record<string, 'W' | 'U' | 'B' | 'R' | 'G'> = { white: 'W', blue: 'U', black: 'B', red: 'R', green: 'G' }; d.evokeExile = C[evx[1]]; return true; } }
+
   if (p === 'improvise') { d.improvise = true; return true; }
   if ((m = /^teamwork (\d+)$/.exec(p))) { d.teamwork = +m[1]; return true; }
   if (p === 'storied') { d.storied = true; return true; }
@@ -1158,6 +1167,7 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   if (!c && (m = /^if a source an opponent controls would deal damage to you, prevent (\d+) of that damage$/.exec(s))) { statics.push({ k: 'preventOppToYou', who: 'self', n: +m[1] }); return true; }
   if ((m = /^as ~ enters, you may pay (\d) life\. if you don't, it enters tapped$/.exec(s))) { d.shock = +m[1]; return true; }
   if ((m = /^as ~ enters, you may reveal an? (\w+) or (\w+) card from your hand\. if you don't, ~ enters tapped$/.exec(s)) && typeWord(m[1]) && typeWord(m[2])) { d.etbTappedUnless = { k: 'handHas', f: { anyType: [typeWord(m[1])!, typeWord(m[2])!] } }; return true; }
+  if ((m = /^as ~ enters, you may reveal an? (\w+) card from your hand\. if you don't, ~ enters tapped$/.exec(s)) && typeWord(m[1])) { d.etbTappedUnless = { k: 'handHas', f: { anyType: [typeWord(m[1])!] } }; return true; }
   if (/^as ~ enters, choose a creature type$/.test(s) && !c) { d.chooseType = true; return true; }
   if (/^as ~ enters, choose a color$/.test(s) && !c) { d.chooseColor = true; return true; }
   if (/^spells and abilities can't be countered$/.test(s) && !c) { statics.push({ k: 'noCounter', who: 'self' }); return true; }
@@ -1193,6 +1203,7 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   if ((m = /^spells you cast that target a creature cost \{(\d+)\} less to cast$/.exec(s)) && !c) { statics.push({ k: 'costLess', who: 'all', n: +m[1], tgtCreature: true }); return true; }
   if (/^untap all creatures you control during each other player's untap step$/.test(s) && !c) { statics.push({ k: 'oppUntapCreatures', who: 'self' }); return true; }
   if (/^as an additional cost to cast (?:this spell|~), sacrifice x creatures$/.test(s) && !c) { d.extraCost = { sacX: true }; return true; }
+  if ((m = /^as an additional cost to cast (?:this spell|~), you may blight (\d+)$/.exec(s))) { d.optBlight = +m[1]; return true; }
   if (/^(this spell|~) can't be countered$/.test(s)) { d.uncounterable = true; return true; }
   if ((m = /^~ can't be blocked if you control (?:a|an) (.+)$/.exec(s))) { const fp = parseFilter(m[1]); if (!fp) return false; statics.push({ k: 'unblockable', who: 'self', cond: { k: 'control', f: fp.f, n: 1 } }); return true; }
   const PST: [RegExp, Static['k'], Static['who']][] = [
@@ -1229,6 +1240,16 @@ if ((m = /^(?:you may pay|pay) (\d+) life rather than pay (?:this spell's|~'s) m
   if (/^if you would gain life, you gain twice that much life instead$/.test(s) && !c) { statics.push({ k: 'doubleLife', who: 'self' }); return true; }
   if (/^if you would draw a card except the first one you draw in each of your draw steps, draw two cards instead$/.test(s) && !c) { statics.push({ k: 'doubleDraw', who: 'self' }); return true; }
   if (/^if a land entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time$/.test(s) && !c) { d.landTrigTwice = true; return true; }
+  if (/^if a permanent entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time$/.test(s) && !c) { d.permTrigTwice = true; return true; }
+  if (/^during each of your turns, you may play a land and cast a permanent spell of each permanent type from your graveyard$/.test(s) && !c) { d.muldrotha = true; return true; }
+  if (/^players can't gain life$/.test(s) && !c) { statics.push({ k: 'noLifeGainAll', who: 'self' }); return true; }
+  if (/^all damage is dealt as though its source had wither$/.test(s) && !c) { statics.push({ k: 'asThoughWither', who: 'self' }); return true; }
+  if (/^spells you control can't be countered$/.test(s) && !c) { statics.push({ k: 'spellsUncounterable', who: 'self' }); return true; }
+  if (/^you may cast creature spells of the chosen type from the top of your library$/.test(s) && !c) { statics.push({ k: 'topLook', who: 'self' }, { k: 'topCast', who: 'self', spellF: { types: ['Creature'], chosenType: true } }); return true; }
+  if ((m = /^elemental permanent spells you cast from your hand gain evoke \{(\d+)\} as you cast them$/.exec(s)) && !c) { d.grantEvokeElem = { generic: +m[1] }; return true; }
+  if (/^companion[—\- ]/.test(s) && !c) return true;
+  if ((m = /^~ gets \+1\/\+1 for each color among permanents you control$/.exec(s)) && !c) { statics.push({ k: 'pt', who: 'self', p: { permColors: true }, t: { permColors: true } }); return true; }
+
   if (/^if one or more charge counters would be put on an artifact you control, that many plus one charge counters are put on it instead$/.test(s) && !c) { statics.push({ k: 'plusCharge', who: 'self' }); return true; }
   if (/^players can't activate planeswalkers' loyalty abilities$/.test(s) && !c) { statics.push({ k: 'noLoyalty', who: 'self' }); return true; }
   if (/^untap all artifacts you control during each other player's untap step$/.test(s) && !c) { statics.push({ k: 'oppUntapArts', who: 'self' }); return true; }
