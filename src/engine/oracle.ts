@@ -7,7 +7,7 @@ import type { ActAbility, Amt, CardDef, CEFx, Color, Cond, Cost, Effect, Filter,
 export const SUB = new Map<string, string>((SUBTYPES as string[]).map(s => [s.toLowerCase(), s]));
 const TYPES: Record<string, string> = { creature: 'Creature', artifact: 'Artifact', enchantment: 'Enchantment', land: 'Land', planeswalker: 'Planeswalker', instant: 'Instant', sorcery: 'Sorcery', battle: 'Battle', permanent: 'Permanent', legendary: 'Legendary', historic: 'Historic', outlaw: 'Outlaw' };
 const COLOR_OF: Record<string, Color> = { white: 'W', blue: 'U', black: 'B', red: 'R', green: 'G' };
-export const KWS = ['phasing', 'compleated', 'wither', 'persist', 'myriad', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'melee', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted', 'riot', 'protection from creatures', 'protection from multicolored'];
+export const KWS = ['daybound', 'nightbound', 'phasing', 'compleated', 'wither', 'persist', 'myriad', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'melee', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted', 'riot', 'protection from creatures', 'protection from multicolored'];
 const IRREG: Record<string, string> = { elves: 'elf', dwarves: 'dwarf', wolves: 'wolf', werewolves: 'werewolf', fungi: 'fungus', mice: 'mouse', sorceries: 'sorcery', allies: 'ally', faeries: 'faerie', zombies: 'zombie', zombie: 'zombie', thieves: 'thief', leeches: 'leech', octopi: 'octopus', 'cyclopes': 'cyclops', 'sphinxes': 'sphinx', 'foxes': 'fox', 'boars': 'boar', 'mercenaries': 'mercenary', 'slivers': 'sliver' };
 function typeWord(w: string | undefined): string | null {
   if (!w) return null;
@@ -253,6 +253,11 @@ export function cond(s: string, cx: Cx): Cond | null {
   if (/^(?:it|this spell|~) targets? a tapped creature$/.test(s)) return { k: 'tgtTappedCreature' };
   if (/^you have no cards in hand$/.test(s)) return { k: 'noCardsHand' };
   if (/^~ attacked or blocked this combat$/.test(s)) return { k: 'atkOrBlkCombat' };
+  if (/^it's day$/.test(s)) return { k: 'isDay' };
+  if (/^it's night$/.test(s)) return { k: 'isNight' };
+  if (/^it's neither day nor night$/.test(s)) return { k: 'neitherDayNight' };
+  if (/^no spells were cast last turn$/.test(s)) return { k: 'noSpellsLastTurn' };
+  if (/^a player (?:has )?cast two or more spells last turn$/.test(s)) return { k: 'twoSpellsLastTurn' };
   if ((m = /^you have (\w+) or fewer cards in hand$/.exec(s))) return { k: 'handLE', n: num(m[1]) as number };
   if ((m = /^a player has (\w+) or fewer cards in hand$/.exec(s))) return { k: 'anyHandLE', n: num(m[1]) as number };
   if (/^a modified creature died under your control this turn$/.test(s)) return { k: 'modDiedYou' };
@@ -576,11 +581,26 @@ const PATS: Pat[] = [
   [/^prevent all combat damage that would be dealt to you this turn$/, () => [{ op: 'prevent', kind: 'combatYou' }]],
   [/^prevent all (combat )?damage that would be dealt to (.+?) this turn$/, (m, cx) => { const o = obj(m[2], cx, false); return o ? [{ op: 'prevent', kind: m[1] ? 'toPermCombat' : 'toPerm', who: o.ref }] : null; }],
   [/^prevent the next (\w+) damage that would be dealt to (.+?) this turn$/, (m, cx) => { const n0 = num(m[1]); const o = obj(m[2], cx, false); return typeof n0 === 'number' && o ? [{ op: 'prevent', kind: 'nextN', n: n0, who: o.ref }] : null; }],
+  [/^the next (\w+) damage that would be dealt to (.+?) this turn is dealt to ((?:another )?target creature(?: you control)?) instead$/, (m, cx) => {
+    const n0 = num(m[1]); const fr = obj(m[2], cx, false); const to = obj(m[3], cx, true);
+    return typeof n0 === 'number' && fr && to && !to.card ? [{ op: 'redirectNext', n: n0, who: fr.ref, other: to.ref }] : null;
+  }],
   [/^§seize (target (?:player|opponent))\|(.+)\|(graveyard|exile|exile\+gy)$/, (m, cx) => { const pl = playerRef(m[1], cx, true); const fp = parseFilter(m[2]); return pl && fp ? [{ op: 'discardChosen', pl, f: fp.f, dest: m[3].startsWith('exile') ? 'exile' : 'graveyard', zone: m[3] === 'exile+gy' ? 'handOrGy' : 'hand' }] : null; }],
   [/^draw a card at the beginning of the next turn's upkeep$/, () => [{ op: 'arcaneDraws', kind: 'you' }]],
   [/^investigate twice$/, () => [{ op: 'token', n: 2, pl: 'you', tok: { name: 'Clue', colors: [], types: ['Artifact'], preset: 'Clue' } }]],
   [/^investigate (x|\w+) times(?:, where x is (.+))?$/, (m, cx) => { const a = m[1] === 'x' && m[2] ? amount(m[2], cx) : num(m[1]); return a !== null ? [{ op: 'token', n: a, pl: 'you', tok: { name: 'Clue', colors: [], types: ['Artifact'], preset: 'Clue' } }] : null; }],
   [/^(?:you )?take (an|two|three) extra turns? after this one$/, m => [{ op: 'extraTurn', n: num(m[1]) as number }]],
+  [/^target player takes (an|two|three) extra turns? after this one$/, (m, cx) => { const p = playerRef('target player', cx, false); return p ? [{ op: 'extraTurn', n: num(m[1]) as number, pl: p }] : null; }],
+  [/^at the beginning of that turn's end step, you lose the game$/, () => [{ op: 'loseAtExtraEnd' }]],
+  [/^copy (target instant or sorcery spell(?: you control)?)$/, (m, cx) => { const o = obj(m[1], cx, true); return o ? [{ op: 'copyStack', who: o.ref }] : null; }],
+  [/^when you next cast an instant or sorcery spell this turn, copy that spell$/, () => [{ op: 'nextCopyIS' }]],
+
+  [/^it becomes day$/, () => [{ op: 'becomeDay' }]],
+  [/^it becomes night$/, () => [{ op: 'becomeNight' }]],
+  [/^if it's night, it becomes day\. otherwise, it becomes night$/, () => [{ op: 'toggleDayNight' }]],
+  [/^~ phases out$/, () => [{ op: 'phaseOut', who: 'self' }]],
+  [/^equipped creature phases out$/, () => [{ op: 'phaseOut', who: 'attached' }]],
+  [/^(.+) phases? out$/, (m, cx) => { const o = obj(m[1], cx, false); return o && !o.card ? [{ op: 'phaseOut', who: o.ref }] : null; }],
   [/^destroy all other permanents except for lands and tokens$/, () => [{ op: 'destroy', who: { all: { other: true, notTypes: ['Land'], nontoken: true } } }]],
   [/^(~|it) deals (\d+) damage to (.+?) and (\d+) damage to (.+)$/, (m, cx) => { const a = dmg(m[1], +m[2], m[3], cx); const b = a && dmg(m[1], +m[4], m[5], cx); return a && b ? [...a, ...b] : null; }],
   [/^amass (?:([a-z]+) )?(\d+)$/, m => [{ op: 'amass', n: +m[2], text: m[1] ? m[1][0].toUpperCase() + m[1].slice(1) : undefined }]],
@@ -856,6 +876,8 @@ export function effects(text: string, cx: Cx): Effect[] | null {
     .replace(/, then investigate(?=\.|$)/g, '. investigate')
     .replace(/ and investigate(?=\.|$)/g, '. investigate');
   t = t.replace(/\."(\s+)/g, '".$1');
+  // CR 732 / The Celestus: collapse the common toggle into one effect (also scored by the AI).
+  if (/^if it's night, it becomes day\. otherwise, it becomes night$/.test(t)) return [{ op: 'toggleDayNight' }];
   // sentences
   const sents = t.split(/\.\s+/); let lastStart = 0;
   for (let i = 0; i < sents.length; i++) {
@@ -870,6 +892,7 @@ export function effects(text: string, cx: Cx): Effect[] | null {
     const ret = /^return (?:it|that card|that creature|them|those cards|the exiled card|the exiled cards) to the battlefield under (?:its owner's|their owners'|your) control( at the beginning of the next end step| at the beginning of (?:that player's|its owner's|their owner's) next end step)?$/.exec(s.replace(/\.$/, ''));
     if (ret && out.length && out[out.length - 1].op === 'exile') { const ex = out.pop()!; out.push({ op: 'flicker', who: ex.who, ret: !ret[1] ? 'now' : /next end step$/.test(ret[1]) && !/the next/.test(ret[1]) ? 'ownerEnd' : 'eot' }); continue; }
     if (/^(?:it|they) can't be regenerated$/.test(s)) continue;
+    if (/^you may choose new targets for the cop(?:y|ies)$/.test(s.replace(/\.$/, ''))) continue;
     const sacNext = /^sacrifice (?:it|that token) at the beginning of the next end step$/.exec(s.replace(/\.$/, ''));
     if (sacNext && out.length && out[out.length - 1].op === 'copyTok') { out.push({ op: 'delaySac', who: 'created' }); continue; }
     const twoInstead = /^if (?:the creature|it|that creature) had power (\d+) or greater, create two of those tokens instead$/.exec(s.replace(/\.$/, ''));
@@ -881,6 +904,10 @@ export function effects(text: string, cx: Cx): Effect[] | null {
     if (/^if a card would be put into your graveyard from anywhere this turn, exile that card instead$/.test(s.replace(/\.$/, '')) && out.length) { out.push({ op: 'tempRepl', repl: { ev: 'toGy', fromAnywhere: true, pl: 'you', cardsOnly: true, until: 'eot', zoneChange: true, instead: { k: 'exile' }, text: s } }); continue; }
     const ins = /^if (.+?), (.+) instead$/.exec(s.replace(/\.$/, ''));
     if (ins && out.length) { const c = cond(ins[1], cx); const sub = c && clause(ins[2], cx); if (!c || !sub) return null; const prev = out.pop()!; out.push({ op: 'if', cond: c, sub, else: [prev] }); continue; }
+    const oth = /^otherwise, (.+)$/.exec(s.replace(/\.$/, ''));
+    if (oth && out.length && out[out.length - 1].op === 'if') {
+      const els = clause(oth[1], cx); if (!els) return null; out[out.length - 1].else = els; continue;
+    }
     const e = clause(s, cx); if (!e) return null;
     // "it"/"that creature" now refer to the first target, if any
     out.push(...e);
@@ -996,6 +1023,10 @@ export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partia
   if ((m = /^an? ([a-z ]+?) (?:is|are) put into your graveyard from the battlefield$/.exec(h))) { const fp = parseFilter(m[1]); return fp && !fp.card ? { defs: [{ ev: 'dies', subj: 'any', f: { ...fp.f, ctrl: 'you' } }], cx: { it: 'ev', that: 'ev' } } : null; }
   if (/^you cast your commander$/.test(h)) return { defs: [{ ev: 'cast', subj: 'any', pl: 'you', filter: 'commander' }], cx: { it: 'ev' } };
   if (/^end of combat$/.test(h)) return { defs: [{ ev: 'endCombat' }], cx: { it: 'self' } };
+  if (/^day becomes night or night becomes day$/.test(h) || /^night becomes day or day becomes night$/.test(h))
+    return { defs: [{ ev: 'dayNight' }], cx: { it: 'self' } };
+  if (/^~ phases in$/.test(h)) return { defs: [{ ev: 'phasesIn', subj: 'self' }], cx: { it: 'self' } };
+  if (/^~ phases out$/.test(h)) return { defs: [{ ev: 'phasesOut', subj: 'self' }], cx: { it: 'self' } };
   if (/^the beginning of combat on your turn$/.test(h)) return { defs: [{ ev: 'beginCombat', pl: 'you' }], cx: { it: 'self', thatPl: 'evp' } };
   if ((m = /^the beginning of (your|each|each opponent's|each player's|the) (upkeep|end step|draw step|combat on your turn|combat|first main phase)$/.exec(h))) {
     const ev = { upkeep: 'upkeep', 'end step': 'endStep', 'draw step': 'drawStep', 'combat on your turn': 'beginCombat', combat: 'beginCombat', 'first main phase': 'firstMain' }[m[2]]!;
@@ -1079,6 +1110,16 @@ export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partia
   if ((m = /^~ blocks (?:an? )?(.+)$/.exec(h))) {
     const fp = parseFilter(m[1]); if (!fp) return null;
     return { defs: [{ ev: 'blocks', subj: 'self', evF: fp.f }], cx: { it: 'self', that: 'ev' } };
+  }
+  if ((m = /^(?:another |an? |one or more )(.+?) phases in$/.exec(h))) {
+    const fp = parseFilter(m[1]); if (!fp) return null;
+    return { defs: [{ ev: 'phasesIn', subj: 'any', f: fp.f }], cx: { it: 'ev', that: 'ev' } };
+  }
+  if (/^~ or another (.+?) phases in$/.exec(h) || (m = /^~ or another (.+?) you control phases in$/.exec(h))) {
+    const mm = /^~ or another (.+?)(?: you control)? phases in$/.exec(h)!;
+    const fp = parseFilter(mm[1]); if (!fp) return null;
+    fp.f.ctrl = fp.f.ctrl ?? 'you';
+    return { defs: [{ ev: 'phasesIn', subj: 'any', f: { ...fp.f, ctrl: 'you' } }], cx: { it: 'ev', that: 'ev' } };
   }
   return null;
 }
@@ -1776,6 +1817,7 @@ function parseEnterAsCopy(l: string, d: CardDef): boolean {
 export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>): boolean {
   let m: RegExpExecArray | null; let c: Cond | undefined; let s = l;
   if (parseEnterAsCopy(s, d)) return true;
+  if (/^if it's neither day nor night, it becomes day as ~ enters$/.test(s)) { d.dayAsEnters = true; return true; }
   if (parseAltCost(s, d)) return true;
   if (/^gift a card$/.test(s)) { d.gift = 'card'; return true; }
   { const em = /^escalate \{([wubrgc])\}$/.exec(s); if (em) { const k = em[1].toUpperCase() as 'W'|'U'|'B'|'R'|'G'|'C'; d.escalateCost = { generic: 0, [k]: 1 }; return true; } }
