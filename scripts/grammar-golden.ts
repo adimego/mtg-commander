@@ -109,5 +109,6 @@ if (bulk) {
   corpus = compareSet('Supported commander-legal corpus (classify auto+builtin, unique oracle_id)', supported);
 }
 
-if (!kindsOk || precon.parseMismatch || precon.parseWorse || precon.invalid || precon.liftMismatch) process.exitCode = 1;
-if (corpus && (corpus.parseMismatch || corpus.parseWorse || corpus.invalid || corpus.liftMismatch)) process.exitCode = 1;
+// Parser may be better than the old compiler (P2+). Fail only if it lost auto support or lift/lower broke.
+if (!kindsOk || precon.parseWorse || precon.invalid || precon.liftMismatch) process.exitCode = 1;
+if (corpus && (corpus.parseWorse || corpus.invalid || corpus.liftMismatch)) process.exitCode = 1;

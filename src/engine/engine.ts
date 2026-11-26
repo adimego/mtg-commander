@@ -1667,6 +1667,7 @@ function trigMatches(g: Game, src: Card, t: TriggerDef, type: string, ev: GameEv
     if (t.filter === 'nonland' && (!subj || isType(subj, 'Land'))) return false;
     if (t.filter === 'commander' && (!subj || !g.players.some(p => p.commanderIds.includes(subj.id)))) return false;
     if (t.nth && (t.nth.k === 'draw' ? ev.amount !== t.nth.n : ev.nth?.[t.nth.k] !== t.nth.n)) return false;
+    if (t.mvGE !== undefined && (ev.mv ?? 0) < t.mvGE) return false;
     if (t.once && src.usedLoyalty === -1000 - g.turn) return false;
     if (t.ifc && !condOk(g, me, t.ifc, src, ev, subj)) return false;
     return true;

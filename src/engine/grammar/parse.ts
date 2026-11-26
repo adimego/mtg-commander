@@ -277,7 +277,6 @@ export function parseInto(sc: ScryLike, d: CardDef, failures: ParseFailure[] = [
     spellFx.push({ op: 'script', kind: 'learn' });
   }
 
-  retryNativeLeftovers({ d, isSpell, sc, spellFx, spellSlots, triggers, abilities, unparsed, failures });
   if (abilities.length) d.abilities = [...(d.abilities ?? []), ...abilities];
   if (triggers.length) d.triggers = [...(d.triggers ?? []), ...triggers];
   if (statics.length) d.statics = statics;
@@ -301,6 +300,19 @@ export function parseCard(sc: ScryLike, d: CardDef, scriptName = sc.name, oracle
   const res = parseInto(sc, d, failures);
   const unparsed = res.unparsed;
   applyScripts(scriptName, d, unparsed, oracleId ?? sc.oracle_id);
+  const isSpell = d.types.includes('Instant') || d.types.includes('Sorcery');
+  retryNativeLeftovers({
+    d, isSpell, sc, unparsed, failures,
+    triggers: (d.triggers ??= []),
+    abilities: (d.abilities ??= []),
+    spellFx: d.spell?.effects ?? (d.spell = { effects: [] }).effects,
+    spellSlots: d.spell.tslots ?? (d.spell.tslots = []),
+  });
+  if (d.spell?.tslots && !d.spell.tslots.length) delete d.spell.tslots;
+  if (d.spell && !d.spell.effects.length && !d.spell.tslots?.length && !d.spell.modes) delete d.spell;
+  if (d.triggers && !d.triggers.length) delete d.triggers;
+  if (d.abilities && !d.abilities.length) delete d.abilities;
+  if (!unparsed.length) d.compiled = true;
   const still = new Set(unparsed);
   const leftover = failures.filter(f => still.has(f.text));
   const script = liftCardDef(d, { source: 'parser' });

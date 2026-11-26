@@ -839,7 +839,7 @@ export function normalize(text: string, name: string): string {
   t = t.split(name).join('~');
   if (short.length > 3 && short !== name) t = t.replace(new RegExp(`\\b${short.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), '~');
   for (const sh of [name.split(',')[0].split(' and ')[0], name.split(',')[0].split(' the ')[0]]) if (sh.length > 3 && sh !== name && sh !== short) t = t.replace(new RegExp(`\\b${sh.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b(?!['’]s? [A-Z])`, 'g'), '~');
-  t = t.toLowerCase().replace(/[’‘]/g, "'").replace(/[−–]/g, '-').replace(/\." it's still an? (land|artifact)/g, '" that\'s still a $1').replace(/\b(this (creature|artifact|enchantment|land|permanent|spell|card|equipment|aura|vehicle|planeswalker|token|spacecraft|planet|class|saga|mount|room))\b/g, '~');
+  t = t.toLowerCase().replace(/[’‘]/g, "'").replace(/[−–]/g, '-').replace(/\." it's still an? (land|artifact)/g, '" that\'s still a $1').replace(/\b(this (creature|artifact|enchantment|land|permanent|spell|card|equipment|aura|vehicle|planeswalker|token|spacecraft|planet|class|saga|mount|room|siege|battle))\b/g, '~');
   // MSC-style personal pronouns for the card itself
   t = t.replace(/\b(?:he|she) (gains|gets|deals|has|can't|enters|attacks|blocks|dies|was|is|connives|explores)\b/g, '~ $1').replace(/\b(on|exile|sacrifice|untap|tap|return) (him|her)\b(?! own)/g, '$1 ~').replace(/\b(his|her) (power|toughness)\b/g, "~'s $2");
   t = t.replace(/ of (?:their|his or her|your) choice/g, '').replace(/enters the battlefield/g, 'enters').replace(/enters under your control/g, 'enters under your control').replace(/ +/g, ' ').replace(/ \./g, '.');
@@ -847,7 +847,7 @@ export function normalize(text: string, name: string): string {
 }
 
 export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> } | null {
-  let m: RegExpExecArray | null; const h = head.trim().replace(/ under your control$/, ' you control').replace(/^~ deal /, '~ deals ');
+  let m: RegExpExecArray | null; const h = head.trim().replace(/ under your control$/, ' you control').replace(/^~ deal /, '~ deals ').replace(/\bnon-?creature, non-?land\b/g, 'noncreature nonland');
   if ((m = /^(an? |another |one or more )(.+?) enters or attacks$/.exec(h))) { const a = trigger(`${m[1]}${m[2]} enters`); const b = trigger(`${m[1]}${m[2]} attacks`); if (a && b) return { defs: [...a.defs, ...b.defs], cx: a.cx }; }
   const self = (ev: string, extra: Partial<TriggerDef> = {}) => ({ defs: [{ ev, subj: 'self' as const, ...extra }], cx: { it: 'self' } });
   if (/^~ enters untapped$/.test(h)) return { defs: [{ ev: 'etb', subj: 'self', ifc: { k: 'enteredUntapped' } }], cx: { it: 'self' } };
@@ -890,7 +890,9 @@ export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partia
   if ((m = /^one or more (.+?) you control attack a player$/.exec(h))) { const fp = parseFilter(m[1]); if (!fp) return null; fp.f.ctrl = 'you'; return { defs: [{ ev: 'attackPlayer', f: fp.f }], cx: { it: 'self' } }; }
   if ((m = /^you cast an? (.+?) spell with mana value (\d+) or greater from your hand$/.exec(h))) { const fp = parseFilter(m[1] + ' spell'); if (!fp) return null; return { defs: [{ ev: 'cast', subj: 'any', f: { ...fp.f, mvGE: +m[2], fromHand: true }, pl: 'you' }], cx: { it: 'ev', that: 'ev' } }; }
   if ((m = /^you cast your first spell with \{x\} in its mana cost each turn$/.exec(h))) return { defs: [{ ev: 'cast', subj: 'any', f: { hasX: true }, pl: 'you', nth: { k: 'x', n: 1 } }], cx: { it: 'ev', that: 'ev' } } as never;
-  if ((m = /^(you|an opponent|a player|target opponent) casts? (?:an|a|your first)\b ?(.*?) ?spell(?: this turn)?$/.exec(h.replace(/ spell of the chosen type$/, ' of the chosen type spell').replace(/^(.+?) spell (with mana value \d+ or (?:greater|less))$/, '$1 $2 spell')))) { if (/first/.test(h)) return null; const fp = m[2] ? parseFilter(/ with /.test(m[2]) ? m[2].replace(' with ', ' spell with ') : m[2] + ' spell') : { f: {} }; if (!fp) return null; return { defs: [{ ev: 'cast', subj: 'any', f: fp.f, pl: m[1] === 'you' ? 'you' : m[1] === 'a player' ? 'any' : 'notyou' }], cx: { it: 'ev', that: 'ev', thatPl: 'evp' } }; }
+  if ((m = /^you cast a spell with mana value (\d+) or greater$/.exec(h)))
+    return { defs: [{ ev: 'cast', pl: 'you', subj: 'any', mvGE: +m[1] }], cx: { it: 'ev', that: 'ev' } };
+    if ((m = /^(you|an opponent|a player|target opponent) casts? (?:an|a|your first)\b ?(.*?) ?spell(?: this turn)?$/.exec(h.replace(/ spell of the chosen type$/, ' of the chosen type spell').replace(/^(.+?) spell (with mana value \d+ or (?:greater|less))$/, '$1 $2 spell')))) { if (/first/.test(h)) return null; const fp = m[2] ? parseFilter(/ with /.test(m[2]) ? m[2].replace(' with ', ' spell with ') : m[2] + ' spell') : { f: {} }; if (!fp) return null; return { defs: [{ ev: 'cast', subj: 'any', f: fp.f, pl: m[1] === 'you' ? 'you' : m[1] === 'a player' ? 'any' : 'notyou' }], cx: { it: 'ev', that: 'ev', thatPl: 'evp' } }; }
   if ((m = /^your commander (enters or attacks|enters|attacks|deals combat damage to a player|dies)$/.exec(h))) { const r = trigger(`a commander creature you own ${m[1]}`); if (r) for (const d0 of r.defs) if (d0.ev === 'attacks' || d0.ev === 'combatDamagePlayer') d0.f = { ...d0.f, ctrl: 'you' }; return r; }
   if (/^you attack with your commander$/.test(h)) { const r = trigger('a commander creature you own attacks'); if (r) for (const d0 of r.defs) d0.f = { ...d0.f, ctrl: 'you' }; return r; }
   if (/^one or more cards leave your graveyard$/.test(h)) return { defs: [{ ev: 'leaveGy', pl: 'you', batch: true }], cx: { it: 'self' } };
@@ -934,6 +936,27 @@ export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partia
   if ((m = /^(?:one or more|a) \+1\/\+1 counters? (?:is|are) put on (~|a creature you control|another creature you control)$/.exec(h))) return { defs: [{ ev: 'counterPut', kindF: '+1/+1', subj: m[1] === '~' ? 'self' : m[1].startsWith('another') ? 'other' : 'any', f: { types: ['Creature'], ctrl: 'you' } }], cx: { it: m[1] === '~' ? 'self' : 'ev', that: 'ev' } };
   if ((m = /^(?:one or more|a) -1\/-1 counters? (?:is|are) put on (a creature|~)$/.exec(h))) return { defs: [{ ev: 'counterPut', kindF: '-1/-1', subj: m[1] === '~' ? 'self' : 'any', f: { types: ['Creature'] } }], cx: { it: m[1] === '~' ? 'self' : 'ev', that: 'ev' } };
   if ((m = /^a land enters you control$/.exec(h))) return { defs: [{ ev: 'etb', subj: 'any', f: { types: ['Land'], ctrl: 'you' } }], cx: { it: 'self', that: 'ev' } };
+  // P2 leftover heads — only events the engine already emits
+  if (/^~ deals combat damage$/.test(h) || /^~ deals combat damage to a player or a planeswalker$/.test(h))
+    return { defs: [{ ev: 'combatDamage', subj: 'self' }], cx: { it: 'self', that: 'ev', thatPl: 'evp' } };
+  if (/^~ becomes tapped$/.test(h)) return { defs: [{ ev: 'becomesTapped', subj: 'self' }], cx: { it: 'self' } };
+  if ((m = /^(an?|another) (.+?) becomes tapped$/.exec(h))) {
+    const fp = parseFilter(m[2]); if (!fp) return null;
+    if (m[1] === 'another') fp.f.other = true;
+    return { defs: [{ ev: 'becomesTapped', subj: m[1] === 'another' ? 'other' : 'any', f: fp.f }], cx: { it: 'ev', that: 'ev' } };
+  }
+  if (/^an opponent discards a card$/.test(h)) return { defs: [{ ev: 'discard', pl: 'notyou', subj: 'any' }], cx: { it: 'ev', that: 'ev', thatPl: 'evp' } };
+  if ((m = /^an opponent discards (?:a|an) (.+?) cards?$/.exec(h))) {
+    const fp = parseFilter(m[1] + ' card'); if (!fp) return null;
+    return { defs: [{ ev: 'discard', pl: 'notyou', subj: 'any', f: fp.f }], cx: { it: 'ev', that: 'ev', thatPl: 'evp' } };
+  }
+  if ((m = /^you discard (?:a|an) (.+?) cards?$/.exec(h))) {
+    const fp = parseFilter(m[1] + ' card'); if (!fp) return null;
+    return { defs: [{ ev: 'discard', pl: 'you', subj: 'any', f: fp.f }], cx: { it: 'ev', that: 'ev' } };
+  }
+  if (/^the beginning of your second main phase$/.test(h)) return { defs: [{ ev: 'secondMain', pl: 'you' }], cx: { it: 'self', thatPl: 'evp' } };
+  if (/^~ becomes the target of a spell or ability an opponent controls$/.test(h) || /^~ becomes the target of a spell or ability$/.test(h))
+    return { defs: [{ ev: 'targeted', subj: 'self', pl: h.includes('opponent') ? 'opp' : 'any' }], cx: { it: 'self' } };
   return null;
 }
 export const pl2: Record<string, TriggerDef['pl']> = { you: 'you', any: 'any', notyou: 'opp' };
