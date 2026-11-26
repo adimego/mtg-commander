@@ -222,6 +222,7 @@ html,body,#root,.app,.table{overflow:clip!important}
 .setcount{font-size:.85rem;color:#c5d4cc;letter-spacing:.03em;text-transform:none}
 .deckopt.saved{cursor:pointer;width:24vh;position:relative;text-align:center}
 .deckopt.saved b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deckopt .dsub{color:var(--gold);font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.1}
 .dart{height:13vh;border-radius:.6rem;background:#223 center/cover;position:relative}
 .dtag{position:absolute;top:.4rem;left:.4rem;font-size:.7rem;font-weight:800;padding:.1rem .4rem;border-radius:.3rem;letter-spacing:.03em;text-transform:uppercase}
 .dtag.casual{background:#f9a825;color:#111;left:auto;right:.4rem}

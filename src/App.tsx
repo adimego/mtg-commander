@@ -61,6 +61,7 @@ function PreconTile({ d, on, pick, dbl }: { d: Precon; on: boolean; pick: () => 
     <button data-deck={d.id} className={`deckopt saved ${on ? 'on' : ''}`} onClick={pick} onDoubleClick={dbl}>
       <div className="dart" style={{ backgroundImage: d.art ? `url(${d.art})` : undefined }}><span className={`dtag ${official ? 'official' : 'custom'}`}>{official ? 'Official' : 'Custom'}</span></div>
       <b>{d.name}</b>
+      {d.subtitle ? <span className="dsub">{d.subtitle}</span> : null}
       <span title={cs.map(c => c.name).join(', ')}>{cs.length > 1 ? `Choose 1 of ${cs.length} commanders` : cs[0]?.name}</span>
       <small>{official ? 'Wizards precon' : 'Your list'} · {d.supported === d.total ? 'fully supported' : <span className="limtag" title={d.unsupported.join(', ')}>{d.supported}/{d.total} supported</span>}</small>
     </button>
@@ -860,7 +861,7 @@ export default function App() {
           <div className="dimg"><CardFace d={c} /></div><b>{d.name}</b><span>{c.name}</span><small>{c.text.split('\n').slice(-1)[0]}</small></button>); })}</div>
       <section className="deckgroup official" data-section="official">
         <h3 className="dsec">Official precons</h3>
-        <p className="dnote">Wizards of the Coast products from Marvel Super Heroes Commander, Reality Fracture Commander, Star Trek Commander, and Secrets of Strixhaven Commander. A deck that lists several commanders asks you to pick one before the game starts.</p>
+        <p className="dnote">Wizards of the Coast products from Marvel Super Heroes Commander, Reality Fracture Commander, Star Trek Commander, Secrets of Strixhaven Commander, and Final Fantasy Commander. A deck that lists several commanders asks you to pick one before the game starts.</p>
         {OFFICIAL_SETS.map(s => { const open = openSets.has(s.set); return (
           <div key={s.set} className={`setgroup ${open ? 'open' : ''}`} data-set={s.set} data-open={open ? '1' : '0'}>
             <button type="button" className="sethead" aria-expanded={open} data-set-toggle={s.set} onClick={() => toggleSet(s.set)}>
