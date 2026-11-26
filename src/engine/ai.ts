@@ -1,4 +1,4 @@
-import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretell, canPlot, plot, canNinjutsu, ninjutsu, sneakRets, teamworkPick, modesMax, crewPick,
+import { aiType, cmdKey, backCastable, flipFace, frontFace, fusedDef, canForetell, foretell, canPlot, plot, canNinjutsu, ninjutsu, sneakRets, teamworkPick, modesMax, crewPick,
   Game, Card, Player, Target, TargetSpec, Effect, def, isType, hasKw, cmc, power, toughness, opponents, canCast, castSpell, playLand, canPlayLand,
   declareAttackers, declareBlockers, canAttack, canBlock, attackers, isCommander, isTypeOrSub, legalTargets, findCard, creatures, canActivate, activate, isMain,
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
@@ -177,6 +177,7 @@ function scoreFx(g: Game, pid: number, fx: Effect[], x = 0): number {
 function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   const d = def(c); const p = g.players[pid];
   if (d.overload?.spell && canCast(g, pid, c, { overload: true }) && scoreFx(g, pid, d.overload.spell.effects, 0) >= 2 && castSpell(g, pid, c.uid, { overload: true })) return true;
+  if (d.fuse && canCast(g, pid, c, { fuse: true })) { const fd = fusedDef(d); const fx = fd?.spell?.effects ?? []; const sc = scoreFx(g, pid, fx, 0); const one = scoreFx(g, pid, d.spell?.effects ?? [], 0) + scoreFx(g, pid, d.back?.spell?.effects ?? [], 0); if (sc >= 2 && sc + 1 >= one && castSpell(g, pid, c.uid, { fuse: true, x: d.cost.x || d.back?.cost.x ? 1 : 0 })) return true; }
   const kicked = !!d.kicker && canCast(g, pid, c, { kicked: true }) && !!planPayment(p, costOf(g, c, { kicked: true }));
   const dash = !!d.dash && canCast(g, pid, c, { dash: true }) && (g.active === pid && (g.step === 'main1' || g.step === 'beginCombat' || g.step === 'attackers')) && creatures(p).length >= 0;
   const offspring = !!d.offspring && canCast(g, pid, c, { offspring: true }) && !!planPayment(p, costOf(g, c, { offspring: true })) && manaAvailable(p) >= 2 + (d.offspring.generic ?? 0);
@@ -302,6 +303,7 @@ function tryActivate(g: Game, pid: number, c: Card, i: number, a: ActAbility, ph
       if (cost <= -6) sc += threat < after ? 8 : 2; // ultimate
     }
   }
+  if ((a.mana?.E ?? 0) > 0 && sc > 0) sc += 2; // spend energy on cheap, high-value activations
   if (sc <= 0) return false;
   if (fx.every(e => e.op === 'pump' || e.op === 'grant') && phase !== 'combat' && a.loyalty === undefined) return false;
   let targets: (Target | undefined)[] = [];
@@ -317,7 +319,9 @@ function useAbilities(g: Game, pid: number, phase: 'main' | 'eot' | 'combat'): b
   const p = g.players[pid];
   for (const c of [...p.battlefield, ...p.hand, ...p.graveyard]) {
     const abs = abilitiesOf(g, c);
-    for (let i = 0; i < abs.length; i++) if (tryActivate(g, pid, c, i, abs[i], phase)) return true;
+    const order = abs.map((_, i) => i);
+    if ((p.energy ?? 0) > 0) order.sort((i, j) => ((abs[j].mana?.E ?? 0) > 0 ? 1 : 0) - ((abs[i].mana?.E ?? 0) > 0 ? 1 : 0) || (abs[i].mana?.generic ?? 0) - (abs[j].mana?.generic ?? 0));
+    for (const i of order) if (tryActivate(g, pid, c, i, abs[i], phase)) return true;
   }
   return false;
 }
@@ -334,10 +338,15 @@ function mainPhase(g: Game, pid: number): boolean {
     return playLand(g, pid, lands.sort((a, b) => score(b) - score(a))[0].uid);
   }
   { const mdfcLand = p.hand.find(c => canPlayLand(g, pid, c, true) && (!canCast(g, pid, c) || p.battlefield.filter(x => isType(x, 'Land')).length < 6)); if (mdfcLand && playLand(g, pid, mdfcLand.uid, true)) return true; }
-  // adventures first (the creature stays available from exile); modal DFC back faces when the front can't be cast
+  // adventures first (the creature stays available from exile); modal DFC / split back faces when the front can't be cast
   for (const c of p.hand) {
     if (!backCastable(g, pid, c) || !canCast(g, pid, c, { back: true })) continue;
-    if (!def(c).back?.adventure && canCast(g, pid, c)) continue;
+    if (!def(c).back?.adventure && !def(c).split && canCast(g, pid, c)) continue;
+    flipFace(c); if (tryCast(g, pid, c)) return true; frontFace(c);
+  }
+  // aftermath: the back half is only castable from the graveyard
+  for (const c of p.graveyard) {
+    if (!backCastable(g, pid, c) || !canCast(g, pid, c, { back: true })) continue;
     flipFace(c); if (tryCast(g, pid, c)) return true; frontFace(c);
   }
   const opts = [...p.hand, ...p.command, ...p.graveyard, ...p.exile].filter(c => castZone(g, pid, c) && (canCast(g, pid, c, { x: def(c).cost.x ? 1 : 0 }) || canCast(g, pid, c, { evoke: true }) || canCast(g, pid, c, { free: true }) || canCast(g, pid, c, { webSling: true })) && !isCounter(def(c)) && !isPump(def(c)))

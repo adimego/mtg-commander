@@ -331,6 +331,7 @@ html,body,#root,.app,.table{overflow:clip!important}
 .badge.loyready{top:.2rem;left:.2rem;background:#d4af37;color:#000;font-size:.62rem;animation:pulse 1.6s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
 .poison{color:#7fd16b;font-weight:700;margin-left:6px;font-size:.9em}
+.energy{color:#f0c14b;font-weight:700;margin-left:6px;font-size:.9em}
 .dtag.set{background:#c62828;color:#fff}
 
 html{touch-action:manipulation;-webkit-text-size-adjust:100%}
@@ -680,6 +681,7 @@ html.compact.wide .gwhy{color:#ffb74d;font-size:.75rem}
 .glance-name{font-size:.85rem}
 .glance-life{font-weight:900;font-size:1.15rem;background:#0008;border-radius:.35rem;padding:0 .35rem;min-width:1.6rem;text-align:center}
 .glance-poison{color:#7fd16b;font-weight:800}
+.glance-energy{color:#f0c14b;font-weight:800}
 .glance-tax,.glance-cmd{color:var(--muted)}
 .glance-dmg{display:flex;gap:.2rem;flex:none}
 .gcd{font-size:.68rem;border:1px solid #ffffff33;border-radius:.4rem;padding:0 .3rem}
