@@ -55,7 +55,7 @@ export function ImportDialog({ close, saved, art }: { close: () => void; saved: 
             <button onClick={() => file.current?.click()}>📄 Load .txt / .dek file…</button>
             <input ref={file} type="file" accept=".txt,.dek,.dec,text/plain" hidden onChange={e => loadFile(e.target.files?.[0])} />
             <p className="muted small">Formats: "1 Sol Ring", "1x Sol Ring", "1 Sol Ring (CMR) 472", <b>*CMDR*</b> markers, Archidekt <b>[Commander]</b> categories, <b>Commander</b>/<b>Deck</b> headers (Arena, Moxfield), MTGO .txt (commander in the sideboard) and MTGO .dek. Maybeboard and Considering sections are ignored.</p>
-            <p className="muted small">Cards are looked up on Scryfall from your browser. Cards the game can't model fully are flagged before you play.</p>
+            <p className="muted small">Cards are looked up on Scryfall from your browser. Cards the game can't model fully are flagged before you play. After checking, you can save with limited cards (the default) or use a strict save only when every card is fully supported.</p>
             {err && <p className="bad">{err}</p>}
             <button className="big" disabled={!text.trim() || !!busy} onClick={check}>{busy ?? 'Check deck ▸'}</button>
           </div>
@@ -91,6 +91,7 @@ export function ImportDialog({ close, saved, art }: { close: () => void; saved: 
         <div className="impbtns">
           <button onClick={() => setRes(null)}>◂ Edit list</button>
           <button className={`big ${legality!.errors.length ? 'warnbtn' : ''}`} disabled={!cmd[0]} onClick={save}>{legality!.errors.length ? 'Save anyway (casual) ▸' : 'Save deck ▸'}</button>
+          <button className="big" disabled={!cmd[0] || !stats || stats.lim > 0} title={stats && stats.lim > 0 ? 'Strict save requires 100/100 supported cards' : 'Save only if every card is fully supported'} onClick={save}>Save strictly ▸</button>
         </div>
       </>}
     </div></div>

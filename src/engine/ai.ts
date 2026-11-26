@@ -72,9 +72,19 @@ export function decide(g: Game, d: Decision): unknown {
         return manaAvailable(p) >= 3 || g.active !== d.pid || !top;
       }
       if (/Pay \d+ life/.test(d.text)) return p.life > 12;
+      if (/Begin the game with/.test(d.text)) return true;
+      if (/extort/i.test(d.text)) return manaAvailable(p) >= 1;
       return !/sacrifice|discard|lose \d+ life/.test(d.text) || p.life > 10;
     }
     case 'pick': {
+      if (/choose a card/.test(d.text) && d.min === 1 && d.max === 1) {
+        const ranked = [...d.cards].sort((a, b) => {
+          const cm = (isCommander(g, b) ? 100 : 0) - (isCommander(g, a) ? 100 : 0);
+          if (cm) return cm;
+          return cmc(def(b)) - cmc(def(a)) || value(g, b) - value(g, a);
+        });
+        return [ranked[0].uid];
+      }
       const worstFirst = (d.zone === 'hand' || d.zone === 'battlefield') && d.min > 0;
       const sorted = [...d.cards].sort((a, b) => worstFirst ? value(g, a) - value(g, b) : landNeed(g, p, b) - landNeed(g, p, a) || value(g, b) - value(g, a));
       return sorted.slice(0, worstFirst ? d.min : d.max).map(c => c.uid);
@@ -135,6 +145,18 @@ function scoreFx(g: Game, pid: number, fx: Effect[], x = 0): number {
       case 'may': case 'if': case 'repeat': case 'unless': s += scoreFx(g, pid, e.sub ?? [], x); break;
       case 'sac': s += e.pl === 'you' ? -3 : 3; break;
       case 'discard': s += e.pl === 'you' ? -1 : 2; break;
+      case 'discardChosen': s += 4; break;
+      case 'steal': s += 5; break;
+      case 'prevent': {
+        const inc = incomingCombat(g, pid);
+        if (e.kind === 'combat' || e.kind === 'all' || e.kind === 'fromCreatures' || e.kind === 'combatYou' || e.kind === 'toYou') {
+          const combat = ['attackers', 'blockers', 'firstStrike', 'damage'].includes(g.step);
+          if (combat && (inc >= 6 || inc >= g.players[pid].life)) s += 8;
+          else if (combat && inc > 0) s += 2;
+          else s -= 4;
+        } else s += 1;
+        break;
+      }
       case 'addMana': case 'untap': case 'tap': if (e.who === 'self' || e.op === 'addMana') break; s += e.op === 'tap' ? 1 : 0.5; break;
       default: s += 0.5;
     }
@@ -147,6 +169,12 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   const d = def(c); const p = g.players[pid];
   if (d.overload?.spell && canCast(g, pid, c, { overload: true }) && scoreFx(g, pid, d.overload.spell.effects, 0) >= 2 && castSpell(g, pid, c.uid, { overload: true })) return true;
   const kicked = !!d.kicker && canCast(g, pid, c, { kicked: true }) && !!planPayment(p, costOf(g, c, { kicked: true }));
+  const dash = !!d.dash && canCast(g, pid, c, { dash: true }) && (g.active === pid && (g.step === 'main1' || g.step === 'beginCombat' || g.step === 'attackers')) && creatures(p).length >= 0;
+  const offspring = !!d.offspring && canCast(g, pid, c, { offspring: true }) && !!planPayment(p, costOf(g, c, { offspring: true })) && manaAvailable(p) >= 2 + (d.offspring.generic ?? 0);
+  const buyback = !!d.buyback && canCast(g, pid, c, { buyback: true }) && !!planPayment(p, costOf(g, c, { buyback: true })) && manaAvailable(p) >= 4;
+  const miracle = !!d.miracle && canCast(g, pid, c, { miracle: true });
+  const madness = !!d.madness && canCast(g, pid, c, { madness: true });
+  const entwine = !!d.entwine && !!d.spell?.modes && canCast(g, pid, c, { entwine: true }) && !!planPayment(p, costOf(g, c, { entwine: true }));
   // warp: only when we can't cast it normally and it does something on entering (or can attack right away)
   const warp = !!d.warp && p.hand.includes(c) && !canCast(g, pid, c) && canCast(g, pid, c, { warp: true }) && (hasKw(c, 'haste') || (d.triggers ?? []).some(t => t.ev === 'etb'));
   if (d.warp && p.hand.includes(c) && !canCast(g, pid, c) && !warp) return false;
@@ -161,7 +189,7 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   const exileAlt = !normal && !omni && !free && !!d.exileAlt && canCast(g, pid, c, { exileAlt: true });
   let door: number | undefined;
   if (d.room) { door = d.room.doors.findIndex((_, i) => canCast(g, pid, c, { door: i })); if (door < 0) return false; }
-  if (!free && !normal && !evoke && !webRet && !omni && !surge && !exileAlt && door === undefined) return false;
+  if (!free && !normal && !evoke && !webRet && !omni && !surge && !exileAlt && !dash && !miracle && !madness && door === undefined) return false;
   // teamwork: tap creatures that won't attack this turn anyway
   const tw = d.teamwork !== undefined ? teamworkPick(g, pid, c) : null;
   const teamwork = !!tw && (g.active !== pid || g.step === 'main2' || tw.every(x => !canAttack(g, x, true)));
@@ -185,7 +213,7 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   if (spellReplicate(g, pid, d) && door === undefined) { while (replicate < 8 && canCast(g, pid, c, { kicked, warp, x, evoke, webSling: !!webRet, omni, surge: surge && !omni && !normal, exileAlt, replicate: replicate + 1 })) replicate++; if (replicate > 2) replicate = 2; }
   let squad = 0;
   if (d.squad) { while (squad < 8 && canCast(g, pid, c, { kicked, warp, x, evoke, webSling: !!webRet, omni, surge: surge && !omni && !normal, exileAlt, door, replicate, squad: squad + 1 })) squad++; if (squad > 2) squad = 2; }
-  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt, door, replicate: replicate || undefined, squad: squad || undefined, gift: def(c).gift ? (g.players.find(q => q.id !== pid && !q.lost)?.id ?? false) : undefined });
+  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, dash: dash && !normal, offspring, buyback, miracle, madness, entwine, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt, door, replicate: replicate || undefined, squad: squad || undefined, gift: def(c).gift ? (g.players.find(q => q.id !== pid && !q.lost)?.id ?? false) : undefined });
 }
 const isCounter = (d: CardDef) => !!(d.spell?.effects.some(e => e.op === 'counter' || (e.op === 'unless' && e.sub?.some(s => s.op === 'counter'))));
 const isPump = (d: CardDef) => !!d.spell?.effects.some(e => e.op === 'pump') && !d.spell.effects.some(e => HARMFUL.includes(e.op));
@@ -336,6 +364,20 @@ function ninjutsuAI(g: Game, pid: number): boolean {
   }
   return false;
 }
+function incomingCombat(g: Game, pid: number): number {
+  return attackers(g).filter(a => a.attacking === pid && !(a.blockedBy ?? []).length).reduce((s, a) => s + power(g, a), 0)
+    + attackers(g).filter(a => a.attacking === pid).reduce((s, a) => {
+      const blk = (a.blockedBy ?? []).map(u => findCard(g, u)).filter(Boolean) as Card[];
+      if (!blk.length) return s;
+      return s + Math.max(0, power(g, a) - blk.reduce((t, b) => t + toughness(g, b), 0));
+    }, 0);
+}
+function tryFog(g: Game, pid: number): boolean {
+  const inc = incomingCombat(g, pid);
+  if (inc < 4 && inc < g.players[pid].life) return false;
+  const fog = g.players[pid].hand.find(c => (def(c).spell?.effects ?? []).some(e => e.op === 'prevent' && (e.kind === 'combat' || e.kind === 'all' || e.kind === 'fromCreatures' || e.kind === 'combatYou' || e.kind === 'toYou')) && canCast(g, pid, c));
+  return !!fog && tryCast(g, pid, fog, true);
+}
 /** The AI has priority: do at most one thing, or pass. */
 export function aiPriority(g: Game, pid: number) {
   const p = g.players[pid]; const top = g.stack[g.stack.length - 1];
@@ -350,6 +392,7 @@ export function aiPriority(g: Game, pid: number) {
   if (g.active === pid && isMain(g) && mainPhase(g, pid)) return;
   if (g.step === 'blockers' && g.active === pid && sneak(g, pid)) return;
   if (g.step === 'blockers' && g.active === pid && ninjutsuAI(g, pid)) return;
+  if ((g.step === 'attackers' || g.step === 'blockers' || g.step === 'damage' || g.step === 'firstStrike') && tryFog(g, pid)) return;
   if (g.step === 'blockers' && (combatTrick(g, pid) || (p.battlefield.some(c => c.attacking !== undefined || c.blocking !== undefined) && useAbilities(g, pid, 'combat')))) return;
   // End of an opponent's turn (right before ours): use instants and abilities.
   if (g.step === 'end' && g.active !== pid && nextAlive(g, g.active) === pid) {
