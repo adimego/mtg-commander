@@ -1099,6 +1099,21 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   if (d.soulbond) triggers.push({ on: 'x', ev: 'etb', subj: 'self', label: 'Soulbond: pair with another unpaired creature you control', effects: [{ op: 'soulPair' }] } as TriggerDef, { on: 'x', ev: 'etb', subj: 'other', f: { types: ['Creature'], ctrl: 'you' }, label: 'Soulbond: you may pair with that creature', effects: [{ op: 'soulPair', who: 'ev' }] } as TriggerDef);
   if (d.impending) triggers.push({ on: 'x', label: 'remove a time counter', ev: 'endStep', pl: 'you', effects: [{ op: 'script', kind: 'remTime' }] });
   if (d.dethrone) triggers.push({ on: 'x', ev: 'attacks', subj: 'self', ifc: { k: 'atkMostLife' }, label: 'Dethrone', effects: [{ op: 'addC', kind: '+1/+1', n: 1, who: 'self' }] } as TriggerDef);
+  { const bm = [...kws].map(k => /^bushido (\d+)$/.exec(k)).find(Boolean); if (bm) { const n = +bm[1]; const fx = [{ op: 'pump', n, m: n, who: 'self' as const, until: 'eot' as const }]; triggers.push({ on: 'x', ev: 'blocks', subj: 'self', label: `Bushido ${n}`, effects: fx } as TriggerDef, { on: 'x', ev: 'blocked', subj: 'self', label: `Bushido ${n}`, effects: fx } as TriggerDef); } }
+  if (kws.has('flanking')) triggers.push({ on: 'x', ev: 'blocked', subj: 'self', label: 'Flanking', effects: [{ op: 'script', kind: 'flanking' }] } as TriggerDef);
+  if (d.modular) triggers.push({ on: 'x', ev: 'dies', subj: 'self', label: 'Modular', tslots: [{ who: 'perm', f: { types: ['Artifact', 'Creature'] }, harm: false, opt: true }], effects: [{ op: 'script', kind: 'modular' }] } as TriggerDef);
+  if (d.graft) triggers.push({ on: 'x', ev: 'etb', subj: 'other', f: { types: ['Creature'] }, label: 'Graft', effects: [{ op: 'script', kind: 'graft' }] } as TriggerDef);
+  { const rm = [...kws].map(k => /^renown (\d+)$/.exec(k)).find(Boolean); if (rm) triggers.push({ on: 'x', ev: 'combatDamagePlayer', subj: 'self', ifc: { k: 'notRenowned' }, label: `Renown ${rm[1]}`, effects: [{ op: 'script', kind: 'renown', n: +rm[1] }] } as TriggerDef); }
+  { const am = [...kws].map(k => /^afterlife (\d+)$/.exec(k)).find(Boolean); if (am) triggers.push({ on: 'x', ev: 'dies', subj: 'self', label: `Afterlife ${am[1]}`, effects: [{ op: 'token', n: +am[1], pl: 'you', tok: { name: 'Spirit', p: 1, t: 1, colors: ['W', 'B'], types: ['Creature'], sub: ['Spirit'], kws: ['flying'] } }] } as TriggerDef); }
+  { const af = [...kws].map(k => /^afflict (\d+)$/.exec(k)).find(Boolean); if (af) triggers.push({ on: 'x', ev: 'blocked', subj: 'self', label: `Afflict ${af[1]}`, effects: [{ op: 'lose', n: +af[1], pl: 'def' }] } as TriggerDef); }
+  if (d.fabricate) triggers.push({ on: 'x', ev: 'etb', subj: 'self', label: `Fabricate ${d.fabricate}`, effects: [{ op: 'script', kind: 'fabricate', n: d.fabricate }] } as TriggerDef);
+  if (d.offspring) triggers.push({ on: 'x', ev: 'etb', subj: 'self', ifc: { k: 'offspringPaid' }, label: 'Offspring', effects: [{ op: 'script', kind: 'offspring' }] } as TriggerDef);
+  if (d.extort) triggers.push({ on: 'x', ev: 'cast', pl: 'you', label: 'Extort', effects: [{ op: 'may', text: 'pay {W/B} to extort', ifPaid: { generic: 0, hyb: ['W|B'] }, sub: [{ op: 'script', kind: 'extort' }] }] } as TriggerDef);
+  if (kws.has('training')) triggers.push({ on: 'x', ev: 'attacks', subj: 'self', ifc: { k: 'training' }, label: 'Training', effects: [{ op: 'addC', kind: '+1/+1', n: 1, who: 'self' }] } as TriggerDef);
+  { const rp = [...kws].map(k => /^rampage (\d+)$/.exec(k)).find(Boolean); if (rp) triggers.push({ on: 'x', ev: 'blocked', subj: 'self', label: `Rampage ${rp[1]}`, effects: [{ op: 'script', kind: 'rampage', n: +rp[1] }] } as TriggerDef); }
+  if (kws.has('provoke')) triggers.push({ on: 'x', ev: 'attacks', subj: 'self', label: 'Provoke', tslots: [{ who: 'perm', f: { types: ['Creature'], defP: true }, harm: false, opt: true }], effects: [{ op: 'script', kind: 'provoke' }] } as TriggerDef);
+  if (kws.has('ingest')) triggers.push({ on: 'x', ev: 'combatDamagePlayer', subj: 'self', label: 'Ingest', effects: [{ op: 'script', kind: 'ingest' }] } as TriggerDef);
+  if (d.forMirrodin) triggers.push({ on: 'x', ev: 'etb', subj: 'self', label: 'For Mirrodin!', effects: [{ op: 'script', kind: 'forMirrodin' }] } as TriggerDef);
   if (abilities.length) d.abilities = [...(d.abilities ?? []), ...abilities];
   if (triggers.length) d.triggers = [...(d.triggers ?? []), ...triggers];
   if (statics.length) d.statics = statics;
@@ -1203,6 +1218,30 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
   if ((m = /^bestow (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.bestow = c; return true; }
   if (p === 'strive') { d.strive = true; return true; }
   if (p === 'dethrone') { d.dethrone = true; return true; }
+  if (p === 'infect') { kws.add('infect'); return true; }
+  if ((m = /^poisonous (\d+)$/.exec(p))) { kws.add(`poisonous ${m[1]}`); return true; }
+  if ((m = /^bushido (\d+)$/.exec(p))) { kws.add(`bushido ${m[1]}`); return true; }
+  if (p === 'flanking') { kws.add('flanking'); return true; }
+  if ((m = /^bloodthirst (\d+)$/.exec(p))) { d.bloodthirst = +m[1]; return true; }
+  if ((m = /^modular (\d+)$/.exec(p))) { d.modular = +m[1]; d.etbCounters = { kind: '+1/+1', n: +m[1] }; return true; }
+  if ((m = /^graft (\d+)$/.exec(p))) { d.graft = +m[1]; d.etbCounters = { kind: '+1/+1', n: +m[1] }; return true; }
+  if ((m = /^renown (\d+)$/.exec(p))) { kws.add(`renown ${m[1]}`); return true; }
+  if (p === 'unleash') { d.unleash = true; return true; }
+  if ((m = /^afterlife (\d+)$/.exec(p))) { kws.add(`afterlife ${m[1]}`); return true; }
+  if ((m = /^afflict (\d+)$/.exec(p))) { kws.add(`afflict ${m[1]}`); return true; }
+  if ((m = /^fabricate (\d+)$/.exec(p))) { d.fabricate = +m[1]; return true; }
+  if ((m = /^offspring (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.offspring = c; return true; }
+  if ((m = /^dash (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.dash = c; return true; }
+  if (p === 'extort') { d.extort = true; return true; }
+  if (p === 'umbra armor' || p === 'totem armor') { kws.add('umbra armor'); return true; }
+  if (p === 'enlist') { kws.add('enlist'); return true; }
+  if ((m = /^reinforce (\d+)[—-]((?:\{[^}]+\})+)$/.exec(p))) { const c = parseCost(m[2].toUpperCase()); if (!c) return false; abilities.push({ label: `Reinforce ${m[1]}`, mana: c, zone: 'hand', tslots: [{ who: 'perm', f: { types: ['Creature'] }, harm: false }], effects: [{ op: 'addC', kind: '+1/+1', n: +m[1], who: 't0' }] }); return true; }
+  if (p === 'training') { kws.add('training'); return true; }
+  if ((m = /^rampage (\d+)$/.exec(p))) { kws.add(`rampage ${m[1]}`); return true; }
+  if (p === 'provoke') { kws.add('provoke'); return true; }
+  if (p === 'ingest') { kws.add('ingest'); return true; }
+  if ((m = /^amplify (\d+)$/.exec(p))) { d.amplify = +m[1]; return true; }
+  if (p === 'for mirrodin!') { d.forMirrodin = true; return true; }
   if (p === 'imprint') { d.imprint = true; return true; }
   if (p === 'read ahead') { d.readAhead = true; return true; }
   { const em = /^escalate \{([wubrgc])\}$/.exec(p); if (em) { const k = em[1].toUpperCase() as 'W'|'U'|'B'|'R'|'G'|'C'; d.escalateCost = { generic: 0, [k]: 1 }; return true; } }
