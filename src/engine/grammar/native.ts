@@ -1,6 +1,6 @@
 /** Second-pass token-native sentence parser for leftover lines the first (parity) loop rejected. */
 import type { ActAbility, CardDef, Effect, TSlot, TriggerDef } from '../types';
-import { parseCosts, trigger, type ScryLike } from '../oracle';
+import { parseCosts, shortLabel, trigger, type ScryLike } from '../oracle';
 import type { ParseFailure } from './types';
 import { tokenize, guessProduction, type Production, type Token } from './tokenize';
 import { Cursor } from './cursor';
@@ -38,6 +38,7 @@ export interface NativeHit {
   slots: TSlot[];
   production: Production;
   trigger?: Partial<TriggerDef>;
+  extraTriggers?: Partial<TriggerDef>[];
   ability?: Partial<ActAbility>;
 }
 
@@ -51,21 +52,28 @@ export function parseNativeLine(raw: string, ctx: Pick<NativeCtx, 'isSpell' | 's
     const c0 = new Cursor(toks);
     const kind = c0.peekText();
     if (!c0.eat('when', 'whenever', 'at')) return null;
-    let comma = -1;
+    const commas: number[] = [];
     for (let i = c0.i; i < c0.tokens.length; i++) {
-      if (c0.tokens[i].kind === 'punct' && c0.tokens[i].text === ',') { comma = i; break; }
+      if (c0.tokens[i].kind === 'punct' && c0.tokens[i].text === ',') commas.push(i);
     }
-    if (comma < 0) return null;
-    let head = new Cursor(c0.tokens.slice(c0.i, comma)).remainingText();
-    if (kind === 'at') head = head.replace(/^the beginning of the end step$/, 'the beginning of each end step');
-    const tr = trigger(kind === 'at' ? head : head);
-    if (!tr) return null;
-    const parsed = parseEffectSentences(c0.tokens.slice(comma + 1));
-    if (!parsed) return null;
-    const def: Partial<TriggerDef> = { ...tr.defs[0], effects: parsed.effects };
-    const mergedSlots = [...(tr.cx.slots ?? []), ...parsed.slots];
-    if (mergedSlots.length) def.tslots = mergedSlots;
-    return { effects: parsed.effects, slots: parsed.slots, production: 'triggered', trigger: def };
+    // Prefer the last comma (so "noncreature, nonland card, draw a card" keeps the filter in the head),
+    // then earlier commas (so "when ~ enters, if it was kicked, …" can still split after the event).
+    for (const comma of [...commas].reverse()) {
+      let head = new Cursor(c0.tokens.slice(c0.i, comma)).remainingText();
+      if (kind === 'at') head = head.replace(/^the beginning of the end step$/, 'the beginning of each end step');
+      const tr = trigger(head);
+      if (!tr) continue;
+      const parsed = parseEffectSentences(c0.tokens.slice(comma + 1), tr.cx);
+      if (!parsed) continue;
+      // Multi-event heads ("enters or attacks") already return multiple defs sharing the body.
+      const first: Partial<TriggerDef> = { on: 'x', label: shortLabel(raw), ...tr.defs[0], effects: parsed.effects };
+      const mergedSlots = [...(tr.cx.slots ?? []), ...parsed.slots];
+      if (mergedSlots.length) first.tslots = mergedSlots;
+      if (tr.defs.length === 1) return { effects: parsed.effects, slots: parsed.slots, production: 'triggered', trigger: first };
+      // Stash extra defs on the first via a synthetic multi apply in applyNativeHit.
+      return { effects: parsed.effects, slots: parsed.slots, production: 'triggered', trigger: first, extraTriggers: tr.defs.slice(1).map(d => ({ on: 'x' as const, label: shortLabel(raw), ...d, effects: parsed.effects, tslots: mergedSlots.length ? mergedSlots : undefined })) };
+    }
+    return null;
   }
 
   if (prod === 'activated' && !ctx.isSpell) {
@@ -87,7 +95,7 @@ export function parseNativeLine(raw: string, ctx: Pick<NativeCtx, 'isSpell' | 's
   return { effects: parsed.effects, slots: parsed.slots, production: ctx.isSpell ? 'spell' : prod };
 }
 
-function parseEffectSentences(toks: Token[]): { effects: Effect[]; slots: TSlot[] } | null {
+function parseEffectSentences(toks: Token[], cxExtra?: Partial<import('../oracle').Cx>): { effects: Effect[]; slots: TSlot[] } | null {
   const parts: Token[][] = [];
   let cur: Token[] = [];
   for (const t of toks) {
@@ -101,9 +109,11 @@ function parseEffectSentences(toks: Token[]): { effects: Effect[]; slots: TSlot[
   const slots: TSlot[] = [];
   for (const part of parts) {
     const wrap = parseWrappers(part);
-    const verb = parseNativeVerb(wrap.inner, { slots });
+    const verb = parseNativeVerb(wrap.inner, { slots, cx: cxExtra });
     if (!verb) return null;
-    effects.push(...applyWrappers(verb.effects, wrap.wrap));
+    const wrapped = applyWrappers(verb.effects, wrap.wrap);
+    if (!wrapped) return null;
+    effects.push(...wrapped);
     if (verb.slots) slots.push(...verb.slots);
   }
   return { effects, slots };
@@ -113,6 +123,7 @@ function applyNativeHit(raw: string, hit: NativeHit, ctx: NativeCtx): boolean {
   void raw;
   if (hit.trigger) {
     ctx.triggers.push(hit.trigger as TriggerDef);
+    for (const extra of hit.extraTriggers ?? []) ctx.triggers.push(extra as TriggerDef);
     return true;
   }
   if (hit.ability) {

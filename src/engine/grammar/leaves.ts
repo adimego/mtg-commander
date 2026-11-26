@@ -134,12 +134,13 @@ export function parseWrappers(tokens: Token[]): { inner: Cursor; wrap: Wrapper }
   return { inner: c, wrap };
 }
 
-export function applyWrappers(fx: Effect[], wrap: Wrapper): Effect[] {
+export function applyWrappers(fx: Effect[], wrap: Wrapper): Effect[] | null {
   let out = fx;
   if (wrap.until) for (const e of out) if (!e.until) e.until = wrap.until;
   if (wrap.condText) {
     const cnd = parseCond(wrap.condText, newCx());
-    if (cnd) out = [{ op: 'if', cond: cnd, sub: out }];
+    if (!cnd) return null; // do not drop a failed "if" and keep the verb
+    out = [{ op: 'if', cond: cnd, sub: out }];
   }
   if (wrap.may) out = [{ op: 'may', sub: out }];
   return out;

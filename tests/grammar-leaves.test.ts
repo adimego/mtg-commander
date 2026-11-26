@@ -51,7 +51,8 @@ describe('token-native leaves', () => {
     expect(iff.wrap.condText).toBe('you control a creature');
     expect(iff.inner.remainingText()).toBe('draw a card');
     const fx = applyWrappers([{ op: 'draw', n: 1 }], { may: true, until: 'eot' });
-    expect(fx[0].op).toBe('may');
-    expect((fx[0] as { sub: { until?: string }[] }).sub[0].until).toBe('eot');
+    expect(fx).not.toBeNull();
+    expect(fx![0].op).toBe('may');
+    expect((fx![0] as { sub: { until?: string }[] }).sub[0].until).toBe('eot');
   });
 });
