@@ -1,0 +1,481 @@
+[
+  {
+    "oracle_id": "08becc07-28bc-4a2f-a6b0-28a2998d2f50",
+    "name": "Windfall",
+    "type_line": "Sorcery",
+    "mana_cost": "{2}{U}",
+    "oracle_text": "Each player discards their hand, then draws cards equal to the greatest number of cards a player discarded this way.",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 3.0
+  },
+  {
+    "oracle_id": "0c23fefe-9891-4dd8-9bb1-eebdb3274e31",
+    "name": "Bloom Tender",
+    "type_line": "Creature \u2014 Elf Druid",
+    "mana_cost": "{1}{G}",
+    "oracle_text": "Vivid \u2014 {T}: For each color among permanents you control, add one mana of that color.",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Vivid"
+    ],
+    "power": "1",
+    "toughness": "1",
+    "layout": "normal",
+    "cmc": 2.0
+  },
+  {
+    "oracle_id": "0fd114c4-092b-4e28-b0dc-ef529f3bc73e",
+    "name": "Jeska's Will",
+    "type_line": "Sorcery",
+    "mana_cost": "{2}{R}",
+    "oracle_text": "Choose one. If you control a commander as you cast this spell, you may choose both instead.\n\u2022 Add {R} for each card in target opponent's hand.\n\u2022 Exile the top three cards of your library. You may play them this turn.",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 3.0
+  },
+  {
+    "oracle_id": "240e85d3-e495-4877-8609-4b4056c402f7",
+    "name": "Victimize",
+    "type_line": "Sorcery",
+    "mana_cost": "{2}{B}",
+    "oracle_text": "Choose two target creature cards in your graveyard. Sacrifice a creature. If you do, return the chosen cards to the battlefield tapped.",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 3.0
+  },
+  {
+    "oracle_id": "3aa83ed2-f48b-4ce6-a614-2c54ddf50538",
+    "name": "The One Ring",
+    "type_line": "Legendary Artifact",
+    "mana_cost": "{4}",
+    "oracle_text": "Indestructible\nWhen The One Ring enters, if you cast it, you gain protection from everything until your next turn.\nAt the beginning of your upkeep, you lose 1 life for each burden counter on The One Ring.\n{T}: Put a burden counter on The One Ring, then draw a card for each burden counter on The One Ring.",
+    "colors": [],
+    "color_identity": [],
+    "keywords": [
+      "Indestructible"
+    ],
+    "layout": "normal",
+    "cmc": 4.0
+  },
+  {
+    "oracle_id": "4c6a0c30-b547-4eff-8ff4-0ca25803c076",
+    "name": "Urza's Saga",
+    "type_line": "Enchantment Land \u2014 Urza's Saga",
+    "mana_cost": "",
+    "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 This Saga gains \"{T}: Add {C}.\"\nII \u2014 This Saga gains \"{2}, {T}: Create a 0/0 colorless Construct artifact creature token with 'This token gets +1/+1 for each artifact you control.'\"\nIII \u2014 Search your library for an artifact card with mana cost {0} or {1}, put it onto the battlefield, then shuffle.",
+    "colors": [],
+    "color_identity": [],
+    "keywords": [],
+    "layout": "saga",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "5def9f38-0a0b-4e8d-9f9d-29dcb46520b4",
+    "name": "Esper Sentinel",
+    "type_line": "Artifact Creature \u2014 Human Soldier",
+    "mana_cost": "{W}",
+    "oracle_text": "Whenever an opponent casts their first noncreature spell each turn, draw a card unless that player pays {X}, where X is this creature's power.",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "keywords": [],
+    "power": "1",
+    "toughness": "1",
+    "layout": "normal",
+    "cmc": 1.0
+  },
+  {
+    "oracle_id": "706ae742-1807-44b7-a4fa-f2e26f61519a",
+    "name": "Wild Growth",
+    "type_line": "Enchantment \u2014 Aura",
+    "mana_cost": "{G}",
+    "oracle_text": "Enchant land\nWhenever enchanted land is tapped for mana, its controller adds an additional {G}.",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Enchant"
+    ],
+    "layout": "normal",
+    "cmc": 1.0
+  },
+  {
+    "oracle_id": "74d3277a-38e5-4732-afed-084a56148f20",
+    "name": "Mana Drain",
+    "type_line": "Instant",
+    "mana_cost": "{U}{U}",
+    "oracle_text": "Counter target spell. At the beginning of your next main phase, add an amount of {C} equal to that spell's mana value.",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 2.0
+  },
+  {
+    "oracle_id": "7a43bd27-fdd8-41f0-9bc4-92568f3408f1",
+    "name": "Mox Amber",
+    "type_line": "Legendary Artifact",
+    "mana_cost": "{0}",
+    "oracle_text": "{T}: Add one mana of any color among legendary creatures and planeswalkers you control.",
+    "colors": [],
+    "color_identity": [],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "84dc18f0-8225-4b40-a165-b10321e41769",
+    "name": "Nykthos, Shrine to Nyx",
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "oracle_text": "{T}: Add {C}.\n{2}, {T}: Choose a color. Add an amount of mana of that color equal to your devotion to that color. (Your devotion to a color is the number of mana symbols of that color in the mana costs of permanents you control.)",
+    "colors": [],
+    "color_identity": [],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "89ca686a-7c72-4d8f-9290-e89635624a83",
+    "name": "Cavern of Souls",
+    "type_line": "Land",
+    "mana_cost": "",
+    "oracle_text": "As this land enters, choose a creature type.\n{T}: Add {C}.\n{T}: Add one mana of any color. Spend this mana only to cast a creature spell of the chosen type, and that spell can't be countered.",
+    "colors": [],
+    "color_identity": [],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "8dd5f5af-d2d8-4356-8617-8381081b930c",
+    "name": "Yavimaya, Cradle of Growth",
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "oracle_text": "Each land is a Forest in addition to its other land types.",
+    "colors": [],
+    "color_identity": [],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "956381ba-6d37-4a8a-846c-bad79222dbee",
+    "name": "Force of Will",
+    "type_line": "Instant",
+    "mana_cost": "{3}{U}{U}",
+    "oracle_text": "You may pay 1 life and exile a blue card from your hand rather than pay this spell's mana cost.\nCounter target spell.",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 5.0
+  },
+  {
+    "oracle_id": "a731e87b-8d99-4b64-8ee3-8e540d652366",
+    "name": "Malakir Rebirth // Malakir Mire",
+    "type_line": "Instant // Land",
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [],
+    "layout": "modal_dfc",
+    "card_faces": [
+      {
+        "object": "card_face",
+        "name": "Malakir Rebirth",
+        "mana_cost": "{B}",
+        "type_line": "Instant",
+        "oracle_text": "Choose target creature. You lose 2 life. Until end of turn, that creature gains \"When this creature dies, return it to the battlefield tapped under its owner's control.\"",
+        "colors": [
+          "B"
+        ]
+      },
+      {
+        "object": "card_face",
+        "name": "Malakir Mire",
+        "mana_cost": "",
+        "type_line": "Land",
+        "oracle_text": "This land enters tapped.\n{T}: Add {B}.",
+        "colors": []
+      }
+    ],
+    "cmc": 1.0
+  },
+  {
+    "oracle_id": "ab8d5f5c-1976-4f77-8ed2-8d28ee666741",
+    "name": "Tireless Provisioner",
+    "type_line": "Creature \u2014 Elf Scout",
+    "mana_cost": "{2}{G}",
+    "oracle_text": "Landfall \u2014 Whenever a land you control enters, create a Food token or a Treasure token. (Food is an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\" Treasure is an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Treasure",
+      "Food",
+      "Landfall"
+    ],
+    "power": "3",
+    "toughness": "2",
+    "layout": "normal",
+    "cmc": 3.0
+  },
+  {
+    "oracle_id": "ac2dd694-d2f1-4025-8400-12332bdc882a",
+    "name": "Takenuma, Abandoned Mire",
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "oracle_text": "{T}: Add {B}.\nChannel \u2014 {3}{B}, Discard this card: Mill three cards, then return a creature or planeswalker card from your graveyard to your hand. This ability costs {1} less to activate for each legendary creature you control.",
+    "colors": [],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [
+      "Mill",
+      "Channel"
+    ],
+    "layout": "normal",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "acfa77fd-3610-4f12-9c3c-bd860ce91700",
+    "name": "Rhythm of the Wild",
+    "type_line": "Enchantment",
+    "mana_cost": "{1}{R}{G}",
+    "oracle_text": "Creature spells you control can't be countered.\nNontoken creatures you control have riot. (They enter with your choice of a +1/+1 counter or haste.)",
+    "colors": [
+      "G",
+      "R"
+    ],
+    "color_identity": [
+      "G",
+      "R"
+    ],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 3.0
+  },
+  {
+    "oracle_id": "ae120613-97d6-4393-b39d-c3e6c076f5d6",
+    "name": "Deflecting Swat",
+    "type_line": "Instant",
+    "mana_cost": "{2}{R}",
+    "oracle_text": "If you control a commander, you may cast this spell without paying its mana cost.\nYou may choose new targets for target spell or ability.",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 3.0
+  },
+  {
+    "oracle_id": "bcc6eece-75ea-494c-b33a-d4477d504e0b",
+    "name": "Sink into Stupor // Soporific Springs",
+    "type_line": "Instant // Land",
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [],
+    "layout": "modal_dfc",
+    "card_faces": [
+      {
+        "object": "card_face",
+        "name": "Sink into Stupor",
+        "mana_cost": "{1}{U}{U}",
+        "type_line": "Instant",
+        "oracle_text": "Return target spell or nonland permanent an opponent controls to its owner's hand.",
+        "colors": [
+          "U"
+        ]
+      },
+      {
+        "object": "card_face",
+        "name": "Soporific Springs",
+        "mana_cost": "",
+        "type_line": "Land",
+        "oracle_text": "As this land enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {U}.",
+        "colors": []
+      }
+    ],
+    "cmc": 3.0
+  },
+  {
+    "oracle_id": "bf1341dd-41a3-49f6-87ec-63170dde4324",
+    "name": "Boseiju, Who Endures",
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "oracle_text": "{T}: Add {G}.\nChannel \u2014 {1}{G}, Discard this card: Destroy target artifact, enchantment, or nonbasic land an opponent controls. That player may search their library for a land card with a basic land type, put it onto the battlefield, then shuffle. This ability costs {1} less to activate for each legendary creature you control.",
+    "colors": [],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Channel"
+    ],
+    "layout": "normal",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "c0adbddc-b070-4c5f-afe0-0474c72a9251",
+    "name": "Gemstone Caverns",
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "oracle_text": "If this card is in your opening hand and you're not the starting player, you may begin the game with Gemstone Caverns on the battlefield with a luck counter on it. If you do, exile a card from your hand.\n{T}: Add {C}. If Gemstone Caverns has a luck counter on it, instead add one mana of any color.",
+    "colors": [],
+    "color_identity": [],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "c749f23c-40c0-4159-b84c-a70cbb062c14",
+    "name": "Grand Abolisher",
+    "type_line": "Creature \u2014 Human Cleric",
+    "mana_cost": "{W}{W}",
+    "oracle_text": "During your turn, your opponents can't cast spells or activate abilities of artifacts, creatures, or enchantments.",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "keywords": [],
+    "power": "2",
+    "toughness": "2",
+    "layout": "normal",
+    "cmc": 2.0
+  },
+  {
+    "oracle_id": "db6174d7-211d-4817-b8e4-8384594c83f9",
+    "name": "Urborg, Tomb of Yawgmoth",
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "oracle_text": "Each land is a Swamp in addition to its other land types.",
+    "colors": [],
+    "color_identity": [],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "e9b6a394-691c-425a-9307-76d8edc7375e",
+    "name": "Otawara, Soaring City",
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "oracle_text": "{T}: Add {U}.\nChannel \u2014 {3}{U}, Discard this card: Return target artifact, creature, enchantment, or planeswalker to its owner's hand. This ability costs {1} less to activate for each legendary creature you control.",
+    "colors": [],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [
+      "Channel"
+    ],
+    "layout": "normal",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "ec3d4466-547c-4e02-b1b5-a156ec4637e9",
+    "name": "Chrome Mox",
+    "type_line": "Artifact",
+    "mana_cost": "{0}",
+    "oracle_text": "Imprint \u2014 When this artifact enters, you may exile a nonartifact, nonland card from your hand.\n{T}: Add one mana of any of the exiled card's colors.",
+    "colors": [],
+    "color_identity": [],
+    "keywords": [
+      "Imprint"
+    ],
+    "layout": "normal",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "f3c5978a-70fa-431f-933b-b954bd0db0ea",
+    "name": "Mox Diamond",
+    "type_line": "Artifact",
+    "mana_cost": "{0}",
+    "oracle_text": "If this artifact would enter, you may discard a land card instead. If you do, put this artifact onto the battlefield. If you don't, put it into its owner's graveyard.\n{T}: Add one mana of any color.",
+    "colors": [],
+    "color_identity": [],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 0.0
+  },
+  {
+    "oracle_id": "f9d3b046-0b95-4103-a630-4b3fb88bb60b",
+    "name": "Delighted Halfling",
+    "type_line": "Creature \u2014 Halfling Citizen",
+    "mana_cost": "{G}",
+    "oracle_text": "{T}: Add {C}.\n{T}: Add one mana of any color. Spend this mana only to cast a legendary spell, and that spell can't be countered.",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [],
+    "power": "1",
+    "toughness": "2",
+    "layout": "normal",
+    "cmc": 1.0
+  },
+  {
+    "oracle_id": "fd949f82-fc10-4e37-8aa9-6c7569fe3c55",
+    "name": "Akroma's Will",
+    "type_line": "Instant",
+    "mana_cost": "{3}{W}",
+    "oracle_text": "Choose one. If you control a commander as you cast this spell, you may choose both instead.\n\u2022 Creatures you control gain flying, vigilance, and double strike until end of turn.\n\u2022 Creatures you control gain lifelink, indestructible, and protection from each color until end of turn.",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "keywords": [],
+    "layout": "normal",
+    "cmc": 4.0
+  }
+]

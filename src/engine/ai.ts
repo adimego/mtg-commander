@@ -73,6 +73,17 @@ export function decide(g: Game, d: Decision): unknown {
       }
       if (/Pay \d+ life/.test(d.text)) return p.life > 12;
       if (/Begin the game with/.test(d.text)) return true;
+      if (/create a Treasure token/.test(d.text)) return p.life > 5;
+      if (/exile a nonartifact/.test(d.text)) return p.hand.some(c => def(c).colors.length > 0 && !def(c).types.includes('Artifact') && !def(c).types.includes('Land') && !isCommander(g, c));
+      if (/Discard a land card so/.test(d.text)) return p.hand.some(c => isType(c, 'Land'));
+      if (/change the target/.test(d.text)) {
+        // Retarget an opponent's harmful spell away from us, or our beneficial spell onto a better target
+        const it = g.res?.item;
+        const top = g.stack[g.stack.length - 1];
+        const spell = g.stack.find(s => s.id === (it?.targets?.[0]?.stack));
+        if (spell && spell.controller !== d.pid) return true;
+        return !!spell;
+      }
       if (/extort/i.test(d.text)) return manaAvailable(p) >= 1;
       if (/tribute/i.test(d.text) || d.key.startsWith('tribute:')) {
         const c = findCard(g, +d.key.slice(8));
@@ -163,7 +174,14 @@ function scoreFx(g: Game, pid: number, fx: Effect[], x = 0): number {
       case 'phaseOut': s += e.who === 'self' ? -1 : 3; break;
       case 'extraTurn': s += 8 * (typeof e.n === 'number' ? e.n : 1); break;
       case 'lose': s += e.pl === 'you' ? -n * (g.players[pid].life < 10 ? 2 : 0.5) : n; break;
-      case 'search': case 'ret': case 'retPick': case 'look': case 'exileTop': s += 3; break;
+      case 'search': case 'ret': case 'retPick': case 'look': case 'exileTop': case 'maySearch': s += 3; break;
+      case 'retarget': s += 4; break;
+      case 'windfall': { const mine = g.players[pid].hand.length; const opp = Math.max(0, ...g.players.filter(q => q.id !== pid && !q.lost).map(q => q.hand.length)); s += Math.max(1, (opp - mine) * 2 + 2); break; }
+      case 'protAll': s += 3; break;
+      case 'delayMain': s += scoreFx(g, pid, e.sub ?? [], x) + 1; break;
+      case 'tokenOr': s += 3 * n; break;
+      case 'gainAbil': s += 2; break;
+      case 'ifDid': s += scoreFx(g, pid, e.sub ?? [], x) + scoreFx(g, pid, e.else ?? [], x); break;
       case 'pump': case 'grant': s += isMain(g) || g.step === 'blockers' ? 1 : 0.2; break;
       case 'scry': case 'surveil': case 'mill': case 'proliferate': case 'explore': s += 1; break;
       case 'may': case 'if': case 'repeat': case 'unless': s += scoreFx(g, pid, e.sub ?? [], x); break;

@@ -94,7 +94,19 @@ export function parseFilter(s0: string): FP | null {
   if (core && / and /.test(core)) { const ps = core.split(/,? and |, /); if (ps.length > 1 && ps.every(p => !!typeWord(p))) core = ps.join(', '); }
   if (core) {
     const parts = core.split(/,? or |, (?:and\/or )?| and\/or /).map(x => x.trim()).filter(Boolean);
-    if (parts.length > 1) { const ts = parts.map(p => p.split(' ').map(typeWord)); if (ts.some(t => t.some(x => !x))) return null; if (ts.every(t => t.length === 1)) f.anyType = ts.map(t => t[0]!); else return null; if (parts.some(p => /s$/.test(p) && typeWord(p) !== p)) plural = true; }
+    if (parts.length > 1) {
+      const ts = parts.map(p => {
+        const ws = p.split(' ').filter(Boolean);
+        while (ws[0] === 'nonbasic' || ws[0] === 'basic' || ws[0] === 'legendary' || ws[0] === 'nonlegendary' || ws[0] === 'nontoken' || ws[0] === 'token') {
+          const x = ws.shift()!;
+          if (x === 'nonbasic') f.nonbasic = true; else if (x === 'basic') f.basic = true;
+          else if (x === 'legendary') f.legendary = true; else if (x === 'nonlegendary') f.nonlegendary = true;
+          else if (x === 'nontoken') f.nontoken = true; else if (x === 'token') f.token = true;
+        }
+        return ws.map(typeWord);
+      });
+      if (ts.some(row => !row.length || row.some(x => !x))) return null; if (ts.every(row => row.length === 1)) f.anyType = ts.map(row => row[0]!); else return null; if (parts.some(p => /s$/.test(p.split(' ').pop()!) && typeWord(p.split(' ').pop()!) !== p.split(' ').pop())) plural = true;
+    }
     else { const ws = core.split(' '); const ts = ws.map(typeWord); if (ts.some(t => !t)) return null; f.types = [...(f.types ?? []), ...(ts as string[])]; if (/s$/.test(ws[ws.length - 1]) && !SUB.has(ws[ws.length - 1]) && !TYPES[ws[ws.length - 1]]) plural = true; }
   } else if (!card && !spell && !f.types && !f.token) return null;
   if (notT.length) f.notTypes = notT; if (cols.length) f.colors = cols; if (notC.length) f.notColors = notC;
@@ -130,7 +142,8 @@ function obj(s: string, cx: Cx, harm: boolean): ObjR | null {
   if (/^(enchanted|equipped) (creature|permanent|land|artifact|planeswalker)$/.test(s)) return { ref: 'attached' };
   if (s === 'any target' || s === 'any other target') return { ref: addSlot(cx, { who: 'any', harm }) };
   if (/^(up to (?:one|two|a) )?target activated ability, triggered ability, or noncreature spell$/.test(s)) return { ref: addSlot(cx, { who: 'stack', f: { notTypes: ['Creature'] }, harm: true, opt: s.startsWith('up to ') }) };
-  if (/^target spell, activated ability, or triggered ability$/.test(s)) return { ref: addSlot(cx, { who: 'stack', harm: true }) };
+  if (/^target spell, activated ability, or triggered ability$/.test(s) || /^target spell or ability$/.test(s)) return { ref: addSlot(cx, { who: 'stack', harm: true }) };
+  { const sp = /^target spell or nonland permanent( an opponent controls)?$/.exec(s); if (sp) return { ref: addSlot(cx, { who: 'spellOrPerm', f: { notTypes: ['Land'], ...(sp[1] ? { ctrl: 'opp' as const } : {}) }, harm: true }) }; }
 
   if (/^(one|two|three|\d+) target/.test(s) && !/^(one|two|three|\d+) target (creature|player|[a-z]+s\b)/.test(s)) return null;
   const tm = /^(?:(up to )?(one or two|one|two|three|four|five|x|\d+) )?(other |another )?target (.+)$/.exec(s);
@@ -210,7 +223,7 @@ function forEach(s: string, cx: Cx): Amt | null {
   if (/^opponent you attacked this turn$/.test(s)) return { atkOpps: true };
   if (/^differently named land you control$/.test(s)) return { uniqLands: true };
   if (/^basic land type among lands you control$/.test(s)) return { domain: true };
-  if ((m = /^card in (your|target player's|that player's) hand$/.exec(s))) return { cards: 'hand', pl: playerRef(m[1], cx) ?? 'you' };
+  if ((m = /^card in (your|target player's|target opponent's|that player's) hand$/.exec(s))) return { cards: 'hand', pl: playerRef(m[1], cx) ?? 'you' };
   if ((m = /^(.*?) ?card in (their|that player's|target player's|target opponent's) graveyard$/.exec(s))) { const fp = m[1] ? parseFilter(m[1]) : { f: {} }; const p = m[2] === 'their' || m[2] === "that player's" ? cx.lastPl ?? cx.thatPl : playerRef(m[2], cx); return fp && p ? { cards: 'graveyard', pl: p, f: fp.f } : null; }
   if ((m = /^(.*?) ?card in your graveyard$/.exec(s))) { const fp = m[1] ? parseFilter(m[1]) : { f: {} }; return fp ? { cards: 'graveyard', pl: 'you', f: fp.f } : null; }
   if ((m = /^(\+1\/\+1|[a-z]+) counter on ~$/.exec(s))) return { ctr: m[1], who: 'self' };
@@ -366,6 +379,7 @@ function tokenSpec(s: string): TokenSpec | null {
   return { name: named || sub.join(' ') || types.join(' '), p, t, colors, types, sub, legendary: legendary || undefined, kws: extraKw };
 }
 function kwList(s: string): string[] | null {
+  s = s.replace(/protection from each color/g, 'protection from white, protection from blue, protection from black, protection from red, protection from green');
   const parts = s.replace(/, and |, | and /g, '|').split('|').map(x => x.trim());
   return parts.every(p => KWS.includes(p)) ? parts : null;
 }
@@ -382,6 +396,8 @@ export function manaAdd(s: string, cx: Cx): { mana: ManaSym[]; n?: Amt } | null 
   if (/^one mana of any colou?r that a land an opponent controls could produce$/.test(s)) return { mana: ['OPP'] };
   if (/^one mana of any type that a land you control could produce$/.test(s)) return { mana: ['MINE'] };
   if (/^one mana of any colou?r among legendary permanents you control$/.test(s)) return { mana: ['LEGEND'] };
+  if (/^one mana of any colou?r among legendary creatures and planeswalkers you control$/.test(s)) return { mana: ['LEGEND_CP'] };
+  if (/^one mana of any of the exiled card's colou?rs$/.test(s)) return { mana: ['IMPRINT'] };
   if ((m = /^(two|three|x) mana (?:of any one colou?r|in any combination of colou?rs)$/.exec(s))) { const n = num(m[1]); return n === 'X' ? { mana: ['ANY'], n: 'X' } : { mana: Array(n as number).fill('ANY') }; }
   if ((m = /^(\{[wubrgc]\}(?:, \{[wubrgc]\})*,? or \{[wubrgc]\})$/.exec(s))) return { mana: [[...s.matchAll(/\{([wubrgc])\}/g)].map(x => x[1].toUpperCase()).join('|') as ManaSym] };
   if ((m = /^((?:\{[wubrgc]\})+)$/.exec(s))) return { mana: [...s.matchAll(/\{([wubrgc])\}/g)].map(x => x[1].toUpperCase() as ManaSym) };
@@ -675,10 +691,10 @@ const PATS: Pat[] = [
   [/^§jobselect$/, () => [{ op: 'token', n: 1, pl: 'you', tok: { name: 'Hero', p: 1, t: 1, colors: [], types: ['Creature'], sub: ['Hero'] } }, { op: 'attach', who: 'self', other: 'created' }]],
   [/^empower jace (.+)$/, (m, cx) => { const n0 = num(m[1]); const n = n0 !== null ? n0 : amount(m[1], cx); return n !== null ? [{ op: 'empower', n, tok: jaceTok() }] : null; }],
   [/^investigate$/, () => [{ op: 'token', n: 1, pl: 'you', tok: { name: 'Clue', colors: [], types: ['Artifact'], preset: 'Clue' } }]],
-  [new RegExp(`^(?:${P_RE} )?creates? (${N}|that many|x) (tapped )?(.+?) tokens?(?: with (.+?))?( that are tapped and attacking| that's tapped and attacking| tapped and attacking)?(?: for each (.+))?$`), (m, cx) => {
+  [new RegExp(`^(?:${P_RE} )?creates? (${N}|that many|x) (tapped )?(.+?) tokens?(?: with ("[^"]+"|'[^']+'|.+?))?( that are tapped and attacking| that's tapped and attacking| tapped and attacking)?(?: for each (.+))?$`), (m, cx) => {
     const p = pl(m[1], cx, false); const a = num(m[2]) ?? (m[2] === 'that many' && cx.pips ? { pips: cx.pips } : 'ev'); if (!p) return null;
     const cda = !!m[5] && /"~'s power and toughness are each equal to/.test(m[5]); const tok = tokenSpec(m[4]) ?? (cda ? tokenSpec('0/0 ' + m[4]) : null); if (!tok) return null;
-    if (m[5]) { const q = /^(?:(.+?),? and )?"([^"]+)"$/.exec(m[5]); if (q) { if (q[1]) { const kws = kwList(q[1]); if (!kws) return null; tok.kws = kws; } const ext = tokenAbil(q[2], tok.name); if (!ext) return null; tok.ext = ext; } else { const kws = kwList(m[5]); if (!kws) return null; tok.kws = kws; } }
+    if (m[5]) { const q = /^(?:(.+?),? and )?(?:"([^"]+)"|'([^']+)')$/.exec(m[5]); if (q) { if (q[1]) { const kws = kwList(q[1]); if (!kws) return null; tok.kws = kws; } const ext = tokenAbil(q[2] ?? q[3], tok.name); if (!ext) return null; tok.ext = ext; } else { const kws = kwList(m[5]); if (!kws) return null; tok.kws = kws; } }
     const n = withForEach(a, m[7], cx); if (n === null) return null;
     return [{ op: 'token', n, pl: p, tok, tapped: !!m[3] || !!m[6], attacking: !!m[6] }];
   }],
@@ -740,6 +756,22 @@ const PATS: Pat[] = [
   [/^(?:you may )?play an additional land (?:this turn|on each of your turns)$/, () => [{ op: 'extraLand', n: 1 }]],
   [/^put (a|an|up to (?:one|two|three|four|five|six|seven)|any number of) (.+?) cards? from your hand onto the battlefield( tapped)?$/, (m, cx) => { const fp = parseFilter(m[2]); return fp ? [{ op: 'putLand', f: fp.f, n: m[1] === 'any number of' ? 99 : /^up to /.test(m[1]) ? num(m[1].slice(6)) as number : 1, tapped: !!m[3], text: `${m[1]} ${m[2]} card` }] : null; }],
   [/^attach (?:~|it) to (.+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'attach', who: 'self', other: o.ref }] : null; }],
+  [/^you may choose new targets for target spell or ability$/, (m, cx) => { const o = obj('target spell or ability', cx, true); return o ? [{ op: 'retarget', who: o.ref }] : null; }],
+  [/^choose new targets for target spell or ability$/, (m, cx) => { const o = obj('target spell or ability', cx, true); return o ? [{ op: 'retarget', who: o.ref }] : null; }],
+  [/^you gain protection from everything until your next turn$/, () => [{ op: 'protAll', until: 'yourNext' }]],
+  [/^each player discards their hand, then draws cards equal to the greatest number of cards a player discarded this way$/, () => [{ op: 'windfall' }]],
+  [/^create a food token or a treasure token$/, () => [{ op: 'tokenOr', tok: { name: 'Food', colors: [], types: ['Artifact'], preset: 'Food' }, text: 'Treasure' }]],
+  [/^you may exile a nonartifact nonland card from your hand$/, () => [{ op: 'may', text: 'exile a nonartifact, nonland card from your hand', sub: [{ op: 'exile', zone: 'hand', f: { notTypes: ['Artifact', 'Land'] }, n: 1 }] }]],
+  [/^exile a nonartifact nonland card from your hand$/, () => [{ op: 'exile', zone: 'hand', f: { notTypes: ['Artifact', 'Land'] }, n: 1 }]],
+  [/^mill (two|three|four|five|six|seven|eight|nine|ten|\d+) cards?, then return a (.+?) card from your graveyard to your hand$/, (m) => { const n = num(m[1]); const fp = parseFilter(m[2] + ' card'); return typeof n === 'number' && fp ? [{ op: 'mill', n, pl: 'you' }, { op: 'retPick', n: 1, f: fp.f, dest: 'hand', zone: 'graveyard' }] : null; }],
+  [/^search your library for an artifact card with mana cost \{0\} or \{1\}, put it onto the battlefield, then shuffle$/, () => [{ op: 'search', n: 1, f: { types: ['Artifact'], cost01: true }, dest: 'battlefield', text: 'artifact card with mana cost {0} or {1}' }]],
+  [/^that player may search their library for a land card with a basic land type, put it onto the battlefield, then shuffle$/, () => [{ op: 'maySearch', pl: 'ctl:t0', f: { types: ['Land'], basicType: true }, dest: 'battlefield', text: 'land card with a basic land type' }]],
+  [/^~ gains "([^"]+)"$/, (m) => { const ext = tokenAbil(m[1], CUR_NAME); return ext ? [{ op: 'gainAbil', who: 'self', ce: { grant: ext } }] : null; }],
+  [/^(?:until end of turn, )?(that creature|it|~) gains "when ~ dies, return it to the battlefield tapped under its owner's control\."(?: until end of turn)?$/, (m, cx) => { const o = obj(m[1], cx, false); const ext = tokenAbil("when ~ dies, return it to the battlefield tapped under its owner's control", CUR_NAME); return o && ext ? [{ op: 'gainAbil', who: o.ref, ce: { grant: ext }, until: 'eot' }] : null; }],
+  [/^for each color among permanents you control, add one mana of that color$/, () => [{ op: 'addMana', mana: ['EACH_COLOR'] }]],
+  [/^§devotionmana$/, () => [{ op: 'addMana', mana: ['CHOSEN'], n: { devotion: [] } }]],
+  [/^choose a color\. add an amount of mana of that color equal to your devotion to that color$/, () => [{ op: 'addMana', mana: ['CHOSEN'], n: { devotion: [] } }]],
+  [/^return the chosen cards to the battlefield tapped$/, (m, cx) => [{ op: 'ret', who: (cx.slots.length >= 2 ? `tr:0-${cx.slots.length - 1}` : (cx.it ?? 't0')) as import('./types').Ref, dest: 'battlefield', zone: 'graveyard', tapped: true }]],
   [/^search your library for (a|an|one|two|three|any number of|up to (?:one|two|three|four|five|x)) (.+?) cards?(?: with (?:different names|the same name))?, (?:reveal (?:it|them|that card|those cards), )?(?:and )?put (?:it|them|that card|those cards|the card) (onto the battlefield( tapped)?|into your hand|on top of your library)(?:,? then shuffle| and shuffle)?$/, (m, cx) => search(m[1], m[2], m[3], !!m[4])],
   [/^search your library for (a|an|one) card,? (?:then )?(?:reveal it, )?(?:then )?(?:shuffle(?: and|,)? )?(?:put|and put) (?:that card|it) (into your hand|on top(?: of your library)?)(?:,? then shuffle)?$/, m => search(m[1], 'card', m[2].startsWith('on top') ? 'on top of your library' : m[2], false)],
   [/^search your library for (a|an|one|two|three|up to (?:one|two|three)) (.+?) cards?, (?:reveal (?:it|them|those cards), )?(?:then )?shuffle,? and put (?:that card|the card|it|them) (on top|into your hand|onto the battlefield)(?: of your library)?$/, (m, cx) => search(m[1], m[2], m[3] === 'on top' ? 'on top of your library' : m[3], false)],
@@ -806,6 +838,7 @@ function clause(s: string, cx: Cx): Effect[] | null {
   if ((m = /^(.+?) unless (.+)$/.exec(s)) && !/^you /.test(m[2]) && !/pays? \{/.test(m[2]) && !/unless they're mana abilities/.test(s) && !/for each/.test(s)) { const cc = cond(m[2], cx); const sub = cc && clause(m[1], cx); if (cc && sub) return [{ op: 'if', cond: { k: 'not', c: cc }, sub }]; }
   if (/^if that creature would die this turn, exile it instead$/.test(s)) return [{ op: 'script', kind: 'exileIfDies', who: 't0' }];
   if ((m = /^(.+?) unless (that player|its controller|they|he or she|any player) pays? \{(\d+)\}$/.exec(s))) { const sub = clause(m[1], cx); const ft = sub?.find(e => typeof e.who === 'string' && /^t\d+$/.test(e.who as string))?.who as string | undefined; const p = m[2] === 'any player' ? null : m[2] === 'its controller' && ft ? `ctl:${ft}` : playerRef(m[2] === 'they' || m[2] === 'he or she' ? 'that player' : m[2], cx, true); if (sub && p) return [{ op: 'unless', pl: p, ifPaid: { generic: +m[3] }, text: m[1], sub }]; }
+  if ((m = /^(.+?) unless (that player|its controller|they|he or she) pays? \{x\}, where x is ~'s power$/.exec(s))) { const sub = clause(m[1], cx); const p = playerRef(m[2] === 'they' || m[2] === 'he or she' ? 'that player' : m[2], cx, true); if (sub && p) return [{ op: 'unless', pl: p, n: { pow: 'self' }, text: m[1], sub }]; }
   if ((m = /^destroy (.+?) unless (?:its controller|that player|they) has ~ deal damage to (?:them|that player|him or her|its controller) equal to (?:his|her|its|~'s) power$/.exec(s))) { const o = obj(m[1], cx, true); return o && !o.card ? [{ op: 'unlessDmg', who: o.ref, n: { pow: 'self' } }] : null; }
   if ((m = /^(that player|they|each opponent) may pay \{(\d+)\}\. if (?:the player|they|that player) (?:doesn't|don't|do not|does not), (.+)$/.exec(s))) { const sub = clause(m[3], cx); const p = playerRef(m[1] === 'they' ? 'that player' : m[1], cx, true); if (sub && p) return [{ op: 'unless', pl: p, ifPaid: { generic: +m[2] }, text: m[3], sub }]; }
   for (const [re, fn] of PATS) { const mm = re.exec(s); if (mm) { const save = cx.slots.length; const r = fn(mm, cx); if (r) return r; cx.slots.length = save; } }
@@ -824,7 +857,7 @@ function clause(s: string, cx: Cx): Effect[] | null {
 }
 /** Parse a block of effect sentences. */
 export function effects(text: string, cx: Cx): Effect[] | null {
-  let t = text.trim().replace(/\.$/, '').replace(/draw three cards\. then discard two cards unless you discard an artifact card/, 'draw three cards. §thirst').replace(/\bnoncreature, nonland\b/g, 'noncreature nonland').replace(/(search your library for (?:a|an) [a-z ]+?) card (with mana value (?:x|\d+) or less),/, '$1 $2 card,');
+  let t = text.trim().replace(/\.$/, '').replace(/draw three cards\. then discard two cards unless you discard an artifact card/, 'draw three cards. §thirst').replace(/\bnoncreature, nonland\b/g, 'noncreature nonland').replace(/\bnonartifact, nonland\b/g, 'nonartifact nonland').replace(/^choose ((?:two |three )?target )/, '$1').replace(/choose a color\. add an amount of mana of that color equal to your devotion to that color/, '§devotionmana').replace(/(search your library for (?:a|an) [a-z ]+?) card (with mana value (?:x|\d+) or less),/, '$1 $2 card,');
   const out: Effect[] = [];
   { const gm = /^(create .+?), then mill a card\. if an? ([a-z]+) card was milled this way, put a loyalty counter on ~ and repeat this process$/.exec(t);
     if (gm) { const a = clause(gm[1], cx); const fp = parseFilter(gm[2] + ' card'); return a && fp ? [{ op: 'repeatWhile', sub: [...a, { op: 'mill', n: 1, pl: 'you' }], f: fp.f, rt: { label: '', effects: [{ op: 'addC', kind: 'loyalty', n: 1, who: 'self' }] } }] : null; } }
@@ -849,6 +882,9 @@ export function effects(text: string, cx: Cx): Effect[] | null {
   }
   const imp = /^(.*?)exile the top (card|\w+ cards) of your library(?:, where x is ([^.]+))?\. (?:until (?:the )?end of (?:your next )?turn, )?you may play (?:it|that card|them|those cards)(?: this turn| until the end of your next turn| until end of turn)?(.*)$/.exec(t);
   if (imp) { if (imp[3]) { const a = amount(imp[3], cx); if (a !== null) cx.xAmt = a; } const pre = imp[1] ? effects(imp[1], cx) : []; let k: Amt | null = imp[2] === 'card' ? 1 : num(imp[2].split(' ')[0]); if (k === 'X' && cx.xAmt) k = cx.xAmt; const post = (imp[4] ?? '').replace(/^\.\s*/, ''); const tail = post ? effects(post, cx) : []; if (!pre || !tail || k === null) return null; return [...pre, { op: 'exileTop', n: k, until: /next turn/.test(imp[0]) ? 'yourNext' : 'eot' }, ...tail]; }
+  { const mdn = /^(.*?)at the beginning of your next main phase, add an amount of \{c\} equal to that spell's mana value$/.exec(t);
+    if (mdn) { const pre = mdn[1] ? effects(mdn[1].replace(/\.\s*$/, ''), cx) : []; if (!pre) return null; return [...pre, { op: 'delayMain', sub: [{ op: 'addMana', mana: ['C'], n: { mv: 't0' } }] }]; } }
+  { const onlyT = /^((?:two |three )?target [^.]+)\. (.+)$/s.exec(t); if (onlyT) { const o = obj(onlyT[1], cx, true); if (o && !/ (gets?|gains?|deals?|is|are|can't|doesn't|becomes|enters) /.test(onlyT[1])) { cx.it = o.ref as string; cx.that = o.ref as string; t = onlyT[2]; } } }
   t = t.replace(/(you|target opponent|target player|each opponent) gets? an emblem with "([^"]+)"/g, (_, w: string, b: string) => { EMB.push(b.replace(/\.$/, '')); return `${w} gets emblem#${EMB.length - 1}${/\.$/.test(b) ? '.' : ''}`; })
     .replace(/that's still a planeswalker\. prevent all damage that would be dealt to (?:him|her|it|them) this turn/, "that's still a planeswalker §prevent");
   t = t.replace(/(that player|they) may pay \{(\d+)\}\. if (?:the player|they|that player) (?:doesn't|don't|does not|do not), ([^.]+)/g, '$3 unless $1 pays {$2}')
@@ -1150,6 +1186,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   const ROM: Record<string, number> = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7 };
   for (const raw of lines) {
     let l = cleanLine(raw).replace(/\.$/, '');
+    if (/^imprint[ \u2014\u2013-]/.test(raw)) d.imprint = true;
     { const fm = /^(?:forecast[ \u2014\u2013-]+)?((?:\{[^}]+\})+), reveal (?:this card|~) from your hand: (.+)$/i.exec(l);
       if (fm) {
         const c = parseCost(fm[1].toUpperCase());
@@ -1234,6 +1271,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
     }
     { let x: RegExpExecArray | null;
       if ((x = /^whenever you tap an? ([a-z ]+?) for mana, add an additional \{([wubrgc])\}$/.exec(l))) { const fp = parseFilter(x[1]); if (fp) { statics.push({ k: 'manaExtra', who: 'all', f: { ...fp.f, ctrl: 'you' }, add: [x[2].toUpperCase()] }); continue; } }
+      if ((x = /^whenever enchanted land is tapped for mana, its controller adds an additional \{([wubrgc])\}$/.exec(l))) { statics.push({ k: 'manaExtra', who: 'attached', add: [x[1].toUpperCase()] }); continue; }
       if (/^~ enters prepared$/.test(l)) { d.etbPrepared = true; continue; }
       if ((x = /^as long as ~ isn't on the battlefield, it's an? (\d+)\/(\d+) ([a-z]+) creature in addition to its other types$/.exec(l))) { const sb = SUB.get(x[3]) ?? x[3][0].toUpperCase() + x[3].slice(1); d.offBf = { addTypes: ['Creature'], addSub: [sb], p: +x[1], t: +x[2] }; continue; }
       if (/^as long as ~ is attached to a creature, ~ can't be attacked and has "whenever equipped creature deals combat damage during your turn, put that many loyalty counters on ~\.?"$/.test(l)) {
@@ -1279,17 +1317,20 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
         if (cop) { const C: Record<string, string> = { white: 'W', blue: 'U', black: 'B', red: 'R', green: 'G' }; ab.effects = [{ op: 'script', kind: 'preventColor', text: C[cop[1]] }]; abilities.push(ab); continue; }
       }
       body = body.replace(/\. activate (?:this ability )?only as a sorcery$/, () => { ab.sorcery = true; return ''; })
+        .replace(/\. this ability costs \{1\} less to activate for each legendary creature you control$/, () => { ab.lessLegend = true; return ''; })
         .replace(/\. activate (?:this ability )?only once each turn$/, () => { ab.once = true; return ''; })
         .replace(/\. activate (?:this ability )?only during your turn$/, () => { ab.cond = { k: 'yourTurn' }; return ''; })
         .replace(/\. activate (?:this ability )?only if (.+)$/, (_, c) => { const cc = cond(c, newCx()); if (!cc) return '§FAIL'; ab.cond = cc; return ''; });
       if (body.includes('§FAIL')) { fail(raw); continue; }
       // mana abilities
-      let only: string | undefined;
+      let only: string | undefined; let manaUnc = false;
+      body = body.replace(/, and that spell can't be countered$/, () => { manaUnc = true; return ''; });
       body = body.replace(/\. if that mana is spent on a dragon creature spell, it gains haste until end of turn$/, () => { only = 'dragonHaste'; return ''; });
       body = body.replace(/\. (?:spend this mana only to (.+)|this mana can't be spent to (?:cast (?:a )?nonartifact spells?|pay generic mana costs))$/, (_, w?: string) => { only = !w ? (/generic mana costs/.test(body) ? 'nongeneric' : 'artifact') : ({ 'cast a creature spell of the chosen type': 'ctypeSpell', 'cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type': 'ctypeAny', 'cast a hero spell or to activate an ability of a hero source': 'hero', 'cast a villain spell or to activate an ability of a villain source': 'villain', 'cast a legendary spell': 'legendary', 'cast an instant or sorcery spell': 'is', 'cast artifact spells or activate abilities of artifacts': undefined, 'cast a creature spell': 'creature', 'cast elemental spells or activate abilities of elemental sources': 'elemental', 'cast an elemental spell or activate an ability of an elemental': 'elemental', 'cast elemental spells or activate abilities of elementals': 'elemental', 'cast an angel spell': 'angel', 'cast a dragon creature spell': 'dragonCreature', 'cast dragon spells or activate abilities of dragons': 'dragon' } as Record<string, string | undefined>)[w] ?? '§'; return ''; });
       body = body.replace(/^(add one mana of any color in your commander's color identity)\. when that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1$/, (_, x) => { only = 'path'; return x; });
       if (only === '§') { fail(raw); continue; }
-      if (only) { const r = /^add (.+)$/.exec(body) && manaAdd(body.slice(4), newCx()); if (!r || !ab.tap || Object.keys(pc.ab).length !== 1) { fail(raw); continue; } manaLines.push({ add: r.mana, n: r.n, only }); continue; }
+      if (only) { const r = /^add (.+)$/.exec(body) && manaAdd(body.slice(4), newCx()); if (!r || !ab.tap || Object.keys(pc.ab).length !== 1) { fail(raw); continue; } manaLines.push({ add: r.mana, n: r.n, only, uncounter: manaUnc || undefined }); continue; }
+      if (/^add \{c\}\. if ~ has a luck counter on it, instead add one mana of any color$/.test(body) && ab.tap && Object.keys(pc.ab).length === 1) { manaLines.push({ add: ['C'], luckAny: true }); continue; }
       const pm = /^add (.+?)\. ~ deals (\d) damage to you$/.exec(body);
       if (pm && ab.tap && Object.keys(pc.ab).length === 1) { const r = manaAdd(pm[1], newCx()); if (r) { manaLines.push({ add: r.mana, n: r.n, pain: +pm[2] }); continue; } }
       const fm = /^add (\{[wubrg]\}\{[wubrg]\}), (\{[wubrg]\}\{[wubrg]\}), or (\{[wubrg]\}\{[wubrg]\})$/.exec(body);
@@ -1307,6 +1348,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       if (md) { const ms = parseModes(md[1], md[2], cx); if (!ms) { fail(raw); continue; } ab.modes = ms; abilities.push(ab); continue; }
       const fx = effects(body, cx); if (!fx) { fail(raw); continue; }
       ab.effects = fx; if (cx.slots.length) ab.tslots = cx.slots;
+      if (fx.length && fx.every(e => e.op === 'addMana') && !cx.slots.length) ab.manaAb = true;
       abilities.push(ab); continue;
     }
     // spell text
@@ -1611,6 +1653,10 @@ function parseAltCost(s: string, d: CardDef): boolean {
     const n0 = num(m[1]); if (typeof n0 !== 'number') return false;
     d.exileAlt = { n: n0, color: COLOR_OF[m[2]] }; return true;
   }
+  if ((m = /^you may pay (\d+) life and exile (a|an|one|two|three|\d+) (white|blue|black|red|green) cards? from your hand rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
+    const life = +m[1]; const n0 = num(m[2]); if (typeof n0 !== 'number') return false;
+    d.exileAlt = { n: n0, color: COLOR_OF[m[3]], life }; return true;
+  }
   if ((m = /^you may pay (\{[^}]+\}(?:\{[^}]+\})*) rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
     const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.altCost = { mana: c }; return true;
   }
@@ -1832,6 +1878,12 @@ export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<st
   }
   if (/^you control enchanted (?:creature|permanent|land|artifact|planeswalker)$/.test(s)) { statics.push({ k: 'controlAttached', who: 'attached' }); return true; }
   if (/^if (?:~|this card) is in your opening hand, you may begin the game with (?:it|this card|~) on the battlefield$/.test(s)) { d.leyline = true; return true; }
+  if (/^if (?:~|this card) is in your opening hand and you're not the starting player, you may begin the game with (?:it|this card|~) on the battlefield with a luck counter on it\. if you do, exile a card from your hand$/.test(s)) { d.leyline = true; d.leylineLuck = true; return true; }
+  if (/^if ~ would enter, you may discard a land card instead\. if you do, put ~ onto the battlefield\. if you don't, put it into its owner's graveyard$/.test(s)) { d.enterDiscardLand = true; return true; }
+  if ((m = /^each land is an? (plains|island|swamp|mountain|forest) in addition to its other (?:land )?types$/.exec(s))) { statics.push({ k: 'addLandType', who: 'all', f: { types: ['Land'] }, add: [m[1][0].toUpperCase() + m[1].slice(1)] }); return true; }
+  if (/^creature spells you control can't be countered$/.test(s)) { statics.push({ k: 'spellsUncounterable', who: 'self', spellF: { types: ['Creature'] } }); return true; }
+  if (/^during your turn, your opponents can't cast spells or activate abilities of artifacts, creatures, or enchantments$/.test(s)) { statics.push({ k: 'oppsCantCast', who: 'self' }, { k: 'oppsCantAct', who: 'self' }); return true; }
+  if ((m = /^whenever enchanted land is tapped for mana, its controller adds an additional \{([wubrgc])\}$/.exec(s))) { statics.push({ k: 'manaExtra', who: 'attached', add: [m[1].toUpperCase()] }); return true; }
   if (/^cast (?:this spell|~) only during the declare attackers step(?: and only if you've been attacked this step)?$/.test(s)) { d.castOnly = 'declareAttackers'; return true; }
   if (/^cast (?:this spell|reset|~) only during an opponent's turn after (?:their|his or her) upkeep step$/.test(s)) { d.castOnly = 'afterOppUpkeep'; return true; }
   if (/^goaded creatures can't block$/.test(s)) { statics.push({ k: 'goadedCantBlock', who: 'all' }); return true; }

@@ -328,7 +328,14 @@
             "warpExile",
             "watch",
             "watchCombatUntap",
-            "winGame"
+            "winGame",
+            "retarget",
+            "protAll",
+            "windfall",
+            "tokenOr",
+            "delayMain",
+            "gainAbil",
+            "maySearch"
           ]
         },
         "id": {
@@ -608,7 +615,9 @@
             "goadedCantBlock",
             "cantActivate",
             "extraBlock",
-            "mustBlock"
+            "mustBlock",
+            "addLandType",
+            "oppsCantAct"
           ]
         },
         "who": {
