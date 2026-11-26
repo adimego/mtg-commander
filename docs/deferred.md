@@ -2,7 +2,7 @@
 
 Living list of Oracle wording and mechanics that are **not** modelled yet, or were only modelled in a simple form and still leave cards Limited. Counts are from the same Scryfall Oracle Cards bulk and `classify()` method used for support reports (unique `oracle_id`, commander-legal, excluding tokens, emblems, dungeons, planes, phenomena, schemes, vanguards, conspiracies, and commander-banned cards). Corpus size: **32,643**.
 
-**Last updated:** 2026-11-26, after the popular-card Batch 1 PR (top 250). Support is **17,846 / 32,643 (54.7%)** — auto 17,685, builtin 161, Limited 14,797. After the day/night and shared-piece sweep PR [#39](https://github.com/adimego/mtg-commander/pull/39) it was 17,783 / 32,643 (54.5%). After the second P4 PR [#38](https://github.com/adimego/mtg-commander/pull/38) it was 17,665 / 32,643 (54.1%); after the first P4 replacements PR [#37](https://github.com/adimego/mtg-commander/pull/37) it was 17,566 / 32,643 (53.8%); after the second P3 PR [#36](https://github.com/adimego/mtg-commander/pull/36) it was 17,516 / 32,643 (53.7%); after the first P3 PR [#35](https://github.com/adimego/mtg-commander/pull/35) it was 17,389 / 32,643 (53.3%); after P2 [#34](https://github.com/adimego/mtg-commander/pull/34) it was 17,260 / 32,643 (52.9%).
+**Last updated:** 2026-11-26, after the popular-card Batch 1 PR [#40](https://github.com/adimego/mtg-commander/pull/40). Support is **17,846 / 32,643 (54.7%)** — auto 17,685, builtin 161, Limited 14,797. After the day/night and shared-piece sweep PR [#39](https://github.com/adimego/mtg-commander/pull/39) it was 17,783 / 32,643 (54.5%). After the second P4 PR [#38](https://github.com/adimego/mtg-commander/pull/38) it was 17,665 / 32,643 (54.1%); after the first P4 replacements PR [#37](https://github.com/adimego/mtg-commander/pull/37) it was 17,566 / 32,643 (53.8%); after the second P3 PR [#36](https://github.com/adimego/mtg-commander/pull/36) it was 17,516 / 32,643 (53.7%); after the first P3 PR [#35](https://github.com/adimego/mtg-commander/pull/35) it was 17,389 / 32,643 (53.3%); after P2 [#34](https://github.com/adimego/mtg-commander/pull/34) it was 17,260 / 32,643 (52.9%).
 
 **How to read a row.** *Involved* is how many current Limited cards have at least one leftover line in the family. *Exclusive* is how many of those cards have every leftover line in that family, so modelling the family *could* flip the card if the inner effect is also exact. Families overlap; do not add rows. Plan-era figures are labelled when a current recount was not the source.
 
@@ -171,7 +171,7 @@ Not in this PR: the P5 AI card-script hook (plan only, in the work notes); remai
 
 ### Done in popular Batch 1
 
-Popular-card Batch 1 (the 29 Limited cards in the positional top 250 by `edhrec_rank`), 2026-11-26. Support +63 to **17,846 / 32,643 (54.7%)**. Official precons stayed 100/100. 804 tests.
+Popular-card Batch 1 PR [#40](https://github.com/adimego/mtg-commander/pull/40) (the 29 Limited cards in the positional top 250 by `edhrec_rank`), 2026-11-26. Support +63 to **17,846 / 32,643 (54.7%)**. Official precons stayed 100/100. 804 tests.
 
 Top-N (positional among ranked commander-legal cards, same corpus as the support reports):
 
