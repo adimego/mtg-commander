@@ -831,7 +831,7 @@ export function parseCosts(s: string, name: string): ParsedCost | null {
 export function cleanLine(l: string): string { return l.replace(/^[a-z' ,-]+ — /, s => (/^(choose|when|whenever|at)\b/.test(s) ? s : '')); }
 
 export interface CompileResult { unparsed: string[]; notes: string[]; ok: boolean }
-export interface ScryLike { name: string; oracle_text?: string; type_line?: string; mana_cost?: string; power?: string; toughness?: string; loyalty?: string; keywords?: string[] }
+export interface ScryLike { name: string; oracle_text?: string; type_line?: string; mana_cost?: string; power?: string; toughness?: string; loyalty?: string; keywords?: string[]; oracle_id?: string }
 
 export function normalize(text: string, name: string): string {
   let t = text.replace(/\([^)]*\)/g, '');

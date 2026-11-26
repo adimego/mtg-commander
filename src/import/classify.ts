@@ -78,9 +78,9 @@ export function compileScry(c: ScryCard, opts?: GrammarOpts): Classified {
   if (types.includes('Background')) { d.partner = true; d.canBeCommander = true; }
   const problems: string[] = [];
   let prepUn: string[] = [];
-  if (f && c.layout === 'prepare' && f[1]) { const b = compileScry({ ...(f[1] as ScryCard), name: f[1].name, layout: 'normal', card_faces: undefined, colors: (f[1] as ScryCard).colors ?? c.colors, color_identity: c.color_identity } as ScryCard, opts); b.def.id = d.id + '--prep'; delete b.def.limited; d.prepDef = b.def; if (b.support !== 'auto') prepUn = (b.unparsed?.length ? b.unparsed : [b.reason ?? 'prepare spell']).map(x => `prepare spell: ${x}`); }
+  if (f && c.layout === 'prepare' && f[1]) { const b = compileScry({ ...(f[1] as ScryCard), name: f[1].name, layout: 'normal', card_faces: undefined, colors: (f[1] as ScryCard).colors ?? c.colors, color_identity: c.color_identity, oracle_id: c.oracle_id } as ScryCard, opts); b.def.id = d.id + '--prep'; delete b.def.limited; d.prepDef = b.def; if (b.support !== 'auto') prepUn = (b.unparsed?.length ? b.unparsed : [b.reason ?? 'prepare spell']).map(x => `prepare spell: ${x}`); }
   else if (f && f[1] && ['transform', 'modal_dfc', 'adventure', 'split', 'flip'].includes(c.layout ?? '') && !/Room/.test(c.type_line ?? typeLine)) {
-    const bf = f[1] as ScryCard; const b = compileScry({ ...bf, name: bf.name, layout: 'normal', card_faces: undefined, colors: bf.colors ?? c.colors, color_identity: c.color_identity, keywords: [], image_uris: bf.image_uris ?? c.image_uris } as ScryCard, opts);
+    const bf = f[1] as ScryCard; const b = compileScry({ ...bf, name: bf.name, layout: 'normal', card_faces: undefined, colors: bf.colors ?? c.colors, color_identity: c.color_identity, keywords: [], image_uris: bf.image_uris ?? c.image_uris, oracle_id: c.oracle_id } as ScryCard, opts);
     b.def.id = d.id + '--back'; delete b.def.limited;
     if (c.layout === 'transform' || c.layout === 'flip') b.def.cost = { ...d.cost };
     if (c.layout === 'adventure') b.def.adventure = true;
@@ -92,7 +92,7 @@ export function compileScry(c: ScryCard, opts?: GrammarOpts): Classified {
   }
   else if (f && f.length >= 2 && /Room/.test(c.type_line ?? typeLine)) {
     const doors = f.map((face, i) => {
-      const fc = compileScry({ ...(face as ScryCard), name: face.name ?? c.name, layout: 'normal', card_faces: undefined, colors: (face as ScryCard).colors ?? c.colors, color_identity: c.color_identity, keywords: (face as ScryCard).keywords ?? [], image_uris: face.image_uris ?? c.image_uris } as ScryCard, opts);
+      const fc = compileScry({ ...(face as ScryCard), name: face.name ?? c.name, layout: 'normal', card_faces: undefined, colors: (face as ScryCard).colors ?? c.colors, color_identity: c.color_identity, keywords: (face as ScryCard).keywords ?? [], image_uris: face.image_uris ?? c.image_uris, oracle_id: c.oracle_id } as ScryCard, opts);
       const fd = fc.def; delete fd.limited;
       for (const a of fd.abilities ?? []) a.door = i;
       for (const st of fd.statics ?? []) st.door = i;
@@ -111,21 +111,23 @@ export function compileScry(c: ScryCard, opts?: GrammarOpts): Classified {
   }
   else if (f) problems.push(`${c.layout ?? 'multi-face'} card: only the front face is used`);
   if (!exact && front.mana_cost && !d.room) problems.push(`mana cost ${front.mana_cost} simplified to ${costStr(d.cost)}`);
-  const scryLike = { ...front, name: f ? front.name ?? c.name : c.name, oracle_text: front.oracle_text ?? (f ? '' : c.oracle_text) } as ScryLike;
+  const scryLike = { ...front, name: f ? front.name ?? c.name : c.name, oracle_text: front.oracle_text ?? (f ? '' : c.oracle_text), oracle_id: c.oracle_id } as ScryLike;
   let failures: ParseFailure[] | undefined;
   let res: { unparsed: string[] };
   if (d.room) {
     res = { unparsed: [] as string[] };
   } else if (grammarRequested(opts)) {
     const seed = cloneDef(d);
-    const parsed = parseCard(scryLike, d, c.name);
+    const parsed = parseCard(scryLike, d, c.name, c.oracle_id);
     failures = parsed.failures;
     res = { unparsed: parsed.unparsed };
     if (opts?.fallback !== false) {
       const dOld = cloneDef(seed);
       const old = compile(scryLike, dOld);
-      applyScripts(c.name, dOld, old.unparsed);
-      if (!equivCardDef(d, dOld)) {
+      applyScripts(c.name, dOld, old.unparsed, c.oracle_id);
+      // Keep the parser when it is equivalent or better (accepted a line the old compiler leftover).
+      // Fall back only when the parser failed a line the old compiler accepted.
+      if (parserWorse(parsed.unparsed, old.unparsed)) {
         replaceDef(d, dOld);
         res = { unparsed: old.unparsed };
         failures = undefined;
@@ -133,7 +135,7 @@ export function compileScry(c: ScryCard, opts?: GrammarOpts): Classified {
     }
   } else {
     res = compile(scryLike, d);
-    applyScripts(c.name, d, res.unparsed);
+    applyScripts(c.name, d, res.unparsed, c.oracle_id);
   }
   if (pStar && !d.statics?.some(s => s.k === 'pt' && s.who === 'self' && (typeof s.p !== 'number' || typeof s.t !== 'number'))) { if (!d.toughness) d.toughness = 1; problems.push(`variable power/toughness (${front.power}/${front.toughness}) played as ${d.power}/${d.toughness}`); }
   const basicT: Record<string, string> = { Plains: 'W', Island: 'U', Swamp: 'B', Mountain: 'R', Forest: 'G' };
@@ -146,7 +148,7 @@ export function compileScry(c: ScryCard, opts?: GrammarOpts): Classified {
   res.unparsed.push(...prepUn);
   if (!res.unparsed.length && !problems.length) return maybeApplyGrammar({ def: d, support: 'auto', failures }, opts);
   const works = describeWorks(d);
-  const why = [res.unparsed.length ? `not modelled: "${res.unparsed.slice(0, 3).map(x => pretty(x, c.name)).map(x => x.length > 70 ? x.slice(0, 67) + '…' : x).join('" / "')}"${res.unparsed.length > 3 ? ` (+${res.unparsed.length - 3} more)` : ''}` : '', ...problems].filter(Boolean).join('; ');
+  const why = formatLimitedWhy(res.unparsed, c.name, problems, failures);
   d.limited = `Limited support: ${works}. ${why[0].toUpperCase() + why.slice(1)}.`;
   return maybeApplyGrammar({ def: d, support: 'limited', reason: `${works[0].toUpperCase() + works.slice(1)}. ${why[0].toUpperCase() + why.slice(1)}.`, unparsed: res.unparsed, failures }, opts);
 }
@@ -160,6 +162,39 @@ function describeWorks(d: CardDef): string {
   return parts.join(', ');
 }
 export const costStr = (c: Cost) => `${c.generic ? `{${c.generic}}` : ''}${COLORS.map(k => `{${k}}`.repeat(c[k] || 0)).join('')}` || '{0}';
+
+
+/** True when the parser leftover a line the old compiler accepted. */
+export function parserWorse(parserUnparsed: string[], oldUnparsed: string[]): boolean {
+  const old = new Set(oldUnparsed.map(x => x.replace(/\.$/, '')));
+  return parserUnparsed.some(x => !old.has(x.replace(/\.$/, '')));
+}
+
+/** Limited-support reason: leftover lines first, then the failing clause / parse reason when present. */
+export function formatLimitedWhy(unparsed: string[], name: string, problems: string[] = [], failures?: ParseFailure[]): string {
+  const un = unparsed.length ? formatUnparsedReason(unparsed, name, failures) : '';
+  return [un, ...problems].filter(Boolean).join('; ');
+}
+
+export function formatUnparsedReason(unparsed: string[], name: string, failures?: ParseFailure[]): string {
+  const bits = unparsed.slice(0, 3).map(x => {
+    const prettyX = pretty(x, name);
+    const trunc = prettyX.length > 70 ? prettyX.slice(0, 67) + '…' : prettyX;
+    const f = failures?.find(ff => ff.text === x);
+    const hint = f ? formatFailureHint(f, prettyX) : '';
+    return `"${trunc}"${hint}`;
+  });
+  return `not modelled: ${bits.join(' / ')}${unparsed.length > 3 ? ` (+${unparsed.length - 3} more)` : ''}`;
+}
+
+function formatFailureHint(f: ParseFailure, prettyLine: string): string {
+  const clause = f.clause && f.clause !== f.production && f.clause !== f.text ? f.clause : undefined;
+  const bits: string[] = [];
+  if (clause && clause !== prettyLine) bits.push(clause);
+  if (f.reason) bits.push(f.reason);
+  else if (f.production) bits.push(f.production);
+  return bits.length ? ` (${bits.join(': ')})` : '';
+}
 
 function cloneDef(d: CardDef): CardDef { return JSON.parse(JSON.stringify(d)) as CardDef; }
 function replaceDef(dst: CardDef, src: CardDef): void {

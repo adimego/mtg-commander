@@ -3,6 +3,7 @@
 // ("~" = the card's name, lowercase, no trailing period). If Oracle text changes, the key stops matching and
 // the card honestly falls back to limited support.
 import type { CardDef, Effect, TriggerDef, TSlot, TokenSpec, Filter } from './types';
+import { lineHash, lookupLineOverride } from './grammar/overrides';
 import { GINGER, JACE_TOK } from './frc';
 import { TREK_SCRIPTS } from './trek-scripts';
 import { SOC_SCRIPTS } from './soc-scripts';
@@ -380,8 +381,13 @@ Object.assign(SCRIPTS, EOC_SCRIPTS);
 Object.assign(SCRIPTS, FDC_SCRIPTS);
 
 /** Apply scripts for lines the compiler couldn't parse; covered lines are removed from `unparsed`. */
-export function applyScripts(name: string, d: CardDef, unparsed: string[]) {
-  const sc = SCRIPTS[name]; if (!sc) return;
-  for (let i = unparsed.length - 1; i >= 0; i--) { const p = sc[unparsed[i].replace(/\.$/, "")]; if (!p) continue; p(d); unparsed.splice(i, 1); }
+export function applyScripts(name: string, d: CardDef, unparsed: string[], oracleId?: string) {
+  for (let i = unparsed.length - 1; i >= 0; i--) {
+    const key = unparsed[i].replace(/\.$/, "");
+    const p = lookupLineOverride(oracleId, key) ?? SCRIPTS[name]?.[key] ?? SCRIPTS[name]?.[lineHash(key)];
+    if (!p) continue;
+    p(d);
+    unparsed.splice(i, 1);
+  }
   if (!unparsed.length) d.compiled = true;
 }

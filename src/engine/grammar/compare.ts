@@ -103,5 +103,8 @@ function amountEquals(a: unknown, b: unknown): boolean {
 }
 
 export function equivCardDef(a: CardDef, b: CardDef): boolean {
-  return equivValue(a, b);
+  // `limited` is a UI reason string, not a mechanical field — parse-failure hints may be appended there.
+  const { limited: _la, ...aa } = a;
+  const { limited: _lb, ...bb } = b;
+  return equivValue(aa, bb);
 }

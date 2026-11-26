@@ -42,7 +42,7 @@ function compareSet(label: string, entries: { name: string; card: ScryCard }[]) 
       liftMismatch++;
       if (samples.length < 25) samples.push(`LIFT ${name}: ${liftDiff.join(' | ')}`);
     }
-    const old = compileScry(card);
+    const old = compileScry(card, { grammar: false });
     const parsed = parseScry(card);
     if (old.support === 'auto' && parsed.support !== 'auto') {
       parseWorse++;

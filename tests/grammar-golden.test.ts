@@ -6,14 +6,14 @@ import {
   diffCardDef, sameCardDef, equivCardDef, setGrammarEnabled, isGrammarEnabled,
 } from '../src/engine/grammar';
 
-afterEach(() => setGrammarEnabled(false));
+afterEach(() => setGrammarEnabled(true));
 
 describe('grammar golden: official precons', () => {
   const entries = officialPreconCardEntries();
 
   it('lists every unique official precon card', () => {
     expect(entries.length).toBeGreaterThan(1000);
-    expect(isGrammarEnabled()).toBe(false);
+    expect(isGrammarEnabled()).toBe(true);
     // precons.json is official-only; sanity-check loadPrecons still reports 100/100
     for (const p of loadPrecons().filter(isOfficialPrecon)) {
       expect(p.supported, `${p.name}: ${p.unsupported.join(', ')}`).toBe(100);
@@ -36,11 +36,11 @@ describe('grammar golden: official precons', () => {
     expect(mismatches, `lossless failures (${mismatches.length})\n${mismatches.slice(0, 15).join('\n')}`).toEqual([]);
   });
 
-  it('grammar: true does not change classify() support or CardDef on official precon cards', () => {
+  it('default-on classify with fallback does not change official precon support or CardDef vs the old compiler', () => {
     const changed: string[] = [];
     for (const { name, card } of entries) {
-      const off = classify(card);
-      const on = classify(card, { grammar: true });
+      const off = classify(card, { grammar: false });
+      const on = classify(card);
       if (off.support !== on.support || !sameCardDef(off.def, on.def)) {
         const diff = diffCardDef(off.def, on.def);
         changed.push(`${name}: support ${off.support}→${on.support}${diff.length ? '; ' + diff.join(' | ') : ''}`);
@@ -53,7 +53,7 @@ describe('grammar golden: official precons', () => {
     const mismatches: string[] = [];
     const worse: string[] = [];
     for (const { name, card } of entries) {
-      const old = compileScry(card);
+      const old = compileScry(card, { grammar: false });
       const parsed = parseScry(card);
       if (old.support === 'auto' && parsed.support !== 'auto') {
         const fails = (parsed.failures ?? []).map(f => `${f.production ?? 'line'}@${f.line}: ${f.reason}`).join('; ')
@@ -72,7 +72,7 @@ describe('grammar golden: official precons', () => {
   it('flag on with fallback does not change compileScry on official precon cards', () => {
     const changed: string[] = [];
     for (const { name, card } of entries) {
-      const off = compileScry(card);
+      const off = compileScry(card, { grammar: false });
       const on = compileScry(card, { grammar: true, fallback: true });
       if (off.support !== on.support || !equivCardDef(off.def, on.def)) {
         changed.push(`${name}: ${off.support}→${on.support}`);

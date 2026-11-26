@@ -9,7 +9,7 @@ import { compileScry, classify } from '../src/import/classify';
 import type { CardDef } from '../src/engine/types';
 import schemaOnDisk from '../src/engine/grammar/schema.json';
 
-afterEach(() => setGrammarEnabled(false));
+afterEach(() => setGrammarEnabled(true));
 
 const shock: CardScript = {
   schema: CARD_SCRIPT_SCHEMA,
@@ -99,23 +99,21 @@ describe('lift / lower', () => {
 });
 
 describe('grammar feature flag', () => {
-  it('is off by default and does not change classify()', () => {
-    expect(isGrammarEnabled()).toBe(false);
+  it('is on by default and with fallback does not reduce support vs the old compiler', () => {
+    expect(isGrammarEnabled()).toBe(true);
     const scry = {
       object: 'card', name: 'Test Draw', lang: 'en', layout: 'normal',
       mana_cost: '{U}', cmc: 1, type_line: 'Instant', oracle_text: 'Draw a card.',
       colors: ['U'], color_identity: ['U'], keywords: [], legalities: { commander: 'legal' },
     } as never;
-    const off = classify(scry);
+    const old = classify(scry, { grammar: false });
     const on = classify(scry, { grammar: true });
-    expect(off.support).toBe(on.support);
-    expect(sameCardDef(off.def, on.def)).toBe(true);
-    setGrammarEnabled(true);
-    expect(isGrammarEnabled()).toBe(true);
+    expect(on.support).toBe(old.support);
+    expect(sameCardDef(old.def, on.def)).toBe(true);
     const flagged = classify(scry);
-    expect(sameCardDef(off.def, flagged.def)).toBe(true);
+    expect(sameCardDef(old.def, flagged.def)).toBe(true);
     setGrammarEnabled(false);
-    const passthrough = maybeApplyGrammar(off);
-    expect(passthrough).toBe(off);
+    const passthrough = maybeApplyGrammar(old);
+    expect(passthrough).toBe(old);
   });
 });

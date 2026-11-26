@@ -22,6 +22,7 @@ export interface Token {
 /** Multi-word tokens recognized after normalize() (lowercase). Longer phrases first. */
 const PHRASES: [string, TokKind][] = [
   ['until the beginning of your next turn', 'until'],
+  ['until the end of your next turn', 'until'],
   ['until your next turn', 'until'],
   ['until end of turn', 'until'],
   ['double strike', 'keyword'],
