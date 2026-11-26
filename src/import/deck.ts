@@ -20,7 +20,42 @@ export function resolve(parsed: Parsed, lk: Lookup): Resolved {
 
 const front = (c: ScryCard) => c.card_faces?.[0] ?? c;
 export const canBeCommander = (c: ScryCard) => (/\bLegendary\b/.test(front(c).type_line ?? c.type_line) && /\bCreature\b/.test(front(c).type_line ?? c.type_line)) || /can be your commander/i.test(c.oracle_text ?? front(c).oracle_text ?? '') || (/\bLegendary\b/.test(c.type_line) && /isn't on the battlefield, it's a [^.]*creature in addition to its other types/i.test(c.oracle_text ?? ''));
-const hasPartner = (c: ScryCard) => (c.keywords ?? []).some(k => /^(partner|friends forever|doctor's companion)$/i.test(k)) || /partner with|choose a background/i.test(c.oracle_text ?? '') || /\bBackground\b/.test(c.type_line);
+export const isBackground = (c: ScryCard) => /\bBackground\b/.test(c.type_line ?? '');
+const partnerWithName = (c: ScryCard) => {
+  const kw = (c.keywords ?? []).find(k => /^partner with /i.test(k));
+  if (kw) return kw.replace(/^partner with /i, '').trim();
+  const m = /partner with ([^\n(]+)/i.exec(c.oracle_text ?? '');
+  return m ? m[1].trim() : undefined;
+};
+export function pairingInfo(c: ScryCard) {
+  const kw = (c.keywords ?? []).map(k => k.toLowerCase());
+  const text = c.oracle_text ?? '';
+  const withName = partnerWithName(c);
+  return {
+    partner: !withName && (kw.includes('partner') || /(?:^|\n)partner(?:\s|\(|$)/im.test(text)),
+    partnerWith: withName,
+    friendsForever: kw.includes('friends forever') || /friends forever/i.test(text),
+    chooseBackground: kw.includes('choose a background') || /choose a background/i.test(text),
+    background: isBackground(c),
+    doctorsCompanion: kw.includes("doctor's companion") || /doctor's companion/i.test(text),
+    timeLordDoctor: /\bTime Lord\b/.test(c.type_line ?? '') && /\bDoctor\b/.test(c.type_line ?? ''),
+  };
+}
+/** Null if the two cards form a legal commander pair under the CR; otherwise an error. */
+export function pairError(a: ScryCard, b: ScryCard): string | null {
+  const A = pairingInfo(a), B = pairingInfo(b);
+  const named = (x?: string, y?: string) => !!x && !!y && x.toLowerCase() === y.toLowerCase();
+  if (A.partnerWith || B.partnerWith) {
+    if (named(A.partnerWith, b.name) || named(B.partnerWith, a.name)) return null;
+    return `${a.name} and ${b.name} aren't a Partner with pair.`;
+  }
+  if (A.friendsForever && B.friendsForever) return null;
+  if (A.partner && B.partner) return null;
+  if ((A.chooseBackground && B.background) || (B.chooseBackground && A.background)) return null;
+  if ((A.doctorsCompanion && B.timeLordDoctor) || (B.doctorsCompanion && A.timeLordDoctor)) return null;
+  return `${a.name} and ${b.name} can't both be commanders: they don't share a legal pairing (Partner, Partner with, Friends forever, Choose a Background, or Doctor's companion).`;
+}
+export const canBeSecondCommander = (first: ScryCard, second: ScryCard) => !pairError(first, second);
 const anyNumber = (c: ScryCard) => /a deck can have any number of cards named/i.test(c.oracle_text ?? '') || /\bBasic\b/.test(c.type_line);
 
 /** Commander candidates: marked ones first, otherwise every eligible card in the list. */
@@ -37,10 +72,18 @@ export function checkLegality(r: Resolved, commanders: string[]): Legality {
   const cmdRows = commanders.map(n => r.rows.find(x => x.name === n)).filter(Boolean) as Row[];
   const total = r.rows.reduce((s, x) => s + x.qty, 0);
   if (!cmdRows.length) errors.push('No commander chosen.');
-  for (const c of cmdRows) if (!canBeCommander(c.scry)) errors.push(`${c.name} can't be a commander (not a legendary creature).`);
+  if (cmdRows.length === 1) {
+    if (!canBeCommander(cmdRows[0].scry)) errors.push(`${cmdRows[0].name} can't be a commander (not a legendary creature).`);
+  }
   if (cmdRows.length === 2) {
-    if (!cmdRows.every(c => hasPartner(c.scry))) errors.push(`${cmdRows[0].name} and ${cmdRows[1].name} can't both be commanders: both need Partner (or Partner with, Friends forever, or Background).`);
-    warnings.push(`Partner pairs aren't fully supported: ${cmdRows[0].name} goes in the command zone, and ${cmdRows[1].name} is shuffled into your library.`);
+    const [a, b] = cmdRows;
+    const aOk = canBeCommander(a.scry) || isBackground(a.scry);
+    const bOk = canBeCommander(b.scry) || isBackground(b.scry);
+    if (!aOk) errors.push(`${a.name} can't be a commander (not a legendary creature).`);
+    if (!bOk) errors.push(`${b.name} can't be a commander (not a legendary creature or Background).`);
+    if (isBackground(a.scry) && isBackground(b.scry)) errors.push('A Background must be paired with a commander that has Choose a Background.');
+    const err = pairError(a.scry, b.scry);
+    if (err) errors.push(err);
   }
   if (cmdRows.length > 2) errors.push('At most two commanders.');
   if (total !== 100) errors.push(`Deck has ${total} cards including the commander. Commander decks need exactly 100.`);
@@ -55,7 +98,7 @@ export function checkLegality(r: Resolved, commanders: string[]): Legality {
   return { errors, warnings, total };
 }
 
-export interface SavedDeck { id: string; name: string; commander: string; cards: string[]; defs: CardDef[]; art?: string; colors: Color[]; stats: { builtin: number; auto: number; limited: number; swapped: number }; source: string; created: number; legal: boolean }
+export interface SavedDeck { id: string; name: string; commander: string; partner?: string; cards: string[]; defs: CardDef[]; art?: string; colors: Color[]; stats: { builtin: number; auto: number; limited: number; swapped: number }; source: string; created: number; legal: boolean }
 const BASIC: Record<Color, string> = { W: 'Plains', U: 'Island', B: 'Swamp', R: 'Mountain', G: 'Forest' };
 const basicId = (k: Color) => Object.values(CARDS).find(d => d.basic && d.name === BASIC[k])!.id;
 
@@ -66,7 +109,7 @@ export function buildDeck(r: Resolved, commanders: string[], o: { name: string; 
   const cards: string[] = []; const defs = new Map<string, CardDef>(); const stats = { builtin: 0, auto: 0, limited: 0, swapped: 0 };
   let bi = 0; const basics = ident.filter(k => COLORS.includes(k));
   for (const x of r.rows) {
-    let q = x.qty; if (x.name === commanders[0]) q -= 1; // the commander goes to the command zone
+    let q = x.qty; if (commanders.includes(x.name)) q -= 1; // commanders go to the command zone
     for (let i = 0; i < q; i++) {
       if (x.cls.support === 'limited' && o.swapLimited && basics.length && !x.cls.def.types.includes('Land')) { cards.push(basicId(basics[bi++ % basics.length])); stats.swapped++; continue; }
       cards.push(x.cls.def.id); stats[x.cls.support]++;
@@ -74,9 +117,10 @@ export function buildDeck(r: Resolved, commanders: string[], o: { name: string; 
     }
   }
   if (cmd.cls.support !== 'builtin') defs.set(cmd.cls.def.id, cmd.cls.def);
-  // the engine needs a legendary creature commander definition; keep its real identity
+  const partnerRow = commanders[1] ? r.rows.find(x => x.name === commanders[1]) : undefined;
+  if (partnerRow && partnerRow.cls.support !== 'builtin') defs.set(partnerRow.cls.def.id, partnerRow.cls.def);
   const id = 'imp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  return { id, name: o.name, commander: cmd.cls.def.id, cards, defs: [...defs.values()], art: images(cmd.scry).art ?? cmd.cls.def.art, colors: ident, stats, source: o.source, created: Date.now(), legal: o.legal };
+  return { id, name: o.name, commander: cmd.cls.def.id, partner: partnerRow?.cls.def.id, cards, defs: [...defs.values()], art: images(cmd.scry).art ?? cmd.cls.def.art, colors: ident, stats, source: o.source, created: Date.now(), legal: o.legal };
 }
 
 // ---------- persistence ----------
@@ -85,7 +129,7 @@ const store = () => (typeof localStorage !== 'undefined' ? localStorage : null);
 export function loadSaved(): SavedDeck[] { try { return JSON.parse(store()?.getItem(KEY) ?? '[]'); } catch { return []; } }
 function write(list: SavedDeck[]) { store()?.setItem(KEY, JSON.stringify(list)); }
 export function activate(d: SavedDeck) { registerCards(d.defs); registerDeck(toDeckDef(d)); }
-export const toDeckDef = (d: SavedDeck): DeckDef => ({ id: d.id, name: d.name, commander: d.commander, cards: d.cards });
+export const toDeckDef = (d: SavedDeck): DeckDef => ({ id: d.id, name: d.name, commander: d.commander, partner: d.partner, cards: d.cards });
 export function activateAll() { const l = loadSaved(); l.forEach(activate); return l; }
 export function saveDeck(d: SavedDeck) { const l = loadSaved().filter(x => x.id !== d.id); l.push(d); write(l); activate(d); return l; }
 export function deleteDeck(id: string) { const l = loadSaved().filter(x => x.id !== id); write(l); unregisterDeck(id); return l; }
@@ -94,7 +138,8 @@ export function renameDeck(id: string, name: string) { const l = loadSaved(); co
 export function exportText(d: SavedDeck): string {
   const counts = new Map<string, number>(); for (const id of d.cards) counts.set(id, (counts.get(id) ?? 0) + 1);
   const nm = (id: string) => (CARDS[id] ?? d.defs.find(x => x.id === id))?.name ?? id;
-  return [`1 ${nm(d.commander)} *CMDR*`, ...[...counts].map(([id, q]) => `${q} ${nm(id)}`)].join('\n') + '\n';
+  const cmdLines = [`1 ${nm(d.commander)} *CMDR*`]; if (d.partner && d.partner !== d.commander) cmdLines.push(`1 ${nm(d.partner)} *CMDR*`);
+  return [...cmdLines, ...[...counts].map(([id, q]) => `${q} ${nm(id)}`)].join('\n') + '\n';
 }
 
 /** Strict import is allowed only when every card is fully supported (auto or builtin). */

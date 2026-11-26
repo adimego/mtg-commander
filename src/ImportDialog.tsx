@@ -1,7 +1,7 @@
 import { ReactNode, useMemo, useRef, useState } from 'react';
 import { parseDecklist } from './import/parse';
 import { lookupCards } from './import/scryfall';
-import { resolve, Resolved, commanderOptions, defaultCommanders, checkLegality, buildDeck, SavedDeck, canBeCommander } from './import/deck';
+import { resolve, Resolved, commanderOptions, defaultCommanders, checkLegality, buildDeck, SavedDeck, canBeCommander, canBeSecondCommander } from './import/deck';
 
 const SAMPLE_HINT = `Paste a decklist. Any of these work:
 1 Sol Ring
@@ -67,8 +67,8 @@ export function ImportDialog({ close, saved, art }: { close: () => void; saved: 
             <label>Commander<select value={cmd[0] ?? ''} onChange={e => setCmd([e.target.value, ...(cmd[1] && cmd[1] !== e.target.value ? [cmd[1]] : [])])}>
               {!opts.length && <option value="">— no legendary creature found —</option>}
               {opts.map(o => <option key={o}>{o}</option>)}</select></label>
-            {opts.length > 1 && <label>Partner (optional)<select value={cmd[1] ?? ''} onChange={e => setCmd([cmd[0], ...(e.target.value ? [e.target.value] : [])])}>
-              <option value="">none</option>{opts.filter(o => o !== cmd[0] && res.rows.find(r => r.name === o && canBeCommander(r.scry))).map(o => <option key={o}>{o}</option>)}</select></label>}
+            {<label>Second commander (optional)<select value={cmd[1] ?? ''} onChange={e => setCmd([cmd[0], ...(e.target.value ? [e.target.value] : [])])}>
+              <option value="">none</option>{res.rows.filter(r => r.name !== cmd[0] && cmdRow && canBeSecondCommander(cmdRow.scry, r.scry)).map(r => <option key={r.name}>{r.name}</option>)}</select></label>}
             <label>Deck name<input value={name} onChange={e => setName(e.target.value)} /></label>
           </div>
           <div className="impsum">

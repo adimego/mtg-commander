@@ -1,6 +1,6 @@
 import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretell, canNinjutsu, ninjutsu, sneakRets, teamworkPick, modesMax, crewPick,
   Game, Card, Player, Target, TargetSpec, Effect, def, isType, hasKw, cmc, power, toughness, opponents, canCast, castSpell, playLand, canPlayLand,
-  declareAttackers, declareBlockers, canAttack, canBlock, attackers, isCommander, legalTargets, findCard, creatures, canActivate, activate, isMain,
+  declareAttackers, declareBlockers, canAttack, canBlock, attackers, isCommander, isTypeOrSub, legalTargets, findCard, creatures, canActivate, activate, isMain,
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
   maxX, locate, ctr, manaAvailable, castZone, costOf, planPayment,
   webRets, omniOn, abilitiesOf, canUnlockDoor, unlockDoor, spellReplicate,
@@ -175,6 +175,18 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   const miracle = !!d.miracle && canCast(g, pid, c, { miracle: true });
   const madness = !!d.madness && canCast(g, pid, c, { madness: true });
   const entwine = !!d.entwine && !!d.spell?.modes && canCast(g, pid, c, { entwine: true }) && !!planPayment(p, costOf(g, c, { entwine: true }));
+  const spectacle = !!d.spectacle && canCast(g, pid, c, { spectacle: true });
+  const blitz = !!d.blitz && canCast(g, pid, c, { blitz: true }) && (g.active === pid && (g.step === 'main1' || g.step === 'beginCombat' || g.step === 'attackers'));
+  const freerunning = !!d.freerunning && p.freerunT === g.turn && canCast(g, pid, c, { freerunning: true });
+  const emergeSac = d.emerge ? creatures(p).slice().sort((a, b) => cmc(def(b)) - cmc(def(a)))[0] : undefined;
+  const emerge = !!d.emerge && !!emergeSac && canCast(g, pid, c, { emerge: true, sacs: [emergeSac.uid] });
+  const bargain = !!d.bargain && p.battlefield.some(x => x.token || def(x).types.includes('Artifact') || def(x).types.includes('Enchantment')) && canCast(g, pid, c, { bargain: true });
+  const cas = d.casualty !== undefined ? creatures(p).filter(x => power(g, x) >= d.casualty! && !isCommander(g, x)).sort((a,b)=>power(g,a)-power(g,b))[0] : undefined;
+  const casualty = cas && canCast(g, pid, c, { casualty: d.casualty, sacs: [cas.uid] }) ? cas.uid : undefined;
+  const conC = d.conspire ? creatures(p).filter(x => !x.tapped && def(x).colors.some(k => d.colors.includes(k))) : [];
+  const conspire = d.conspire && conC.length >= 2 ? conC.slice(0, 2).map(x => x.uid) : undefined;
+  const splice = p.hand.filter(x => x !== c && def(x).splice && isTypeOrSub(d, def(x).splice!.onto) && canCast(g, pid, c)).slice(0, 1).map(x => x.uid);
+
   // warp: only when we can't cast it normally and it does something on entering (or can attack right away)
   const warp = !!d.warp && p.hand.includes(c) && !canCast(g, pid, c) && canCast(g, pid, c, { warp: true }) && (hasKw(c, 'haste') || (d.triggers ?? []).some(t => t.ev === 'etb'));
   if (d.warp && p.hand.includes(c) && !canCast(g, pid, c) && !warp) return false;
@@ -189,7 +201,7 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   const exileAlt = !normal && !omni && !free && !!d.exileAlt && canCast(g, pid, c, { exileAlt: true });
   let door: number | undefined;
   if (d.room) { door = d.room.doors.findIndex((_, i) => canCast(g, pid, c, { door: i })); if (door < 0) return false; }
-  if (!free && !normal && !evoke && !webRet && !omni && !surge && !exileAlt && !dash && !miracle && !madness && door === undefined) return false;
+  if (!free && !normal && !evoke && !webRet && !omni && !surge && !exileAlt && !dash && !miracle && !madness && !spectacle && !blitz && !freerunning && !emerge && door === undefined) return false;
   // teamwork: tap creatures that won't attack this turn anyway
   const tw = d.teamwork !== undefined ? teamworkPick(g, pid, c) : null;
   const teamwork = !!tw && (g.active !== pid || g.step === 'main2' || tw.every(x => !canAttack(g, x, true)));
@@ -213,7 +225,7 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   if (spellReplicate(g, pid, d) && door === undefined) { while (replicate < 8 && canCast(g, pid, c, { kicked, warp, x, evoke, webSling: !!webRet, omni, surge: surge && !omni && !normal, exileAlt, replicate: replicate + 1 })) replicate++; if (replicate > 2) replicate = 2; }
   let squad = 0;
   if (d.squad) { while (squad < 8 && canCast(g, pid, c, { kicked, warp, x, evoke, webSling: !!webRet, omni, surge: surge && !omni && !normal, exileAlt, door, replicate, squad: squad + 1 })) squad++; if (squad > 2) squad = 2; }
-  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, dash: dash && !normal, offspring, buyback, miracle, madness, entwine, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt, door, replicate: replicate || undefined, squad: squad || undefined, gift: def(c).gift ? (g.players.find(q => q.id !== pid && !q.lost)?.id ?? false) : undefined });
+  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, dash: dash && !normal, offspring, buyback, miracle, madness, entwine, spectacle, blitz: blitz && !normal, freerunning: freerunning && !normal, emerge: emerge && !normal, sacs: emerge && !normal && emergeSac ? [emergeSac.uid] : (casualty !== undefined ? [casualty] : undefined), bargain, casualty: casualty !== undefined ? d.casualty : undefined, conspire, splice: splice.length ? splice : undefined, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt, door, replicate: replicate || undefined, squad: squad || undefined, gift: def(c).gift ? (g.players.find(q => q.id !== pid && !q.lost)?.id ?? false) : undefined });
 }
 const isCounter = (d: CardDef) => !!(d.spell?.effects.some(e => e.op === 'counter' || (e.op === 'unless' && e.sub?.some(s => s.op === 'counter'))));
 const isPump = (d: CardDef) => !!d.spell?.effects.some(e => e.op === 'pump') && !d.spell.effects.some(e => HARMFUL.includes(e.op));

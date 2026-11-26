@@ -230,6 +230,8 @@ function cond(s: string, cx: Cx): Cond | null {
   if (/^there is no monarch$/.test(s)) return { k: 'noMonarch' };
   if ((m = /^you control (\w+) or fewer other lands$/.exec(s)) && typeof num(m[1]) === 'number') return { k: 'otherLandsLE', n: num(m[1]) as number };
   if (/^(this spell|~|it) was kicked$/.test(s)) return { k: 'kicked' };
+  if (/^(this spell was |you )?bargained$/.test(s) || /^you bargained$/.test(s)) return { k: 'bargained' };
+  if (/^tribute wasn'?t paid$/.test(s)) return { k: 'tributeUnpaid' };
   if ((m = /^you control (?:at least )?(a|an|another|one|two|three|four|five|six|seven|eight|nine|ten|\d+)(?: or more)? (.+)$/.exec(s))) { const fp = parseFilter(m[2].replace(/,? or (?:a|an) /g, ' or ')); if (!fp) return null; if (m[1] === 'another') fp.f.other = true; return { k: 'control', f: { ...fp.f, ctrl: undefined }, n: m[1] === 'another' ? 1 : num(m[1]) as number }; }
   if ((m = /^you control no (.+)$|^you don't control (?:a|an|any) (.+)$/.exec(s))) { const fp = parseFilter(m[1] ?? m[2]); return fp ? { k: 'controlNo', f: { ...fp.f, ctrl: undefined } } : null; }
   if ((m = /^you have (\d+) or more life$|^you have at least (\d+) life$/.exec(s))) return { k: 'lifeGE', n: +(m[1] ?? m[2]) };
@@ -883,6 +885,8 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if (/^you gain life$/.test(h)) return { defs: [{ ev: 'gainLife', pl: 'you' }], cx: { it: 'self' } };
   if (/^you lose life$/.test(h)) return { defs: [{ ev: 'loseLife', pl: 'you' }], cx: { it: 'self' } };
   if (/^you lose life for the first time each turn$/.test(h)) return { defs: [{ ev: 'loseLife', pl: 'you', ifc: { k: 'firstLoseLife' } }], cx: { it: 'self' } };
+  if (/^you exploit a creature$/.test(h)) return { defs: [{ ev: 'exploit', subj: 'self' }], cx: { it: 'self' } };
+  if (/^tribute is not paid$/.test(h) || /^~ enters(?: the battlefield)?, if tribute wasn'?t paid$/.test(h)) return { defs: [{ ev: 'etb', subj: 'self', ifc: { k: 'tributeUnpaid' } }], cx: { it: 'self' } };
   if (/^an opponent loses life$/.test(h)) return { defs: [{ ev: 'loseLife', pl: 'notyou' }], cx: { it: 'self', thatPl: 'evp' } };
   if (/^you draw a card$/.test(h)) return { defs: [{ ev: 'drawCard', pl: 'you' }], cx: { it: 'self' } };
   if (/^a player draws a card$/.test(h)) return { defs: [{ ev: 'drawCard', pl: 'any' }], cx: { it: 'self', thatPl: 'evp' } };
@@ -935,6 +939,13 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   const ROM: Record<string, number> = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7 };
   for (const raw of lines) {
     let l = cleanLine(raw).replace(/\.$/, '');
+    { const fm = /^(?:forecast[ \u2014\u2013-]+)?((?:\{[^}]+\})+), reveal (?:this card|~) from your hand: (.+)$/i.exec(l);
+      if (fm) {
+        const c = parseCost(fm[1].toUpperCase());
+        const fx = effects(fm[2], newCx({ it: 'self' }));
+        if (c && fx) { abilities.push({ label: `Forecast ${fm[1].toUpperCase()}`, mana: c, zone: 'hand', once: true, forecast: true, effects: fx }); continue; }
+      }
+    }
     { const ch = d.sub?.includes('Saga') ? /^((?:i|ii|iii|iv|v|vi|vii)(?:, (?:i|ii|iii|iv|v|vi|vii))*) — (.+)$/s.exec(raw.replace(/\.$/, '')) : null;
       if (ch) { const ns = ch[1].split(', ').map(x => ROM[x]); d.saga = Math.max(d.saga ?? 0, ...ns);
         let body = ch[2];
@@ -1117,6 +1128,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   if (kws.has('ingest')) triggers.push({ on: 'x', ev: 'combatDamagePlayer', subj: 'self', label: 'Ingest', effects: [{ op: 'script', kind: 'ingest' }] } as TriggerDef);
   if (d.forMirrodin) triggers.push({ on: 'x', ev: 'etb', subj: 'self', label: 'For Mirrodin!', effects: [{ op: 'script', kind: 'forMirrodin' }] } as TriggerDef);
   if (d.soulshift) triggers.push({ on: 'x', ev: 'dies', subj: 'self', label: `Soulshift ${d.soulshift}`, tslots: [{ who: 'card', f: { types: ['Creature', 'Spirit'], mvLE: d.soulshift }, zoneOwner: 'you', harm: false, opt: true }], effects: [{ op: 'ret', who: 't0', dest: 'hand', zone: 'graveyard' }] } as TriggerDef);
+  if (d.partnerWith) triggers.push({ on: 'x', ev: 'etb', subj: 'self', label: `Partner with ${d.partnerWith}`, tslots: [{ who: 'player', opt: true }], effects: [{ op: 'script', kind: 'partnerWith', text: d.partnerWith }] } as TriggerDef);
   if (d.exploit) triggers.push({ on: 'x', ev: 'etb', subj: 'self', label: 'Exploit', effects: [{ op: 'script', kind: 'exploit' }] } as TriggerDef);
   if (d.storm && !triggers.some(t => t.label === 'Storm')) triggers.push({ on: 'x', label: 'Storm', ev: 'castSelf', subj: 'self', effects: [{ op: 'script', kind: 'storm' }] } as TriggerDef);
   if (abilities.length) d.abilities = [...(d.abilities ?? []), ...abilities];
@@ -1195,7 +1207,15 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
   if (p === 'convoke') { d.convoke = true; return true; }
   if (p === 'rebound' && (d.types.includes('Instant') || d.types.includes('Sorcery'))) { d.rebound = true; return true; }
   if ((m = /^enchant (.+)$/.exec(p))) { const fp = parseFilter(m[1]); if (!fp) return false; d.aura = { who: 'perm', f: fp.f }; return true; }
-  if (/^(partner|partner with .+|friends forever|choose a background|doctor's companion)$/.test(p)) { d.partner = true; return true; }
+  if (p === 'partner' || p.startsWith('partner with ') || p === 'friends forever' || p === 'choose a background' || p === "doctor's companion") {
+    d.partner = true;
+    if ((m = /^partner with (.+)$/.exec(p))) { d.partnerWith = m[1].replace(/\s*\(.*$/, '').trim(); d.partnerKind = 'partnerWith'; }
+    else if (p === 'friends forever') d.partnerKind = 'friendsForever';
+    else if (p === 'choose a background') d.partnerKind = 'chooseBackground';
+    else if (p === "doctor's companion") d.partnerKind = 'doctorsCompanion';
+    else d.partnerKind = 'partner';
+    return true;
+  }
   if (p === '~ can be your commander') { d.canBeCommander = true; return true; }
   if ((m = /^morph (\{[^}]+\})+$/.exec(p))) { const c = parseCost(p.slice(6).toUpperCase()); if (!c) return false; d.morph = c; abilities.push({ label: `Turn face up for ${p.slice(6).toUpperCase()}`, mana: c, morphTurn: true, effects: [] }); return true; }
   if ((m = /^impending (\d+)[—-]((?:\{[^}]+\})+)$/.exec(p))) { const c = parseCost(m[2].toUpperCase()); if (!c) return false; d.impending = { n: +m[1], cost: c }; return true; }
@@ -1259,6 +1279,29 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
   if (p === 'exploit') { d.exploit = true; return true; }
   if (p === 'split second') { d.splitSecond = true; kws.add('split second'); return true; }
   if (p === 'storm') { d.storm = true; return true; }
+  if ((m = /^casualty (\d+)$/.exec(p))) { d.casualty = +m[1]; return true; }
+  if ((m = /^spectacle (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.spectacle = c; return true; }
+  if ((m = /^blitz (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.blitz = c; return true; }
+  if ((m = /^freerunning (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.freerunning = c; return true; }
+  if ((m = /^emerge (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.emerge = c; return true; }
+  if ((m = /^recover (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.recover = c; return true; }
+  if ((m = /^transmute (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) {
+    const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.transmute = c;
+    abilities.push({ label: `Transmute ${m[1].toUpperCase()}`, mana: c, zone: 'hand', sorcery: true, discard: 0, effects: [{ op: 'script', kind: 'transmute' }] });
+    return true;
+  }
+  if ((m = /^tribute (\d+)$/.exec(p))) { d.tribute = +m[1]; return true; }
+  if ((m = /^splice onto ([a-z][a-z ]*?) (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) {
+    const c = parseCost(m[2].toUpperCase()); if (!c) return false; d.splice = { onto: m[1].trim().replace(/\b\w/g, ch => ch.toUpperCase()), cost: c }; return true;
+  }
+  if ((m = /^ward[—\-]sacrifice (?:a |an )?(.+)$/.exec(p))) {
+    const fp = parseFilter(m[1]); d.wardSac = fp?.f ?? { types: [/creature/.test(m[1]) ? 'Creature' : /permanent/.test(m[1]) ? undefined : undefined].filter(Boolean) as string[] };
+    if (!d.wardSac.types?.length && /permanent/.test(m[1])) delete d.wardSac.types;
+    if (!d.wardSac.types?.length && !d.wardSac.anyType) d.wardSac = { types: ['Creature'] };
+    return true;
+  }
+  if ((m = /^ward[—\-]discard (?:a |an )?card$/.exec(p))) { d.wardDiscard = 1; return true; }
+  if ((m = /^ward[—\-]exile (\w+) cards? from your graveyard$/.exec(p))) { const n = num(m[1]); d.wardExileGy = typeof n === 'number' ? n : 1; return true; }
   if (p === 'imprint') { d.imprint = true; return true; }
   if (p === 'read ahead') { d.readAhead = true; return true; }
   { const em = /^escalate \{([wubrgc])\}$/.exec(p); if (em) { const k = em[1].toUpperCase() as 'W'|'U'|'B'|'R'|'G'|'C'; d.escalateCost = { generic: 0, [k]: 1 }; return true; } }
