@@ -161,8 +161,8 @@ describe('P2 batch 2 leftover trigger heads', () => {
     expect(trigger('a creature you control attacks alone')?.defs[0]).toMatchObject({ ev: 'attacks', subj: 'any' });
     expect(trigger("~ attacks and isn't blocked")?.defs[0]).toMatchObject({ ev: 'unblocked', subj: 'self' });
     expect(trigger('~ blocks a creature')?.defs[0]).toMatchObject({ ev: 'blocks', subj: 'self' });
-    expect(trigger('~ becomes blocked by a creature')?.defs[0]).toMatchObject({ ev: 'blocked', subj: 'self' });
-    expect(trigger('~ blocks or becomes blocked by a creature')?.defs.map(d => d.ev)).toEqual(['blocks', 'blocked']);
+    expect(trigger('~ becomes blocked by a creature')?.defs[0]).toMatchObject({ ev: 'blockedBy', subj: 'self' });
+    expect(trigger('~ blocks or becomes blocked by a creature')?.defs.map(d => d.ev)).toEqual(['blocks', 'blockedBy']);
     expect(trigger('a creature dealt damage by ~ this turn dies')?.defs[0])
       .toMatchObject({ ev: 'dies', ifc: { k: 'srcDamagedEv' } });
   });

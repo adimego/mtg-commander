@@ -7,7 +7,7 @@ import type { ActAbility, Amt, CardDef, CEFx, Color, Cond, Cost, Effect, Filter,
 export const SUB = new Map<string, string>((SUBTYPES as string[]).map(s => [s.toLowerCase(), s]));
 const TYPES: Record<string, string> = { creature: 'Creature', artifact: 'Artifact', enchantment: 'Enchantment', land: 'Land', planeswalker: 'Planeswalker', instant: 'Instant', sorcery: 'Sorcery', battle: 'Battle', permanent: 'Permanent', legendary: 'Legendary', historic: 'Historic', outlaw: 'Outlaw' };
 const COLOR_OF: Record<string, Color> = { white: 'W', blue: 'U', black: 'B', red: 'R', green: 'G' };
-export const KWS = ['compleated', 'wither', 'persist', 'myriad', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'melee', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted', 'riot', 'protection from creatures', 'protection from multicolored'];
+export const KWS = ['phasing', 'compleated', 'wither', 'persist', 'myriad', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'melee', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted', 'riot', 'protection from creatures', 'protection from multicolored'];
 const IRREG: Record<string, string> = { elves: 'elf', dwarves: 'dwarf', wolves: 'wolf', werewolves: 'werewolf', fungi: 'fungus', mice: 'mouse', sorceries: 'sorcery', allies: 'ally', faeries: 'faerie', zombies: 'zombie', zombie: 'zombie', thieves: 'thief', leeches: 'leech', octopi: 'octopus', 'cyclopes': 'cyclops', 'sphinxes': 'sphinx', 'foxes': 'fox', 'boars': 'boar', 'mercenaries': 'mercenary', 'slivers': 'sliver' };
 function typeWord(w: string | undefined): string | null {
   if (!w) return null;
@@ -55,6 +55,7 @@ export function parseFilter(s0: string): FP | null {
     [/ that's attacking $| that's attacking you $/, () => (f.attacking = true)],
     [/ that attacked this turn $/, () => (f.attackedT = true)], [/ that's blocking $/, () => (f.blocking = true)],
     [/ blocking (?:it|~) $/, () => (f.blockingSrc = true)],
+    [/ blocking or blocked by (?:it|~) $/, () => (f.blockRelSrc = true)],
     [/ of the chosen colou?r $/, () => (f.chosenColor = true)],
     [/ with (?:power )?(?:less than|lesser than) ~'s power $/, () => (f.powLTSrc = true)],
     [/ with lesser power $/, () => (f.powLTSrc = true)],
@@ -251,6 +252,7 @@ export function cond(s: string, cx: Cx): Cond | null {
   if ((m = /^a player has (\d+) or less life$/.exec(s))) return { k: 'anyLifeLE', n: +m[1] };
   if (/^(?:it|this spell|~) targets? a tapped creature$/.test(s)) return { k: 'tgtTappedCreature' };
   if (/^you have no cards in hand$/.test(s)) return { k: 'noCardsHand' };
+  if (/^~ attacked or blocked this combat$/.test(s)) return { k: 'atkOrBlkCombat' };
   if ((m = /^you have (\w+) or fewer cards in hand$/.exec(s))) return { k: 'handLE', n: num(m[1]) as number };
   if ((m = /^a player has (\w+) or fewer cards in hand$/.exec(s))) return { k: 'anyHandLE', n: num(m[1]) as number };
   if (/^a modified creature died under your control this turn$/.test(s)) return { k: 'modDiedYou' };
@@ -540,6 +542,33 @@ const PATS: Pat[] = [
   [/^untap (.+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o && !o.card ? [{ op: 'untap', who: o.ref }] : null; }],
   [/^tap (.+)$/, (m, cx) => { const o = obj(m[1], cx, true); return o && !o.card ? [{ op: 'tap', who: o.ref }] : null; }],
   [/^sacrifice (?:it|that creature|that permanent) at the beginning of the next end step$/, (m, cx) => [{ op: 'delaySac', who: cx.it ?? cx.that ?? 't0' }]],
+  [/^sacrifice (?:it|that creature|that permanent) at end of combat$/, (m, cx) => [{ op: 'delaySac', who: cx.it ?? cx.that ?? 't0', kind: 'combat' }]],
+  [/^~ becomes a copy of target (.+?) until end of turn(?:, except (.+))?$/, (m, cx) => {
+    const o = obj('target ' + m[1], cx, false); if (!o) return null;
+    const ex = parseCopyExcept(m[2] ? 'except ' + m[2] : undefined); if (ex === 'fail') return null;
+    return [{ op: 'becomesCopy', who: 'self', other: o.ref, eot: true, except: ex }];
+  }],
+  [/^~ becomes a copy of target (.+?)(?:, except (.+))?$/, (m, cx) => {
+    const o = obj('target ' + m[1], cx, false); if (!o) return null;
+    const ex = parseCopyExcept(m[2] ? 'except ' + m[2] : undefined); if (ex === 'fail') return null;
+    return [{ op: 'becomesCopy', who: 'self', other: o.ref, except: ex }];
+  }],
+  [/^target (.+?) becomes a copy of target (.+?) until end of turn(?:, except (.+))?$/, (m, cx) => {
+    const a = obj('target ' + m[1], cx, false); const b = obj('target ' + m[2], cx, false); if (!a || !b) return null;
+    const ex = parseCopyExcept(m[3] ? 'except ' + m[3] : undefined); if (ex === 'fail') return null;
+    return [{ op: 'becomesCopy', who: a.ref, other: b.ref, eot: true, except: ex }];
+  }],
+  [/^until end of turn, target (.+?) becomes a copy of target (.+?)(?:, except (.+))?$/, (m, cx) => {
+    const a = obj('target ' + m[1], cx, false); const b = obj('target ' + m[2], cx, false); if (!a || !b) return null;
+    const ex = parseCopyExcept(m[3] ? 'except ' + m[3] : undefined); if (ex === 'fail') return null;
+    return [{ op: 'becomesCopy', who: a.ref, other: b.ref, eot: true, except: ex }];
+  }],
+  [/^each other (.+?) becomes a copy of target (.+?) until end of turn(?:, except (.+))?$/, (m, cx) => {
+    const fp = parseFilter(m[1]); if (!fp) return null;
+    const o = obj('target ' + m[2], cx, false); if (!o) return null;
+    const ex = parseCopyExcept(m[3] ? 'except ' + m[3] : undefined); if (ex === 'fail') return null;
+    return [{ op: 'becomesCopy', who: { all: { ...fp.f, other: true } }, other: o.ref, eot: true, except: ex }];
+  }],
   [/^prevent all combat damage that would be dealt this turn$/, () => [{ op: 'prevent', kind: 'combat' }]],
   [/^prevent all damage that would be dealt this turn$/, () => [{ op: 'prevent', kind: 'all' }]],
   [/^prevent all damage that would be dealt by creatures this turn$/, () => [{ op: 'prevent', kind: 'fromCreatures' }]],
@@ -927,6 +956,7 @@ export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partia
   if (/^~ deals damage$/.test(h)) return { defs: [{ ev: 'dealtDmgBy', subj: 'self' }], cx: { it: 'self' } };
   if (/^~ deals combat damage to a player$/.test(h)) return { ...self('combatDamagePlayer'), cx: { it: 'self', thatPl: 'evp' } };
   if (/^~ deals combat damage to an opponent$/.test(h)) return { defs: [{ ev: 'combatDamagePlayer', subj: 'self', pl: 'notyou' }], cx: { it: 'self', thatPl: 'evp' } };
+  if (/^~ deals combat damage to a creature$/.test(h)) return { defs: [{ ev: 'combatDamageCreature', subj: 'self' }], cx: { it: 'self', that: 'ev' } };
   if (/^~ deals damage to (a player|an opponent)$/.test(h)) return { defs: [{ ev: 'damagePlayer', subj: 'self' }], cx: { it: 'self', thatPl: 'evp' } };
   if (/^~ is dealt damage$/.test(h)) return self('dealtDamage');
   if (/^~ becomes untapped$/.test(h)) return self('untaps');
@@ -965,6 +995,7 @@ export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partia
   if ((m = /^(you|an opponent) draws? (?:your|their) (first|second|third) card each turn$/.exec(h))) return { defs: [{ ev: 'drawCard', pl: m[1] === 'you' ? 'you' : 'notyou', nth: { k: 'draw', n: ORD[m[2]] } }], cx: { it: 'self', thatPl: 'evp' } } as never;
   if ((m = /^an? ([a-z ]+?) (?:is|are) put into your graveyard from the battlefield$/.exec(h))) { const fp = parseFilter(m[1]); return fp && !fp.card ? { defs: [{ ev: 'dies', subj: 'any', f: { ...fp.f, ctrl: 'you' } }], cx: { it: 'ev', that: 'ev' } } : null; }
   if (/^you cast your commander$/.test(h)) return { defs: [{ ev: 'cast', subj: 'any', pl: 'you', filter: 'commander' }], cx: { it: 'ev' } };
+  if (/^end of combat$/.test(h)) return { defs: [{ ev: 'endCombat' }], cx: { it: 'self' } };
   if (/^the beginning of combat on your turn$/.test(h)) return { defs: [{ ev: 'beginCombat', pl: 'you' }], cx: { it: 'self', thatPl: 'evp' } };
   if ((m = /^the beginning of (your|each|each opponent's|each player's|the) (upkeep|end step|draw step|combat on your turn|combat|first main phase)$/.exec(h))) {
     const ev = { upkeep: 'upkeep', 'end step': 'endStep', 'draw step': 'drawStep', 'combat on your turn': 'beginCombat', combat: 'beginCombat', 'first main phase': 'firstMain' }[m[2]]!;
@@ -1035,10 +1066,20 @@ export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partia
     return { defs: [{ ev: 'attacks', subj: m[1] === 'another' ? 'other' : 'any', f: fp.f, ifc: { k: 'attacksAlone' } }], cx: { it: 'ev', that: 'ev' } };
   }
   if (/^~ attacks and isn't blocked$/.test(h)) return { defs: [{ ev: 'unblocked', subj: 'self' }], cx: { it: 'self' } };
-  if (/^~ blocks a creature$/.test(h) || /^~ blocks$/.test(h)) return { defs: [{ ev: 'blocks', subj: 'self' }], cx: { it: 'self', that: 'ev' } };
-  if (/^~ becomes blocked by a creature$/.test(h) || /^~ becomes blocked$/.test(h)) return { defs: [{ ev: 'blocked', subj: 'self' }], cx: { it: 'self', that: 'ev' } };
-  if (/^~ blocks or becomes blocked by a creature$/.test(h))
-    return { defs: [{ ev: 'blocks', subj: 'self' }, { ev: 'blocked', subj: 'self' }], cx: { it: 'self', that: 'ev' } };
+  if ((m = /^~ blocks or becomes blocked by (?:an? )?(.+)$/.exec(h))) {
+    const fp = parseFilter(m[1]); if (!fp) return null;
+    return { defs: [{ ev: 'blocks', subj: 'self', evF: fp.f }, { ev: 'blockedBy', subj: 'self', evF: fp.f }], cx: { it: 'self', that: 'ev' } };
+  }
+  if ((m = /^~ becomes blocked by (?:an? )?(.+)$/.exec(h))) {
+    const fp = parseFilter(m[1]); if (!fp) return null;
+    return { defs: [{ ev: 'blockedBy', subj: 'self', evF: fp.f }], cx: { it: 'self', that: 'ev' } };
+  }
+  if (/^~ becomes blocked$/.test(h)) return { defs: [{ ev: 'blocked', subj: 'self' }], cx: { it: 'self', that: 'ev' } };
+  if (/^~ blocks$/.test(h)) return { defs: [{ ev: 'blocks', subj: 'self' }], cx: { it: 'self', that: 'ev' } };
+  if ((m = /^~ blocks (?:an? )?(.+)$/.exec(h))) {
+    const fp = parseFilter(m[1]); if (!fp) return null;
+    return { defs: [{ ev: 'blocks', subj: 'self', evF: fp.f }], cx: { it: 'self', that: 'ev' } };
+  }
   return null;
 }
 export const pl2: Record<string, TriggerDef['pl']> = { you: 'you', any: 'any', notyou: 'opp' };
@@ -1178,6 +1219,10 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       let fx: Effect[] | null = null; let modes: Modes | undefined;
       if (md) { modes = parseModes(md[1], md[2], cx) ?? undefined; if (!modes) { fail(raw); continue; } fx = []; }
       else fx = effects(body, cx);
+      if (!fx) {
+        const eoc = /^(.*) at end of combat$/.exec(body);
+        if (eoc) { fx = effects(eoc[1], cx); if (fx) fx = [{ op: 'delayEoc', sub: fx }]; }
+      }
       if (!fx) { fail(raw); continue; }
       for (const t of tr.defs) triggers.push({ on: 'x', label: shortLabel(raw), effects: fx, tslots: cx.slots.length && !modes ? cx.slots : undefined, modes, ifc, once: once || undefined, ...t, pl: t.pl ? pl2[t.pl] ?? t.pl : undefined } as TriggerDef);
       continue;
@@ -1643,6 +1688,11 @@ function parseReplacement(s: string, cond?: Cond): Replacement | null {
   if (/^if an opponent would begin an extra turn, that player skips that turn instead$/.test(s))
     return withCond({ ev: 'extraTurn', pl: 'opp', instead: { k: 'skip' }, text: s });
 
+  if (/^if you would draw a card while you have no cards in hand, draw two cards instead$/.test(s))
+    return withCond({ ev: 'draw', pl: 'you', cond: { k: 'noCardsHand' }, instead: { k: 'mul', n: 2 }, text: s });
+  if (/^if you would gain life while you have 5 or less life, you gain twice that much life instead$/.test(s))
+    return withCond({ ev: 'gainLife', pl: 'you', cond: { k: 'lifeLE', n: 5 }, instead: { k: 'mul', n: 2 }, text: s });
+
   return null;
 }
 
@@ -1660,8 +1710,72 @@ function parseReplacementLine(s: string, d: CardDef, cond?: Cond): boolean {
   return true;
 }
 
+
+function parseTypeWords(s: string): { addTypes?: string[]; addSub?: string[] } | null {
+  const addTypes: string[] = []; const addSub: string[] = [];
+  for (const w of s.split(/\s+/).filter(Boolean)) {
+    const lower = w.toLowerCase();
+    if (lower === 'legendary') continue;
+    if (TYPES[lower] && !['Permanent', 'Legendary', 'Historic', 'Outlaw'].includes(TYPES[lower])) addTypes.push(TYPES[lower]);
+    else if (SUB.has(lower)) addSub.push(SUB.get(lower)!);
+    else return null;
+  }
+  if (!addTypes.length && !addSub.length) return null;
+  return { addTypes: addTypes.length ? addTypes : undefined, addSub: addSub.length ? addSub : undefined };
+}
+/** Modelable CR 707 except-clauses only; anything else is fail-closed. */
+function parseCopyExcept(s: string | undefined): { addTypes?: string[]; addSub?: string[]; nonlegendary?: boolean; name?: string } | 'fail' | undefined {
+  if (!s) return undefined;
+  const t0 = s.trim().replace(/\.$/, '').replace(/^except (?:it's |it )?/i, '');
+  const parts = t0.split(/, and | and /).map(x => x.trim()).filter(Boolean);
+  const out: { addTypes?: string[]; addSub?: string[]; nonlegendary?: boolean; name?: string } = {};
+  for (const part of parts) {
+    const add = /^(?:an? )?(.+?) in addition to its other types$/.exec(part);
+    if (add) {
+      const tw = parseTypeWords(add[1]); if (!tw) return 'fail';
+      if (tw.addTypes) out.addTypes = [...(out.addTypes ?? []), ...tw.addTypes];
+      if (tw.addSub) out.addSub = [...(out.addSub ?? []), ...tw.addSub];
+      continue;
+    }
+    if (/^(?:it )?(?:not legendary|isn't legendary)$/.test(part)) { out.nonlegendary = true; continue; }
+    if (/^(?:his|her|its) name is ~$/.test(part) || (CUR_NAME && part === `its name is ${CUR_NAME.toLowerCase()}`)) { out.name = CUR_NAME; continue; }
+    return 'fail';
+  }
+  return out;
+}
+function copyOfFilter(s: string): { f: import('./types').Filter; zone?: 'graveyard' | 'battlefield' } | null {
+  let t1 = s.trim().replace(/^any /, '').replace(/^(?:an?|one) /, '');
+  let zone: 'graveyard' | 'battlefield' | undefined;
+  if (/\s+in (?:a|your) graveyard$/.test(t1)) { t1 = t1.replace(/\s+in (?:a|your) graveyard$/, ''); zone = 'graveyard'; }
+  else if (/\s+on the battlefield$/.test(t1)) { t1 = t1.replace(/\s+on the battlefield$/, ''); zone = 'battlefield'; }
+  const fp = parseFilter(t1);
+  if (!fp) return null;
+  return { f: fp.f, zone };
+}
+function parseEnterAsCopy(l: string, d: CardDef): boolean {
+  let may = false; let tapped = false; let rest = '';
+  let m: RegExpExecArray | null;
+  if ((m = /^(?:you may have )?~ enter(?:s)?(?: the battlefield)?( tapped)? as a copy of (.+)$/.exec(l))) {
+    may = /^you may have /.test(l);
+    tapped = !!m[1];
+    rest = m[2];
+  } else if ((m = /^as ~ enters(?: the battlefield)?, you may have it (?:enter as|be) a copy of (.+)$/.exec(l))) {
+    may = true; rest = m[1];
+  } else return false;
+  let exceptRaw: string | undefined;
+  const exm = /^(.*?), except (.+)$/.exec(rest);
+  if (exm) { rest = exm[1]; exceptRaw = 'except ' + exm[2]; }
+  const of = copyOfFilter(rest);
+  if (!of) return false;
+  const ex = parseCopyExcept(exceptRaw);
+  if (ex === 'fail') return false;
+  (d.asEnters ??= []).push({ op: 'enterCopy', f: of.f, zone: of.zone ?? 'battlefield', may, tapped: tapped || undefined, except: ex });
+  return true;
+}
+
 export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>): boolean {
   let m: RegExpExecArray | null; let c: Cond | undefined; let s = l;
+  if (parseEnterAsCopy(s, d)) return true;
   if (parseAltCost(s, d)) return true;
   if (/^gift a card$/.test(s)) { d.gift = 'card'; return true; }
   { const em = /^escalate \{([wubrgc])\}$/.exec(s); if (em) { const k = em[1].toUpperCase() as 'W'|'U'|'B'|'R'|'G'|'C'; d.escalateCost = { generic: 0, [k]: 1 }; return true; } }

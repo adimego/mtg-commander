@@ -2,11 +2,11 @@
 
 Living list of Oracle wording and mechanics that are **not** modelled yet, or were only modelled in a simple form and still leave cards Limited. Counts are from the same Scryfall Oracle Cards bulk and `classify()` method used for support reports (unique `oracle_id`, commander-legal, excluding tokens, emblems, dungeons, planes, phenomena, schemes, vanguards, conspiracies, and commander-banned cards). Corpus size: **32,643**.
 
-**Last updated:** 2026-11-26, after the first P4 replacements PR. Support is **17,566 / 32,643 (53.8%)** — auto 17,405, builtin 161, Limited 15,077. After the second P3 PR [#36](https://github.com/adimego/mtg-commander/pull/36) it was 17,516 / 32,643 (53.7%); after the first P3 PR [#35](https://github.com/adimego/mtg-commander/pull/35) it was 17,389 / 32,643 (53.3%); after P2 [#34](https://github.com/adimego/mtg-commander/pull/34) it was 17,260 / 32,643 (52.9%).
+**Last updated:** 2026-11-26, after the second P4 PR [#38](https://github.com/adimego/mtg-commander/pull/38) (clones, end-of-combat, phasing keyword). Support is **17,665 / 32,643 (54.1%)** — auto 17,504, builtin 161, Limited 14,978. After the first P4 replacements PR [#37](https://github.com/adimego/mtg-commander/pull/37) it was 17,566 / 32,643 (53.8%); after the second P3 PR [#36](https://github.com/adimego/mtg-commander/pull/36) it was 17,516 / 32,643 (53.7%); after the first P3 PR [#35](https://github.com/adimego/mtg-commander/pull/35) it was 17,389 / 32,643 (53.3%); after P2 [#34](https://github.com/adimego/mtg-commander/pull/34) it was 17,260 / 32,643 (52.9%).
 
 **How to read a row.** *Involved* is how many current Limited cards have at least one leftover line in the family. *Exclusive* is how many of those cards have every leftover line in that family, so modelling the family *could* flip the card if the inner effect is also exact. Families overlap; do not add rows. Plan-era figures are labelled when a current recount was not the source.
 
-This file is the copy in the work notes. The in-repo copy is `docs/deferred.md` and should stay in sync when a PR lands.
+This is the in-repo copy. Keep `/workspace/mtg-commander-plan-notes/deferred.md` in sync when a PR lands.
 
 ---
 
@@ -17,7 +17,7 @@ Phases A–K shipped a large set of ability-word conditions, combat keywords, al
 | Wording / mechanic | Approx. cards (current unless noted) | Why it was deferred | Waits on |
 |---|---:|---|---|
 | Ability-word *riders* still unparsed (Landfall “if that land is a Mountain”, unique Delirium/Domain/Threshold tails, Channel variants, etc.) | Plan A estimated a few dozen unique tails after the core conds shipped; leftovers now sit inside P3 `if` / grant / for-each frames rather than as missing words | The prefix already strips; the leftover is a condition or effect the compiler still rejects | P3 compose frames (conditions, grants, amounts); unique tails may stay Limited |
-| Enter as a copy / become a copy | 118 exclusive / 137 involved | Copiable values, “except” clauses, and layer interactions are their own system | P4 replacements / copy |
+| Enter as a copy / become a copy — leftovers | 98 exclusive / 116 involved (down from 118 / 137) | The CR 707 hook shipped (see Done in P4). Leftovers are quoted-ability or mixed excepts, shield/vanishing riders, odd filters, and mid-turn “become a copy of that creature” | Further except wording, or stay Limited |
 | Copy a spell or ability (unusual stack-copy leftovers) | Plan J: 75 exclusive / 117 involved at the time; many simple copies later shipped | Remaining lines are except-clauses, modal copies, or replacements | P4 copy / stack-copy |
 | Extra turns | Plan J: 18 exclusive / 32 involved | Turn-cycle hook, extra-turn triggers, “you lose if you would take an extra turn” | P4 |
 | Votes / Will of the council / Council’s dilemma / Tempting offer | Plan K: ~24+ exclusive | Multi-player vote UI and AI | A later vote system (not P3) |
@@ -27,8 +27,8 @@ Phases A–K shipped a large set of ability-word conditions, combat keywords, al
 | Collect evidence / suspected / case “solved” leftovers | Small; cases are partly flagged | Evidence counts and suspected status aren’t general | A later set-mechanic pass |
 | Amass / Investigate / Proliferate / Explore / Connive / Discover *riders* | Keyword actions often parse; leftover is a following sentence | Fail-closed on the rider, not the keyword | P3 multi-sentence chaining when the rider is a known verb |
 | Haunt, Forecast, Escalate leftovers, Max-speed leftovers, Gift leftovers, and similar half-done keywords | Typically ≤11 exclusive each in the original catalog | Unusual activation windows or leftover templates after the simple form shipped | Opportunistic keyword cleanup, not a P3 frame |
-| Daybound / nightbound / “it becomes day/night” | 36 exclusive / 47 involved | Shared day/night state, transform-if-no-spells-last-turn | Batch 3 / P4 day-night |
-| Phasing / phases in / phases out | 48 exclusive / 63 involved | Zone-like special status and phasing timing | Batch 3 / P4 phasing |
+| Daybound / nightbound / “it becomes day/night” | 36 exclusive / 79 involved | Shared day/night state, transform-if-no-spells-last-turn. Not started in P4 | Batch 3 / later P4 day-night |
+| Phasing / phases in / phases out — leftovers | 42 exclusive / 55 involved (down from 48–49 / 63) | The *phasing* keyword now phases out at the controller’s untap before last turn’s permanents phase in (CR 502.1). Leftovers are “phases in / phases out” abilities, not the keyword itself | Remaining phase-out/in effects, or stay Limited |
 
 ---
 
@@ -55,8 +55,8 @@ P2 only wires a trigger head when the engine already emits that event (or a new 
 |---|---:|---|---|
 | Venture into the dungeon / complete a dungeon | 28 exclusive / 40 involved (20 leftover lines are exactly “venture into the dungeon”) | No dungeon state machine. A simplified venture counter was allowed only if it matched existing dungeon support; there is none | A dungeon / venture system (Batch 3 / P4-adjacent) |
 | Take the initiative / the initiative | 15 exclusive / 26 involved (20 leftover lines are “you take the initiative”) | Same underworld-dungeon complex; parked with venture | Initiative + dungeon system |
-| End-of-combat triggers (“at end of combat”, “destroy that creature at end of combat”) | 89 exclusive / 107 involved (14 leftover heads are exactly “end of combat”; 16 lines are “destroy that creature at end of combat”) | `clearCombat` currently runs in the same `enterStep('main2')` as delayed end-of-combat, which would wipe `blockedBy` before Greater Werewolf–style effects resolve. Shipping a wrong hook was rejected | Combat-step cleanup: emit/queue end-of-combat before combat data is cleared, and only then clear |
-| “~ deals combat damage to a creature” | 29 exclusive / 39 involved (27 leftover heads) | The `combatDamage` emit has no recipient, so the head cannot be exact | Extend the combat-damage event with a recipient (creature vs player/planeswalker) |
+| End-of-combat triggers — leftovers | 47 exclusive / 59 involved (down from 89 / 107) | The `endCombat` step shipped (see Done in P4). `blockedBy` / attacking / blocking stay set until the step is left. Leftovers are unusual bodies or “activate only during the end of combat step” | Unique EOC bodies, or stay Limited |
+| “~ deals combat damage to a creature” — leftovers | 14 exclusive / 18 involved (down from 29 / 39) | A per-recipient `combatDamageCreature` event now carries the damaged creature as `evCard`. Leftovers are unusual tails, not the missing emit | Unique tails, or stay Limited |
 | Remaining unblocked / blocks variants that are not the shipped heads | “~ attacks and isn’t blocked” still 21 leftover heads — usually because the *body* (often “destroy that creature at end of combat”) failed, not the head itself | Fail-closed on the body or on a compound head | End-of-combat hook, or a remaining exact body |
 | “~ is turned face up” still appearing as a leftover head (~28) | The head and `morphTurn` emit shipped in #34; leftover cards have an unmodelled body (or disguise/megamorph rider) | Fail-closed on the body | P3 if the body is a known verb; unique effects stay Limited |
 | “~ mutates” (31 leftover heads) | See parked Mutate | Mutate | Mutate system (parked) |
@@ -89,7 +89,7 @@ These are listed so they are not mistaken for P3 work. P3 will not ship a wrong,
 
 | Wording / mechanic | Approx. cards | Why it waits | Waits on |
 |---|---:|---|---|
-| Replacement effects (“would … instead”) — leftovers | ~301 exclusive / ~394 involved (down from 351 / 490 among Limited just before this PR) | The replacement engine shipped (see Done in P4). Leftovers are unusual events or riders: next-N-damage redirect (en-Kor), “would enter, sacrifice lands”, dice rolls, “would be destroyed, instead…”, “when you do, create a token”, empty-library / no-hand draw conds, explore-twice, and similar unique tails | Further P4 replacement wording, or stay Limited |
+| Replacement effects (“would … instead”) — leftovers | 300 exclusive / 393 involved (down from 351 / 490 among Limited just before the first P4 PR) | The replacement engine shipped (see Done in P4). This PR also parsed “draw a card while you have no cards in hand, draw two instead” and “gain life while you have 5 or less life, you gain twice that much”. Leftovers: next-N-damage redirect (en-Kor), “would enter, sacrifice lands”, dice rolls, “would be destroyed, instead…”, “when you do, create a token”, empty-library draw (Ormos), explore-twice, and similar unique tails | Further replacement wording, or stay Limited |
 | “As though” | Present in the hard bucket of the grammar plan | Permission / timing fiction | P4 |
 | Day/night and phasing | See §1 | Shared turn-level systems | Batch 3 / P4 |
 | Enter-as-copy / become-a-copy | See §1 | Copiable values | P4 copy |
@@ -149,6 +149,15 @@ First P4 PR (replacement effects), 2026-11-26. Support +50 to **17,566 / 32,643 
 - Wording variant: “if an effect would create one or more tokens under your control, it creates twice that many…” now hits the existing `tokenDouble` static (Doubling Season, Anointed Procession, Parallel Lives). `doubleLife` / `plusCharge` actually apply at the event (they previously compiled but had no engine hook).
 - Spell tails: “deals N to any target / target creature or planeswalker. If [that / a creature dealt damage this way] would die this turn, exile it instead”; “if a creature would die this turn, exile it instead” as a this-turn `tempRepl`.
 
-Not in this PR (still in the P4 order): enter-as-a-copy / clones (118 exclusive), end-of-combat triggers and keeping `blockedBy` until they resolve (89 exclusive), combat damage to a creature with a recipient in the emit (29 exclusive), day/night and phasing.
+Second P4 PR [#38](https://github.com/adimego/mtg-commander/pull/38) (clones, end-of-combat, phasing keyword, cheap would/instead leftovers), 2026-11-26. Support +99 to **17,665 / 32,643 (54.1%)**. Official precons stayed 100/100. 759 tests.
+
+- Enters-as-a-copy / become-a-copy (CR 707): `enterCopy` as an `asEnters` replacement and `becomesCopy` for eot / activated copies. Copiable values still come from `CARDS[t.id]` (the current object, including prior copy effects, not layer pumps). Modelable excepts: typal “in addition to its other types”, “isn’t legendary”, “its name is ~”. Anything else (quoted abilities, shield/vanishing riders, mixed Spark Double excepts) is fail-closed and left to scripts where they already exist. The AI picks the highest-`value` copy target, including “you may”.
+- End-of-combat step inserted after damage and before main 2. Delayed “at end of combat” effects keep `evCard`. `blockedBy` / `attacking` / `blocking` are cleared only when leaving `endCombat` (or on an extra combat after that step). True “at end of combat” triggers, “BODY at end of combat” delayed tails, “if ~ attacked or blocked this combat”, and “each creature blocking or blocked by ~” all compile. Extra combats and “end the combat phase” go through `endCombat` first. Firebending mana still expires as the step begins.
+- Combat damage to a creature: per-recipient `combatDamageCreature` emit with the damaged creature as `evCard`. Existing `combatDamage` / `combatDamagePlayer` are unchanged. “Becomes blocked by a [filter]” uses a per-blocker `blockedBy` event so “destroy that creature” has a recipient.
+- Phasing keyword: at the start of the controller’s turn, permanents with phasing phase out *before* last turn’s phased-out permanents phase in (CR 502.1). “Phases in / phases out” abilities are still leftover.
+- Cheap would/instead: “if you would draw a card while you have no cards in hand, draw two cards instead”; “if you would gain life while you have 5 or less life, you gain twice that much life instead”.
+- P/T counters other than +1/+1 and −1/−1 (e.g. −0/−2, +1/+0) now apply to power and toughness.
+
+Not in this PR: day/night and daybound/nightbound (36 exclusive); remaining copy excepts (98 exclusive); remaining EOC unique bodies (47 exclusive); “phases in / phases out” abilities (42 exclusive).
 
 

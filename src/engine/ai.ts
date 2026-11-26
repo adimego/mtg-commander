@@ -86,6 +86,11 @@ export function decide(g: Game, d: Decision): unknown {
       return !/sacrifice|discard|lose \d+ life/.test(d.text) || p.life > 10;
     }
     case 'pick': {
+      if (/copy of/.test(d.text)) {
+        const sorted = [...d.cards].sort((a, b) => value(g, b) - value(g, a));
+        if (!sorted.length || d.max < 1) return [];
+        return sorted.slice(0, Math.max(d.min, 1)).map(c => c.uid);
+      }
       if (/choose a card/.test(d.text) && d.min === 1 && d.max === 1) {
         const ranked = [...d.cards].sort((a, b) => {
           const cm = (isCommander(g, b) ? 100 : 0) - (isCommander(g, a) ? 100 : 0);
@@ -159,7 +164,7 @@ function scoreFx(g: Game, pid: number, fx: Effect[], x = 0): number {
       case 'prevent': {
         const inc = incomingCombat(g, pid);
         if (e.kind === 'combat' || e.kind === 'all' || e.kind === 'fromCreatures' || e.kind === 'combatYou' || e.kind === 'toYou') {
-          const combat = ['attackers', 'blockers', 'firstStrike', 'damage'].includes(g.step);
+          const combat = ['attackers', 'blockers', 'firstStrike', 'damage', 'endCombat'].includes(g.step);
           if (combat && (inc >= 6 || inc >= g.players[pid].life)) s += 8;
           else if (combat && inc > 0) s += 2;
           else s -= 4;
@@ -428,7 +433,7 @@ export function aiPriority(g: Game, pid: number) {
   if (g.active === pid && isMain(g) && mainPhase(g, pid)) return;
   if (g.step === 'blockers' && g.active === pid && sneak(g, pid)) return;
   if (g.step === 'blockers' && g.active === pid && ninjutsuAI(g, pid)) return;
-  if ((g.step === 'attackers' || g.step === 'blockers' || g.step === 'damage' || g.step === 'firstStrike') && tryFog(g, pid)) return;
+  if ((g.step === 'attackers' || g.step === 'blockers' || g.step === 'damage' || g.step === 'firstStrike' || g.step === 'endCombat') && tryFog(g, pid)) return;
   if (g.step === 'blockers' && (combatTrick(g, pid) || (p.battlefield.some(c => c.attacking !== undefined || c.blocking !== undefined) && useAbilities(g, pid, 'combat')))) return;
   // End of an opponent's turn (right before ours): use instants and abilities.
   if (g.step === 'end' && g.active !== pid && nextAlive(g, g.active) === pid) {
