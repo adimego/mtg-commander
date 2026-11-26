@@ -143,8 +143,8 @@ function scoreFx(g: Game, pid: number, fx: Effect[], x = 0): number {
     const n = Math.max(1, num(e.n, x));
     switch (e.op) {
       case 'draw': s += (e.pl === 'opps' || e.pl === 'all' ? (e.pl === 'all' ? 1 : -1) : 3) * n; break;
-      case 'token': case 'copyTok': s += 3 * n; break;
-      case 'addC': s += e.who === 'self' || e.who === 'chosen' ? 2 * n : 2; break;
+      case 'token': case 'copyTok': case 'incubate': case 'manifestDread': s += 3 * n; break;
+      case 'addC': case 'bolster': s += e.who === 'self' || e.who === 'chosen' ? 2 * n : 2; break;
       case 'gain': s += g.players[pid].life < 20 ? 1 : 0.3; break;
       case 'damage': case 'destroy': case 'exile': case 'bounce': case 'counter': case 'fight': case 'bite': case 'tuck': s += 4; break;
       case 'lose': s += e.pl === 'you' ? -n * (g.players[pid].life < 10 ? 2 : 0.5) : n; break;
