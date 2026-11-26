@@ -83,7 +83,7 @@ export interface Player {
   /** creatures that died under this player's control this turn */ diedN?: number; diedT?: number; /** turn a modified creature died under this player's control */ modDied?: number; /** Channel: may pay 1 life to add {C} this turn */ channel?: number; /** city's blessing (ascend) */ blessing?: boolean; isMaxMv?: number; leftGyT?: number; flashAll?: number; inkPrev?: number; inkN?: number; /** you put a counter on a permanent this turn */ ctrPutT?: number;
   /** poison counters */ poison?: number; /** turn a permanent you controlled last left the battlefield */ leftTurn?: number; /** Storied: enduring story */ enduring?: boolean; /** Start your engines! speed (1-4) */ speed?: number; speedTurn?: number; /** firebending {R} that lasts until end of combat */ fireMana?: number; /** floating mana; each unit is a symbol like 'G', 'C', 'W|U' or 'ANY' */ pool: string[]; gained: number; lostLife: number; emblems?: Card[]; extraTurns?: number; extraLands?: number; landsPlayed?: number; /** Muldrotha types already used this turn */ muldrothaTypes?: { turn: number; types: string[] }; /** Exploration Broodship uses this turn */ broodUsed?: { turn: number; uids: number[] }; /** Solar Array: next artifact spell this turn gains sunburst */ solarGrantT?: number; /** a nontoken permanent was sacrificed this turn */ sacNontokenT?: number;
   /** cards drawn this turn ({turn, n}) */ drawn?: { turn: number; n: number }; /** may cast sorceries at instant speed until their next turn */ flashSorc?: boolean; /** turn on which their creature spells can't be countered */ uncCreatures?: number; /** token creation doubled until end of this turn */ tokDouble?: number;
-  /** last "can't lose" reason already announced (Platinum Angel / Darksteel Angel) */ angelWhy?: string; /** Teferi's Protection: life total can't change and protection from everything, until this player's next turn */ teferi?: boolean; /** prevent all damage that would be dealt to this player, until their next turn */ dmgShield?: boolean; /** creatures that entered under this player's control this turn */ etbN?: number; etbT?: number; /** nonland permanents that entered under this player this turn (celebration) */ nlEtbN?: number; nlEtbT?: number; /** first life-gain turn for Vanguard Seraph */ vanguardGainT?: number; /** combat+noncombat damage received this turn */ dmgThisTurn?: number;  /** creatures that attacked this turn */ atkN?: number; /** opponent ids you attacked this turn */ atkOpps?: number[]; /** tokens you created this turn */ tokN?: number; tokT?: number; /** All-Out Assault: untap everything the next time you attack */ untapAtk?: number;
+  /** last "can't lose" reason already announced (Platinum Angel / Darksteel Angel) */ angelWhy?: string; /** Teferi's Protection: life total can't change and protection from everything, until this player's next turn */ teferi?: boolean; /** prevent all damage that would be dealt to this player, until their next turn */ dmgShield?: boolean; /** creatures that entered under this player's control this turn */ etbN?: number; etbT?: number; /** nonland permanents that entered under this player this turn (celebration) */ nlEtbN?: number; nlEtbT?: number; /** first life-gain turn for Vanguard Seraph */ vanguardGainT?: number; /** combat+noncombat damage received this turn */ dmgThisTurn?: number;  /** creatures that attacked this turn */ atkN?: number; /** total power of creatures that attacked this turn */ atkPow?: number; atkPowT?: number; /** opponent ids you attacked this turn */ atkOpps?: number[]; /** tokens you created this turn */ tokN?: number; tokT?: number; /** All-Out Assault: untap everything the next time you attack */ untapAtk?: number;
   /** Võx: this turn, next artifact creature and next spacecraft have undaunted */ voxUndaunted?: number; voxArt?: boolean; voxShip?: boolean;
 }
 export interface Target { player?: number; card?: number; stack?: number }
@@ -1608,6 +1608,13 @@ export function condOk(g: Game, pid: number, c: Cond, src?: Card, ev?: GameEvent
     case 'toughSumGE': return p.battlefield.filter(x => matches(g, x, c.f ?? { types: ['Creature'] }, pid)).reduce((s, x) => s + toughness(g, x), 0) >= (c.n ?? 0);
     case 'otherLandsLE': return p.battlefield.filter(x => x !== src && isType(x, 'Land')).length <= (c.n ?? 0);
     case 'descended': return p.graveyard.some(x => isPermanentCard(def(x)));
+    case 'delirium': return gyCardTypes(g, pid) >= (c.n ?? 4);
+    case 'formidable': return creatures(p).reduce((s, x) => s + power(g, x), 0) >= 8;
+    case 'powSumGE': return creatures(p).reduce((s, x) => s + power(g, x), 0) >= (c.n ?? 0);
+    case 'packTactics': return (p.atkPowT === g.turn ? (p.atkPow ?? 0) : 0) >= (c.n ?? 6);
+    case 'evSpellYou': return ev?.kind === 'spell' && (ev.player === pid || ev.by === pid);
+    case 'battalion': return !!src && src.attacking !== undefined && attackers(g).length >= 3;
+    case 'spellMastery': return p.graveyard.filter(x => isType(x, 'Instant') || isType(x, 'Sorcery')).length >= 2;
     default: return true;
   }
 }
@@ -2209,7 +2216,24 @@ export function amt(g: Game, ctx: ResCtx, a: Amt | undefined): number {
   if ('aurasOnIt' in a) { const src = findCard(g, ctx.item.sourceUid); if (!src) return 0; const host = src.attachedTo !== undefined ? findCard(g, src.attachedTo) : src; if (!host) return 0; return g.players.flatMap(q => q.battlefield).filter(x => x.attachedTo === host.uid && subtypes(def(x)).includes('Aura')).length; }
   if ('aurasOnYours' in a) return g.players[me].battlefield.filter(x => subtypes(def(x)).includes('Aura') && x.attachedTo !== undefined && (() => { const h = findCard(g, x.attachedTo!); return !!h && isType(h, 'Creature') && ctl(h) === me; })()).length;
   if ('cmdCasts' in a) return g.players[me].commanderCasts ?? Object.values(g.players[me].casts ?? {}).reduce((s, n) => s + n, 0);
+  if ('domain' in a) return domainCount(g, me);
+  if ('gyTypes' in a) return gyCardTypes(g, me);
   return 0;
+}
+const BASIC_LAND_TYPES = ['Plains', 'Island', 'Swamp', 'Mountain', 'Forest'];
+function domainCount(g: Game, pid: number): number {
+  const have = new Set<string>();
+  for (const c of g.players[pid].battlefield) if (isType(c, 'Land')) for (const ty of BASIC_LAND_TYPES) if (isTypeOrSub(def(c), ty)) have.add(ty);
+  return have.size;
+}
+function gyCardTypes(g: Game, pid: number): number {
+  const T = new Set(['Artifact', 'Battle', 'Creature', 'Enchantment', 'Instant', 'Kindred', 'Land', 'Planeswalker', 'Sorcery']);
+  const have = new Set<string>();
+  for (const c of g.players[pid].graveyard) for (const ty of def(c).types) {
+    if (ty === 'Tribal') have.add('Kindred');
+    else if (T.has(ty)) have.add(ty);
+  }
+  return have.size;
 }
 /** Greatest number of creatures pid controls that share a creature type (changeling is every type). */
 function sharedTypeCount(g: Game, pid: number): number {
@@ -2282,7 +2306,7 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
     case 'bounce': for (const c of e.who ? who() : tc ? [tc] : []) { if (!locate(g, c.uid)) continue; moveCard(g, c, 'hand'); log(g, `${nm(c)} returns to ${g.players[c.owner].name}'s hand.`); } break;
     case 'tuck': for (const c of onBf(g, who())) { const depth = typeof e.n === 'number' ? e.n : 0; moveCard(g, c, e.dest === 'top' ? 'top' : 'bottom'); if (depth) { const L = g.players[c.owner].library; const i = L.indexOf(c); if (i >= 0) { L.splice(i, 1); L.splice(Math.max(0, L.length - depth), 0, c); } log(g, `${nm(c)} is put into its owner's library ${depth === 1 ? 'second' : 'third'} from the top.`); continue; } log(g, `${nm(c)} is put on the ${e.dest === 'top' ? 'top' : 'bottom'} of its owner's library.`); } break;
     case 'tap': for (const c of onBf(g, who())) c.tapped = true; break;
-    case 'untap': for (const c of onBf(g, who())) c.tapped = false; break;
+    case 'untap': for (const c of onBf(g, who())) { if (c.tapped) { c.tapped = false; emit(g, 'untaps', { player: ctl(c) }, c); } } break;
     case 'counter': {
       const ti = typeof e.who === 'string' && /^t\d+$/.test(e.who) ? +e.who.slice(1) : 0; const t = ctx.item.targets?.[ti] ?? legacyT; const s = g.stack.find(x => x.id === t?.stack); if (!s) break;
       if (s.uncounterable || hasPStatic(g, g.players.map(q => q.id), 'noCounter') || (s.kind === 'spell' && s.card && ((isType(s.card, 'Creature') && g.players[s.controller].uncCreatures === g.turn) || hasPStatic(g, [s.controller], 'spellsUncounterable')))) { log(g, `${s.label} can't be countered.`); break; }
@@ -3082,7 +3106,7 @@ function suspendTick(g: Game) {
 export function suspendCard(g: Game, c: Card, n: number) { c.suspended = true; c.counters = { time: n }; log(g, `${nm(c)} is suspended with ${n} time counters.`); }
 /** 'becomes the target of a spell or ability': fired once per targeted permanent when a spell/ability is put on the stack. */
 function emitTargeted(g: Game, item: StackItem) {
-  const seen = new Set<number>(); for (const t of item.targets ?? (item.target ? [item.target] : [])) { if (t?.card === undefined || seen.has(t.card)) continue; seen.add(t.card); const c = findCard(g, t.card); if (c) emit(g, 'targeted', { player: item.controller }, c); }
+  const seen = new Set<number>(); for (const t of item.targets ?? (item.target ? [item.target] : [])) { if (t?.card === undefined || seen.has(t.card)) continue; seen.add(t.card); const c = findCard(g, t.card); if (c) emit(g, 'targeted', { player: item.controller, by: item.controller, kind: item.kind }, c); }
   if (isCrimeItem(g, item)) emit(g, 'crime', { player: item.controller });
 }
 function isCrimeItem(g: Game, item: StackItem): boolean {
@@ -3246,6 +3270,7 @@ export function declareAttackers(g: Game, pid: number, list: { uid: number; defe
   }
   g.awaiting = null;
   const atk = attackers(g);
+  if (atk.length) { p.atkPow = (p.atkPowT === g.turn ? (p.atkPow ?? 0) : 0) + atk.reduce((s, c) => s + power(g, c), 0); p.atkPowT = g.turn; }
   for (const c of atk) emit(g, 'attacks', { player: c.attacking }, c);
   { const A = (p.atkDefs ??= { turn: g.turn, defs: [] }); for (const a of atk) if (a.attacking !== undefined && !A.defs.includes(a.attacking)) A.defs.push(a.attacking); }
   if (atk.length) { for (const c of atk) c.atkTimes = (c.atkTimes ?? 0) + 1; p.atkN = (p.atkN ?? 0) + atk.length; p.atkOpps = [...new Set([...(p.atkOpps ?? []), ...atk.map(c => c.attacking!).filter(d => d !== pid)])]; emit(g, 'youAttack', { player: pid, amount: atk.length }); const bc = atk.filter(c => hasKw(c, 'battle cry')).length; if (bc) { for (const c of atk) { c.pp += bc; if (hasKw(c, 'battle cry')) c.pp -= 1; } if (atk.length > 1) log(g, `Battle cry: other attacking creatures get +${bc}/+0.`); } if (p.untapAtk === g.turn) { delete p.untapAtk; for (const c of creatures(p)) c.tapped = false; log(g, `${p.name} untaps each creature they control.`); } }
