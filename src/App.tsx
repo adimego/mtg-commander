@@ -17,8 +17,8 @@ import { groupTiles, stackCaption, crowdedCardWidth, pickFromStack, type Tile } 
 const HUMAN = 0;
 const PCOLORS = ['#4fc3f7', '#ef5350', '#ffb300', '#66bb6a'];
 export const costStr = (c: Cost) => `${c.generic ? `{${c.generic}}` : ''}${COLORS.map(k => `{${k}}`.repeat(c[k] || 0)).join('')}` || '{0}';
-const STEP_LABEL: Record<string, string> = { untap: 'Untap', upkeep: 'Upkeep', draw: 'Draw', main1: 'Main 1', beginCombat: 'Begin combat', attackers: 'Attack', blockers: 'Block', firstStrike: 'First strike', damage: 'Damage', main2: 'Main 2', end: 'End', cleanup: 'Cleanup' };
-const PHASE_SHORT: Record<string, string> = { upkeep: 'Upkeep', draw: 'Draw', main1: 'Main', beginCombat: 'Combat', attackers: 'Attack', blockers: 'Block', damage: 'Damage', main2: 'Main 2', end: 'End' };
+const STEP_LABEL: Record<string, string> = { untap: 'Untap', upkeep: 'Upkeep', draw: 'Draw', main1: 'Main 1', beginCombat: 'Begin combat', attackers: 'Attack', blockers: 'Block', firstStrike: 'First strike', damage: 'Damage', endCombat: 'End combat', main2: 'Main 2', end: 'End', cleanup: 'Cleanup' };
+const PHASE_SHORT: Record<string, string> = { upkeep: 'Upkeep', draw: 'Draw', main1: 'Main', beginCombat: 'Combat', attackers: 'Attack', blockers: 'Block', damage: 'Damage', endCombat: 'End', main2: 'Main 2', end: 'End' };
 const SHOWN_STEPS = STEPS.filter(s => s !== 'untap' && s !== 'cleanup' && s !== 'firstStrike');
 const youGrammar = (t: string) => t.replace(/^You's/, 'Your').replace(/You's/g, 'your').replace(/^You (plays|casts|mulligans|loses|gains|discards|wins|activates|sacrifices)/, (_, v: string) => 'You ' + (v === 'mulligans' ? 'mulligan' : v.endsWith('es') && v !== 'loses' && v !== 'sacrifices' && v !== 'activates' ? v.slice(0, -2) : v.slice(0, -1))).replace(/to You\./g, 'to you.').replace(/attacks You\./g, 'attacks you.').replace(/under You's/g, 'under your');
 const poss = (g: Game, pid: number) => (pid === HUMAN ? 'your' : `${g.players[pid].name}'s`);
