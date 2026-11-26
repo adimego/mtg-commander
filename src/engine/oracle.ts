@@ -219,6 +219,7 @@ function forEach(s: string, cx: Cx): Amt | null {
   if (/^instant and sorcery card in your graveyard$/.test(s)) return { cards: 'graveyard', pl: 'you', f: { anyType: ['Instant', 'Sorcery'] } };
   if (/^instant and sorcery card in your graveyard$/.test(s)) return { cards: 'graveyard', pl: 'you', f: { anyType: ['Instant', 'Sorcery'] } };
   if (/^creatures? in your party$/.test(s)) return { party: true };
+  if (/^creatures? that died this turn$/.test(s)) return { died: true };
   if (/^(?:permanent|creature|artifact|enchantment)s? destroyed this way$/.test(s)) return 'destroyed';
   const fp = parseFilter(s); if (fp && !fp.card && !fp.spell) return { count: fp.f };
   return null;
@@ -321,6 +322,8 @@ export function cond(s: string, cx: Cx): Cond | null {
   if (/^no creatures are on the battlefield$/.test(s)) return { k: 'noCreatures' };
   if ((m = /^(?:that player|they) (?:has|have) (\w+) or fewer cards in hand$/.exec(s))) { const n0 = num(m[1]); return typeof n0 === 'number' ? { k: 'evHandLE', n: n0 } : null; }
   if (/^you have a full party$/.test(s)) return { k: 'fullParty' };
+  if (/^it escaped$/.test(s)) return { k: 'escaped' };
+  if ((m = /^\{([wubrg])\} was spent to cast (?:it|this spell|~)$/.exec(s))) return { k: 'spentColor', color: m[1].toUpperCase() as Color };
   if ((m = /^there is an? (.+?) cards? in your graveyard$/.exec(s))) { const fp = parseFilter(m[1] + ' card'); return fp ? { k: 'gyGE', n: 1, f: fp.f } : null; }
   { const mm = /^at least (\w+) mana was spent to cast (?:that spell|it|~)$/.exec(s); const nn = num(mm?.[1]); if (mm && typeof nn === 'number') return { k: 'spentGE', n: nn }; }
   if (/\bor\b/.test(s) && !/ or (?:more|fewer|less|equal)\b/.test(s)) {
@@ -747,6 +750,8 @@ function clause(s: string, cx: Cx): Effect[] | null {
   if ((m = /^you may (.+)$/.exec(s)) && !/^you may play an additional land/.test(s)) { const sub = clause(m[1], cx); if (sub) return [{ op: 'may', text: m[1], sub }]; return null; }
   if ((m = new RegExp(`^${P_RE} may (.+)$`).exec(s))) { const p = playerRef(m[1], cx); const sub = clause(m[2].replace(/their library/g, 'your library'), { ...cx, lastPl: p ?? undefined }); if (p && sub) { for (const e of sub) if (e.pl === 'you' || (e.op === 'search' && !e.pl)) e.pl = p; return [{ op: 'may', pl: p, text: m[2], sub }]; } }
   if ((m = /^(sacrifice (?:it|~)) unless you pay (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(s))) { const c = parseCost(m[2].toUpperCase()); const sub = c && clause(m[1], cx); return c && sub ? [{ op: 'unless', pl: 'you', ifPaid: c, text: m[1], sub }] : null; }
+  if ((m = /^(sacrifice (?:it|~)|exile (?:it|~)) unless you (.+)$/.exec(s))) { const sub = clause(m[1], cx); const alt = sub && clause(m[2], cx); if (sub && alt && canDetectIfDid(alt)) return [{ op: 'unlessAct', pl: 'you', sub, else: alt, text: m[1] }]; }
+  if ((m = /^(.+?) unless (.+)$/.exec(s)) && !/^you /.test(m[2]) && !/pays? \{/.test(m[2]) && !/unless they're mana abilities/.test(s) && !/for each/.test(s)) { const cc = cond(m[2], cx); const sub = cc && clause(m[1], cx); if (cc && sub) return [{ op: 'if', cond: { k: 'not', c: cc }, sub }]; }
   if (/^if that creature would die this turn, exile it instead$/.test(s)) return [{ op: 'script', kind: 'exileIfDies', who: 't0' }];
   if ((m = /^(.+?) unless (that player|its controller|they|he or she|any player) pays? \{(\d+)\}$/.exec(s))) { const sub = clause(m[1], cx); const ft = sub?.find(e => typeof e.who === 'string' && /^t\d+$/.test(e.who as string))?.who as string | undefined; const p = m[2] === 'any player' ? null : m[2] === 'its controller' && ft ? `ctl:${ft}` : playerRef(m[2] === 'they' || m[2] === 'he or she' ? 'that player' : m[2], cx, true); if (sub && p) return [{ op: 'unless', pl: p, ifPaid: { generic: +m[3] }, text: m[1], sub }]; }
   if ((m = /^destroy (.+?) unless (?:its controller|that player|they) has ~ deal damage to (?:them|that player|him or her|its controller) equal to (?:his|her|its|~'s) power$/.exec(s))) { const o = obj(m[1], cx, true); return o && !o.card ? [{ op: 'unlessDmg', who: o.ref, n: { pow: 'self' } }] : null; }
@@ -1214,7 +1219,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       abilities.push(ab); continue;
     }
     // spell text
-    if (isSpell && (/^(~|this spell) (can't be countered|costs)|^as an additional cost|^cast (?:this spell|~) only /.test(l)) && staticLine(l, d, statics, kws)) continue;
+    if (isSpell && (/^(~|this spell) (can't be countered|costs)|^as an additional cost|^cast (?:this spell|~) only |rather than pay /.test(l)) && staticLine(l, d, statics, kws)) continue;
     if (isSpell) {
       const cx = newCx({ spell: true });
       const fx = effects(l, { ...cx, slots: spellSlots, it: spellSlots.length ? 't0' : 'self' });
@@ -1507,8 +1512,49 @@ export function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: Ac
   if (p === 'demonstrate' || p === 'myriad' || p === 'gravestorm' || /^annihilator \d+$/.test(p) || p === 'populate') return false;
   void sc; return false;
 }
+function parseAltCost(s: string, d: CardDef): boolean {
+  let m: RegExpExecArray | null;
+  const tail = / rather than pay (?:this spell's|~'s) mana cost$/;
+  if (!tail.test(s) && !/ rather than pay the mana cost for /.test(s)) return false;
+  if ((m = /^you may exile (a|an|one|two|three|\d+) (white|blue|black|red|green) cards? from your hand rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
+    const n0 = num(m[1]); if (typeof n0 !== 'number') return false;
+    d.exileAlt = { n: n0, color: COLOR_OF[m[2]] }; return true;
+  }
+  if ((m = /^you may pay (\{[^}]+\}(?:\{[^}]+\})*) rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
+    const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.altCost = { mana: c }; return true;
+  }
+  if ((m = /^you may pay (\{[^}]+\}(?:\{[^}]+\})*) and return (a|an|one|two|three|\d+) (.+?) you control to (?:its|their) owner's hand rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
+    const c = parseCost(m[1].toUpperCase()); const n0 = num(m[2]); const fp = parseFilter(m[3]);
+    if (!c || typeof n0 !== 'number' || !fp || fp.card) return false;
+    d.altCost = { mana: c, retF: { f: fp.f, n: n0 } }; return true;
+  }
+  if ((m = /^you may return (a|an|one|two|three|\d+) (.+?) you control to (?:its|their) owner's hand rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
+    const n0 = num(m[1]); const fp = parseFilter(m[2]);
+    if (typeof n0 !== 'number' || !fp || fp.card) return false;
+    d.altCost = { retF: { f: fp.f, n: n0 } }; return true;
+  }
+  if ((m = /^you may sacrifice (a|an|one|two|three|\d+) (.+?) rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
+    const n0 = num(m[1]); const fp = parseFilter(m[2]);
+    if (typeof n0 !== 'number' || !fp || fp.card) return false;
+    d.altCost = { sacF: { f: fp.f, n: n0 } }; return true;
+  }
+  if ((m = /^if you control an? (.+?), you may tap an? (untapped )?(.+?) you control rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
+    const cc = cond('you control a ' + m[1], newCx()); const fp = parseFilter((m[2] ? 'untapped ' : '') + m[3]);
+    if (!cc || !fp || fp.card) return false;
+    d.altCost = { cond: cc, tapF: { f: fp.f, n: 1 } }; return true;
+  }
+  if ((m = /^if you control an? (.+?), you may sacrifice an? (.+?) rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
+    const cc = cond('you control a ' + m[1], newCx()); const fp = parseFilter(m[2]);
+    if (!cc || !fp || fp.card) return false;
+    d.altCost = { cond: cc, sacF: { f: fp.f, n: 1 } }; return true;
+  }
+  return false;
+}
+
+
 export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>): boolean {
   let m: RegExpExecArray | null; let c: Cond | undefined; let s = l;
+  if (parseAltCost(s, d)) return true;
   if (/^gift a card$/.test(s)) { d.gift = 'card'; return true; }
   { const em = /^escalate \{([wubrgc])\}$/.exec(s); if (em) { const k = em[1].toUpperCase() as 'W'|'U'|'B'|'R'|'G'|'C'; d.escalateCost = { generic: 0, [k]: 1 }; return true; } }
 
@@ -1525,6 +1571,9 @@ export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<st
   if (/^cast (?:this spell|~) only during the declare attackers step(?: and only if you've been attacked this step)?$/.test(s)) { d.castOnly = 'declareAttackers'; return true; }
   if (/^cast (?:this spell|reset|~) only during an opponent's turn after (?:their|his or her) upkeep step$/.test(s)) { d.castOnly = 'afterOppUpkeep'; return true; }
   if (/^goaded creatures can't block$/.test(s)) { statics.push({ k: 'goadedCantBlock', who: 'all' }); return true; }
+  if (/^~ can't attack alone$/.test(s) && !c) { d.noAtkAlone = true; return true; }
+  if (/^~ can't block alone$/.test(s) && !c) { d.noBlockAlone = true; return true; }
+  if (/^~ can't attack or block alone$/.test(s) && !c) { d.noAtkAlone = true; d.noBlockAlone = true; return true; }
   if ((m = /^~ can't be blocked except by two or more creatures$/.exec(s))) { statics.push({ k: 'blockMin2', who: 'self', cond: c }); return true; }
   if ((m = /^~ can't be blocked except by (.+)$/.exec(s))) { const fp = parseFilter(m[1].replace(/^creatures /, 'creature ')); if (!fp) return false; statics.push({ k: 'blockOnlyBy', who: 'self', spellF: fp.f, cond: c }); return true; }
   if ((m = /^~ can't attack unless (?:the )?defending player controls (?:an? )?(.+)$/.exec(s))) { const fp = parseFilter(m[1]); if (!fp) return false; d.atkUnlessDef = fp.f; return true; }
@@ -1692,6 +1741,21 @@ if ((m = /^(?:you may pay|pay) (\d+) life rather than pay (?:this spell's|~'s) m
     const fp = m[1].trim() ? parseFilter(m[1].trim() + ' spell') : { f: {} }; if (!fp) return false;
     if (m[2] === 'your opponents cast' && m[4] === 'less') return false; if (m[2] === 'you cast' && m[4] === 'more') return false;
     statics.push({ k: m[4] === 'less' ? 'costLess' : 'costMore', who: 'all', n: +m[3], spellF: fp.f, cond: c }); return true;
+  }
+  if ((m = /^(enchanted (?:creature|permanent)|~) loses all abilities and is an? (?:(white|blue|black|red|green) )?(\w+) creature with base power and toughness (\d+)\/(\d+)$/.exec(s))) {
+    const sub = m[3][0].toUpperCase() + m[3].slice(1);
+    const st: Static = { k: 'basePT', who: m[1] === '~' ? 'self' : 'attached', p: +m[4], t: +m[5], kws: [sub], loseAll: true };
+    if (m[2]) st.colors = [COLOR_OF[m[2]]];
+    statics.push(st); return true;
+  }
+  if ((m = /^(enchanted creature|~) loses all abilities and has base power and toughness (\d+)\/(\d+)$/.exec(s))) {
+    statics.push({ k: 'basePT', who: m[1] === '~' ? 'self' : 'attached', p: +m[2], t: +m[3], loseAll: true }); return true;
+  }
+  if ((m = /^(enchanted creature|equipped creature|~) has base power and toughness (\d+)\/(\d+)$/.exec(s))) {
+    statics.push({ k: 'basePT', who: m[1] === '~' ? 'self' : 'attached', p: +m[2], t: +m[3] }); return true;
+  }
+  if ((m = /^enchanted artifact is a creature with base power and toughness (\d+)\/(\d+) in addition to its other types$/.exec(s))) {
+    statics.push({ k: 'basePT', who: 'attached', p: +m[1], t: +m[2], add: ['Creature'] }); return true;
   }
   if ((m = /^~'s power and toughness are each equal to (.+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; statics.push({ k: 'pt', who: 'self', p: a, t: a }); return true; }
   if ((m = /^~'s power is equal to (.+?) and (?:its |~'s )?toughness is (?:equal to )?that number plus (\d+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; statics.push({ k: 'pt', who: 'self', p: a, t: { plus: +m[2], of: a } }); return true; }

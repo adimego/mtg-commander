@@ -2,7 +2,7 @@
 
 Living list of Oracle wording and mechanics that are **not** modelled yet, or were only modelled in a simple form and still leave cards Limited. Counts are from the same Scryfall Oracle Cards bulk and `classify()` method used for support reports (unique `oracle_id`, commander-legal, excluding tokens, emblems, dungeons, planes, phenomena, schemes, vanguards, conspiracies, and commander-banned cards). Corpus size: **32,643**.
 
-**Last updated:** 2026-11-26, after the first P3 compose-frames PR (this file’s repo copy ships with that PR). Support is **17,389 / 32,643 (53.3%)** — auto 17,228, builtin 161, Limited 15,254. Baseline after P2 PR [#34](https://github.com/adimego/mtg-commander/pull/34) was 17,260 / 32,643 (52.9%).
+**Last updated:** 2026-11-26, after the second P3 compose-frames PR. Support is **17,516 / 32,643 (53.7%)** — auto 17,355, builtin 161, Limited 15,127. After the first P3 PR [#35](https://github.com/adimego/mtg-commander/pull/35) it was 17,389 / 32,643 (53.3%); after P2 [#34](https://github.com/adimego/mtg-commander/pull/34) it was 17,260 / 32,643 (52.9%).
 
 **How to read a row.** *Involved* is how many current Limited cards have at least one leftover line in the family. *Exclusive* is how many of those cards have every leftover line in that family, so modelling the family *could* flip the card if the inner effect is also exact. Families overlap; do not add rows. Plan-era figures are labelled when a current recount was not the source.
 
@@ -102,18 +102,18 @@ This is the approved next phase. The compiler already has wrappers for several o
 
 | Frame | Involved / exclusive (current, loose) | Notes |
 |---|---:|---|
-| `if` conditions (including “if you do”) | 4,051 / 3,228 `if`; 755 / 597 “if you do” / “when you do” | Down from 4,177 / 3,329 and 777 / 617 after the first P3 PR. Remaining leftover `if` lines still fail a cond or wrap a verb that doesn’t parse |
-| `you may` | 2,888 / 2,183 | Not the focus of the first P3 PR (down slightly from 2,897 / 2,187 as side-effect flips). Most leftovers still fail on the inner verb |
-| `unless` | 420 / 351 | Pay-unless and similar; keep fail-closed. Not started |
-| Modes / choose one | 347 / 319 | The mode frame exists; leftovers are unmodelled effects *inside* a mode. Not started |
-| Additional costs | 162 / 92 | Down from 172 / 97 after “discard X cards” shipped. Other additional-cost wordings remain |
-| Alt costs / “without paying its mana cost” / “rather than pay” | 373 / 267 | Overlaps energy alt costs and flashback-like leftovers. Not started |
-| CDAs | 79 / 37 | Remaining odd amounts; see §2. Not started as a frame |
-| Grants (“creatures you control get/have”) | 275 / 208 | Static grants the compiler doesn’t yet accept. Not started |
-| “Can’t” restrictions | 985 / 743 | Many are unique; start with repeated attack/block/activate shapes. Not started |
-| For each / where X is | 1,767 / 1,340 | Down from 1,786 / 1,353 after “creature in your party” amounts. Other amounts still reject |
-| “Costs less” | 337 / 229 | Down from 348 / 235 after party cost reduction. Other self- and typal leftovers remain |
-| Multi-sentence chaining | Common | Second sentence is a known verb or “if you do” but isn’t attached today, except the detectable “X. If you do, Y” cases below |
+| `if` conditions (including “if you do”) | 4,034 / 3,221 `if`; 754 / 597 “if you do” / “when you do” | Mostly unchanged this pass. Remaining leftover `if` lines still fail a cond or wrap a verb that doesn’t parse |
+| `you may` | 2,836 / 2,149 | Down from 2,888 / 2,183, largely because “you may … rather than pay” alt costs shipped. The may *wrapper* already exists; leftover `you may` almost always fails on the trigger head or the inner verb. Honest wrapper-only leftovers are things like “you may choose not to untap ~ during your untap step” (needs an untap-step choice), “you may play that card”, and “choose new targets for the copy” |
+| `unless` | 360 / 301 | Down from 420 / 351 after “sacrifice/exile unless you [action]” and “unless [cond]”. Leftovers are mostly “can’t … unless [pay for each / unique cond]” and unique tails |
+| Modes / choose one | 347 / 319 | Unchanged. The mode frame exists; leftovers are unmodelled effects *inside* a mode. Honest “all mode inners already parse” cases are rare (~7 lines) |
+| Additional costs | 162 / 92 | Unchanged this pass (discard-X shipped in #35) |
+| Alt costs / “without paying its mana cost” / “rather than pay” | 320 / 232 | Down from 373 / 267 after self alternative costs (WUBRG, sacrifice N, return N, tap-if-you-control, exile-a-color-from-hand). Remaining lines are mostly “cast ~ from elsewhere without paying” / copy-cast / “for spells you cast” (Fist of Suns / Jodah) |
+| CDAs | 79 / 38 | Repeated “has / is a [color] [type] with base power and toughness N/N” / “loses all abilities and has base P/T” / “enchanted artifact is a creature with base P/T” shipped. Remaining are unique amounts (“life paid as it entered”, “highest number noted…”) and temporary/type-changing one-shots |
+| Grants (“creatures you control get/have”) | 275 / 208 | Unchanged. Leftovers are unusual subjects (enchanted / modified / equipped / with counters) or quoted granted abilities |
+| “Can’t” restrictions | 972 / 732 | Down from 985 / 743 after “can’t attack / block / attack or block alone”. Leftovers include “except by three or more”, Rule of Law–style spell limits, and unique can’ts |
+| For each / where X is | 1,757 / 1,335 | Down slightly after “creature that died this turn”. Other amounts still reject (experience, cards named ~ in all graveyards, storage counters removed this way, …) |
+| “Costs less” | 334 / 228 | Almost unchanged this pass (died-this-turn cost reduction flipped a couple) |
+| Multi-sentence chaining | Common | Detectable “X. If you do, Y” shipped in #35. General second-sentence attach is still open. “You may choose not to untap” is a special static, not a compose wrapper |
 
 As P3 PRs land, move finished wording out of this section into a short “Done in P3” note and drop the corresponding leftover counts.
 
@@ -128,4 +128,13 @@ First P3 PR (compose frames), 2026-11-26. Support +129 to **17,389 / 32,643 (53.
 - Additional cost: “as an additional cost to cast this spell, discard X cards” (`extraCost.discardX`), including can-cast, max X, and payment.
 - For-each / costs-less: “for each creature in your party” (`Amt` `{ party: true }`) and “this spell costs {N} less to cast for each creature in your party”. Party is the official unique-among-Cleric/Rogue/Warrior/Wizard count.
 
-Still not started as frames: `you may` leftovers, `unless`, modes, alt costs, remaining CDAs, grants, “can’t”, other for-each / where-X amounts, and general multi-sentence chaining.
+Still open after the second P3 PR: leftover `you may` that fail on the head or inner verb (plus choose-not-to-untap, play-that-card, choose-new-targets); remaining unless tails; modes; remaining alt costs (cast-from-elsewhere / “for spells you cast”); unique CDAs; grants with unusual subjects or quoted abilities; remaining “can’t” (except-by-three-or-more, Rule of Law, …); other for-each / where-X amounts; general multi-sentence chaining.
+
+Second P3 PR, 2026-11-26. Support +127 to **17,516 / 32,643 (53.7%)**. Official precons stayed 100/100.
+
+- Alternative costs rather than the mana cost: pay `{W}{U}{B}{R}{G}` (or any parsed mana), sacrifice N [filter], return N [filter] you control to hand, pay {N} and return a land, “if you control a [type], you may tap an untapped [filter]” or sacrifice one, and “exile N [color] cards from your hand” (wired through existing `exileAlt`). Runtime hook is `CastOpts.useAlt` / `CardDef.altCost`. Optional; the printed mana cost still works.
+- “Sacrifice/exile it unless you [action]” (`unlessAct`) when the alternative action’s success is detectable (discard, return, sacrifice, exile, …), fail-closed if the player declines or the action doesn’t happen.
+- “X unless [condition]” composes as `if not cond, X` when the right-hand side is a condition (including “it escaped” and “{U} was spent to cast it”). Escape no longer clears the `escaped` flag on ETB, and spent colors from the payment plan are stored on the spell/permanent.
+- Repeated base-P/T CDAs: “loses all abilities and is a [color] [type] creature with base power and toughness N/N”, “loses all abilities and has base P/T”, “has base P/T”, “enchanted artifact is a creature with base P/T in addition to its other types”. `basePT` layering now applies `applyCEs` (lose-all, set color, set creature types, add types).
+- “~ can’t attack alone”, “~ can’t block alone”, and “~ can’t attack or block alone” (`noAtkAlone` / `noBlockAlone`), enforced at declare-attackers / declare-blockers.
+- For-each / costs-less: “for each creature that died this turn” (`Amt` `{ died: true }`, the global `g.died` count).
