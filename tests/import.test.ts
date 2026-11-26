@@ -124,11 +124,18 @@ describe('legality', () => {
     const l = checkLegality(r, ['Serra Angel']); const e = l.errors.join('\n');
     expect(e).toMatch(/can't be a commander/); expect(e).toMatch(/10 cards/); expect(e).toMatch(/Sol Ring appears 2 times/); expect(e).toMatch(/Lightning Bolt .*outside/); expect(e).toMatch(/Mana Crypt is banned/);
   });
-  it('partners: valid pair accepted with an honest warning', async () => {
+  it('partners: a legal pair is accepted and both go to the command zone', async () => {
     const r = await importText('1 Thrasios, Triton Hero *CMDR*\n1 Tymna the Weaver *CMDR*\n1 Sol Ring');
     expect(commanderOptions(r)).toEqual(['Thrasios, Triton Hero', 'Tymna the Weaver']);
-    const l = checkLegality(r, defaultCommanders(r)); expect(l.errors.some(x => /both need Partner/.test(x))).toBe(false); expect(l.warnings.join()).toMatch(/shuffled into your library/);
-    expect(checkLegality(r, ['Thrasios, Triton Hero', 'Sol Ring']).errors.join()).toMatch(/can't be a commander|both need Partner/);
+    expect(defaultCommanders(r)).toEqual(['Thrasios, Triton Hero', 'Tymna the Weaver']);
+    const l = checkLegality(r, defaultCommanders(r)); expect(l.errors.filter(x => !/need exactly 100/.test(x))).toEqual([]); expect(l.warnings.join()).not.toMatch(/shuffled into your library/);
+    expect(checkLegality(r, ['Thrasios, Triton Hero', 'Sol Ring']).errors.join()).toMatch(/can't be a commander|legal pairing|Partner/);
+    const d = buildDeck(r, defaultCommanders(r), { name: 'Partners', swapLimited: false, source: '', legal: true });
+    expect(d.partner).toBeTruthy();
+    expect(d.colors.sort()).toEqual(['B', 'G', 'U', 'W']);
+    expect(d.cards.filter(id => id === d.commander || id === d.partner).length).toBe(0);
+    expect(exportText(d)).toMatch(/Thrasios, Triton Hero \*CMDR\*/);
+    expect(exportText(d)).toMatch(/Tymna the Weaver \*CMDR\*/);
   });
 });
 
