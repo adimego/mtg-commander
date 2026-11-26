@@ -1,4 +1,4 @@
-import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretell, teamworkPick, modesMax, sneakRets, crewPick,
+import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretell, canNinjutsu, ninjutsu, sneakRets, teamworkPick, modesMax, crewPick,
   Game, Card, Player, Target, TargetSpec, Effect, def, isType, hasKw, cmc, power, toughness, opponents, canCast, castSpell, playLand, canPlayLand,
   declareAttackers, declareBlockers, canAttack, canBlock, attackers, isCommander, legalTargets, findCard, creatures, canActivate, activate, isMain,
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
@@ -326,6 +326,16 @@ function sneak(g: Game, pid: number): boolean {
     if (castSpell(g, pid, c.uid, { sneak: true, sneakRet: ret.uid })) return true; }
   return false;
 }
+function ninjutsuAI(g: Game, pid: number): boolean {
+  const rets = sneakRets(g, pid); if (!rets.length) return false;
+  const ret = [...rets].sort((a, b) => power(g, a) - power(g, b))[0];
+  for (const c of g.players[pid].hand) {
+    if (!canNinjutsu(g, pid, c)) continue;
+    if ((def(c).power ?? 0) <= power(g, ret)) continue;
+    if (ninjutsu(g, pid, c.uid, ret.uid)) return true;
+  }
+  return false;
+}
 /** The AI has priority: do at most one thing, or pass. */
 export function aiPriority(g: Game, pid: number) {
   const p = g.players[pid]; const top = g.stack[g.stack.length - 1];
@@ -339,6 +349,7 @@ export function aiPriority(g: Game, pid: number) {
   }
   if (g.active === pid && isMain(g) && mainPhase(g, pid)) return;
   if (g.step === 'blockers' && g.active === pid && sneak(g, pid)) return;
+  if (g.step === 'blockers' && g.active === pid && ninjutsuAI(g, pid)) return;
   if (g.step === 'blockers' && (combatTrick(g, pid) || (p.battlefield.some(c => c.attacking !== undefined || c.blocking !== undefined) && useAbilities(g, pid, 'combat')))) return;
   // End of an opponent's turn (right before ours): use instants and abilities.
   if (g.step === 'end' && g.active !== pid && nextAlive(g, g.active) === pid) {

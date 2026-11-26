@@ -254,6 +254,11 @@ function cond(s: string, cx: Cx): Cond | null {
   if (/^you gained life this turn$|^you've gained life this turn$/.test(s)) return { k: 'lifeGainedThisTurn', n: 1 };
   if (/^you have the city's blessing$/.test(s)) return { k: 'blessing' };
   if (/^a card left your graveyard this turn$/.test(s)) return { k: 'leftGyYou' };
+  if ((m = /^a player lost (\w+) or more life this turn$/.exec(s))) { const n0 = num(m[1]); return typeof n0 === 'number' ? { k: 'lostLifeGE', n: n0 } : null; }
+  if ((m = /^an opponent has (\w+) or more cards in (?:their|his or her) graveyard$/.exec(s))) { const n0 = num(m[1]); return typeof n0 === 'number' ? { k: 'oppGyGE', n: n0 } : null; }
+  if (/^it's the first combat phase of your turn$/.test(s)) return { k: 'firstCombat' };
+  if (/^a counter was put on ~ this turn$/.test(s)) return { k: 'gotCtrSelf' };
+  if (/^you put a counter on a creature this turn$/.test(s)) return { k: 'putCtrYou' };
   if ((m = /^you(?:'ve)? gained (\d+) or more life this turn$/.exec(s))) return { k: 'lifeGainedThisTurn', n: +m[1] };
   if (/^a creature died this turn$/.test(s)) return { k: 'creatureDiedThisTurn' };
   if (/^you descended this turn$/.test(s)) return { k: 'descended' };
@@ -805,6 +810,7 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if ((m = /^your commander (enters or attacks|enters|attacks|deals combat damage to a player|dies)$/.exec(h))) { const r = trigger(`a commander creature you own ${m[1]}`); if (r) for (const d0 of r.defs) if (d0.ev === 'attacks' || d0.ev === 'combatDamagePlayer') d0.f = { ...d0.f, ctrl: 'you' }; return r; }
   if (/^you attack with your commander$/.test(h)) { const r = trigger('a commander creature you own attacks'); if (r) for (const d0 of r.defs) d0.f = { ...d0.f, ctrl: 'you' }; return r; }
   if (/^one or more cards leave your graveyard$/.test(h)) return { defs: [{ ev: 'leaveGy', pl: 'you', batch: true }], cx: { it: 'self' } };
+  if (/^one or more creature cards leave your graveyard$/.test(h)) return { defs: [{ ev: 'leaveGy', pl: 'you', batch: true, f: { types: ['Creature'] } }], cx: { it: 'self' } };
   if (/^you cast ~$/.test(h)) return { defs: [{ ev: 'castSelf', subj: 'self' }], cx: { it: 'self' } };
   if ((m = /^(you|an opponent) casts? (?:your|their) (first|second|third|fourth) ?(noncreature|instant, sorcery, or villain|) spell each turn$/.exec(h))) { const k = m[3] === '' ? 'n' : m[3] === 'noncreature' ? 'nonc' : 'isv'; const f: Filter = m[3] === 'noncreature' ? { notTypes: ['Creature'] } : m[3] ? { anyType: ['Instant', 'Sorcery', 'Villain'] } : {}; return { defs: [{ ev: 'cast', subj: 'any', f, pl: m[1] === 'you' ? 'you' : 'notyou', nth: { k, n: ORD[m[2]] } }], cx: { it: 'ev', that: 'ev', thatPl: 'evp' } } as never; }
   if ((m = /^(you|an opponent) draws? (?:your|their) (first|second|third) card each turn$/.exec(h))) return { defs: [{ ev: 'drawCard', pl: m[1] === 'you' ? 'you' : 'notyou', nth: { k: 'draw', n: ORD[m[2]] } }], cx: { it: 'self', thatPl: 'evp' } } as never;
@@ -870,7 +876,11 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   for (const raw of lines) {
     let l = cleanLine(raw).replace(/\.$/, '');
     { const ch = d.sub?.includes('Saga') ? /^((?:i|ii|iii|iv|v|vi|vii)(?:, (?:i|ii|iii|iv|v|vi|vii))*) — (.+)$/s.exec(raw.replace(/\.$/, '')) : null;
-      if (ch) { const ns = ch[1].split(', ').map(x => ROM[x]); d.saga = Math.max(d.saga ?? 0, ...ns); l = `when §chapter ${ns.join('+')}, ${ch[2]}`; } }
+      if (ch) { const ns = ch[1].split(', ').map(x => ROM[x]); d.saga = Math.max(d.saga ?? 0, ...ns);
+        let body = ch[2];
+        const fl = /^(?!choose )([a-z][a-z' !]{0,28} — )(.+)$/s.exec(body);
+        if (fl) body = fl[2];
+        l = `when §chapter ${ns.join('+')}, ${body}`; } }
     { let x: RegExpExecArray | null;
       if ((x = /^mobilize (\d+)$/.exec(l))) l = `whenever ~ attacks, §mobilize ${x[1]}`;
       else if ((x = /^firebending (\w+(?:, where x is .+)?)$/.exec(l))) l = `whenever ~ attacks, §firebend ${x[1]}`;
@@ -952,6 +962,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       if (tm[1] === 'at') head = head.replace(/^the beginning of the end step$/, 'the beginning of each end step');
       let once = false;
       body = body.replace(/\. this ability triggers only once each turn$/, () => { once = true; return ''; });
+      body = body.replace(/\. do this only once each turn$/, () => { once = true; return ''; });
       const tr = trigger(tm[1] === 'at' ? head : head);
       if (!tr) { fail(raw); continue; }
       const cx = newCx(tr.cx);
@@ -1021,6 +1032,8 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   }
   if (d.champion) { const ty = d.champion; triggers.push({ on: 'x', ev: 'etb', subj: 'self', label: `Champion a ${ty}`, effects: [{ op: 'champion' }] } as TriggerDef, { on: 'x', ev: 'ltb', subj: 'self', label: `Return the exiled ${ty}`, effects: [{ op: 'championBack' }] } as TriggerDef); }
   if (d.mentor) triggers.push({ on: 'x', ev: 'attacks', subj: 'self', label: 'Mentor', tslots: [{ who: 'perm', f: { types: ['Creature'], attacking: true, other: true, powLTSrc: true } }], effects: [{ op: 'addC', kind: '+1/+1', n: 1, who: 't0' }] } as TriggerDef);
+  if (d.evolve) triggers.push({ on: 'x', ev: 'etb', subj: 'other', f: { types: ['Creature'], ctrl: 'you' }, ifc: { k: 'evolve' }, label: 'Evolve', effects: [{ op: 'addC', kind: '+1/+1', n: 1, who: 'self' }] } as TriggerDef);
+  if (kws.has('undying')) triggers.push({ on: 'x', ev: 'dies', subj: 'self', ifc: { k: 'noP1P1' }, label: 'Undying', effects: [{ op: 'undying' }] } as TriggerDef);
   if (d.soulbond) triggers.push({ on: 'x', ev: 'etb', subj: 'self', label: 'Soulbond: pair with another unpaired creature you control', effects: [{ op: 'soulPair' }] } as TriggerDef, { on: 'x', ev: 'etb', subj: 'other', f: { types: ['Creature'], ctrl: 'you' }, label: 'Soulbond: you may pair with that creature', effects: [{ op: 'soulPair', who: 'ev' }] } as TriggerDef);
   if (abilities.length) d.abilities = [...(d.abilities ?? []), ...abilities];
   if (triggers.length) d.triggers = [...(d.triggers ?? []), ...triggers];
@@ -1064,6 +1077,10 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
   { const ak = /^(evoke|mayhem|harmonize|web-slinging) (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p); if (ak && !d.types.includes('Land')) { const c = parseCost(ak[2].toUpperCase()); if (!c) return false; if (ak[1] === 'evoke') { if (!d.types.includes('Creature')) return false; d.evoke = c; } else if (ak[1] === 'mayhem') d.mayhem = c; else if (ak[1] === 'harmonize') d.harmonize = c; else d.webSling = c; return true; } }
   if ((m = /^foretell (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && !d.types.includes('Land')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.foretell = c; return true; }
   if ((m = /^sneak (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && !d.types.includes('Land')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.sneak = c; return true; }
+  if ((m = /^ninjutsu (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && d.types.includes('Creature')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.ninjutsu = c; return true; }
+  if (p === 'evolve') { d.evolve = true; return true; }
+  if (p === 'undying') { kws.add('undying'); return true; }
+  if (p === 'improvise') { d.improvise = true; return true; }
   if ((m = /^teamwork (\d+)$/.exec(p))) { d.teamwork = +m[1]; return true; }
   if (p === 'storied') { d.storied = true; return true; }
   if ((m = /^level up (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; abilities.push({ label: 'Level up', mana: c, sorcery: true, effects: [{ op: 'addC', kind: 'level', n: 1, who: 'self' }] }); return true; }
@@ -1189,6 +1206,14 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
     [/^you may activate loyalty abilities of planeswalkers you control on any player's turn any time you could cast an instant$/, 'pwInstant', 'all'],
   ];
   for (const [re, k, who] of PST) if (re.test(s)) { statics.push({ k, who, cond: c }); return true; }
+  if (/^creatures your opponents control enter tapped$/.test(s) && !c) { statics.push({ k: 'etbTappedOpp', who: 'self' }); return true; }
+  if ((m = /^the second spell you cast each turn costs \{(\d+)\} less to cast$/.exec(s)) && !c) { statics.push({ k: 'secondSpellLess', who: 'self', n: +m[1] }); return true; }
+  if ((m = /^(equipment and vehicle|vehicle and equipment) spells you cast cost \{(\d+)\} less to cast$/.exec(s)) && !c) { statics.push({ k: 'costLess', who: 'all', n: +m[2], spellF: { anyType: ['Equipment', 'Vehicle'] } }); return true; }
+  if ((m = /^nonartifact spells you cast have improvise$/.exec(s)) && !c) { statics.push({ k: 'improviseSpells', who: 'self' }); return true; }
+  if ((m = /^as long as equipped creature is legendary, it has (.+)$/.exec(s)) && !c) { const k = kwList(m[1]); if (!k) return false; statics.push({ k: 'kw', who: 'attached', kws: k, f: { legendary: true } }); return true; }
+  if (/^creatures you control with a \+1\/\+1 counter on them have trample$/.test(s) && !c) { statics.push({ k: 'kw', who: 'all', f: { types: ['Creature'], ctrl: 'you', ctr: '+1/+1' }, kws: ['trample'] }); return true; }
+if ((m = /^(?:you may pay|pay) (\d+) life rather than pay (?:this spell's|~'s) mana cost$/.exec(s)) && !c) { d.costOrLife = { life: +m[1], pay: 0 }; return true; }
+  if ((m = /^during your turn, ~ has (.+)$/.exec(s)) && !c) { const k = kwList(m[1]); if (!k) return false; statics.push({ k: 'kw', who: 'self', kws: k, cond: { k: 'yourTurn' } }); return true; }
   if (/^you have (hexproof|shroud)$/.test(s) && !c) { statics.push({ k: 'playerHexproof', who: 'self', kws: [s.slice(9)] }); return true; }
   if (/^commanders you control have hexproof$/.test(s) && !c) { statics.push({ k: 'kw', who: 'all', f: { ctrl: 'you', cmdr: 'own' }, kws: ['hexproof'] }); return true; }
   if (/^you have no maximum hand size$/.test(s)) { statics.push({ k: 'noMaxHand', who: 'self' }); return true; }
@@ -1230,6 +1255,38 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
     const k = kwList(m[3]); if (!k) return false;
     const sub = m[4][0].toUpperCase() + m[4].slice(1);
     statics.push({ k: 'pt', who: 'attached', p: +m[1], t: +m[2], cond: c }, { k: 'kw', who: 'attached', kws: k, cond: c }, { k: 'addSub', who: 'attached', kws: [sub], cond: c });
+    return true;
+  }
+  if ((m = /^(enchanted creature|equipped creature|~) gets \+(\d+)\/\+(\d+) and loses (.+)$/.exec(s))) {
+    const who0: Static['who'] = m[1] === '~' ? 'self' : 'attached';
+    const lost = kwList(m[4]); if (!lost) return false;
+    statics.push({ k: 'pt', who: who0, p: +m[2], t: +m[3], cond: c }, { k: 'loseKw', who: who0, kws: lost, cond: c });
+    return true;
+  }
+  // Job typeline grants (Job select leftovers)
+  if ((m = /^equipped creature is an? ([a-z]+) in addition to its other types and has "(.+)"$/.exec(s))) {
+    const sub = m[1][0].toUpperCase() + m[1].slice(1);
+    const ext = tokenAbil(m[2], CUR_NAME); if (!ext) return false;
+    statics.push({ k: 'addSub', who: 'attached', kws: [sub], cond: c }, { k: 'grantAbil', who: 'attached', grant: ext, cond: c });
+    return true;
+  }
+  if ((m = /^equipped creature gets \+(\d+)\/\+(\d+), is an? ([a-z]+) in addition to its other types, and has "(.+)"$/.exec(s))) {
+    const sub = m[3][0].toUpperCase() + m[3].slice(1);
+    const ext = tokenAbil(m[4], CUR_NAME); if (!ext) return false;
+    statics.push({ k: 'pt', who: 'attached', p: +m[1], t: +m[2], cond: c }, { k: 'addSub', who: 'attached', kws: [sub], cond: c }, { k: 'grantAbil', who: 'attached', grant: ext, cond: c });
+    return true;
+  }
+  if ((m = /^equipped creature gets \+(\d+)\/\+(\d+), has (.+?) and "(.+)", and is an? ([a-z]+) in addition to its other types$/.exec(s))) {
+    const kws0 = kwList(m[3]); if (!kws0) return false;
+    const sub = m[5][0].toUpperCase() + m[5].slice(1);
+    const ext = tokenAbil(m[4], CUR_NAME); if (!ext) return false;
+    statics.push({ k: 'pt', who: 'attached', p: +m[1], t: +m[2], cond: c }, { k: 'kw', who: 'attached', kws: kws0, cond: c }, { k: 'addSub', who: 'attached', kws: [sub], cond: c }, { k: 'grantAbil', who: 'attached', grant: ext, cond: c });
+    return true;
+  }
+  if ((m = /^equipped creature gets \+(\d+)\/\+(\d+) for each (.+) on ~ and is an? ([a-z]+) in addition to its other types$/.exec(s))) {
+    const fe = forEach(m[3], newCx()); if (!fe) return false;
+    const sub = m[4][0].toUpperCase() + m[4].slice(1);
+    statics.push({ k: 'pt', who: 'attached', p: { mul: +m[1], of: fe }, t: { mul: +m[2], of: fe }, cond: c }, { k: 'addSub', who: 'attached', kws: [sub], cond: c });
     return true;
   }
   // subject + predicate
