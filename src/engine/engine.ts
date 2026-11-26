@@ -1,7 +1,7 @@
 import cardData from '../data/cards.json';
 import deckData from '../data/decks.json';
 import { CEFx, Color, ManaSym, COLORS, Cost, TargetSpec, Filter, TSlot, Amt, Ref, PRef, Cond, TokenSpec, Effect, ActAbility, TriggerDef, CardDef, DeckDef, Modes, ManaAbility, Static } from './types';
-import { runFrc } from './frc';
+import { runFrc, ensureIncubator } from './frc';
 import { runTrek } from './trek';
 import { runSoc } from './soc';
 import { runFic } from './fic';
@@ -1636,7 +1636,7 @@ export function activate(g: Game, pid: number, uid: number, i: number, opt?: Tar
   log(g, `${p.name} activates ${label}${item.targets!.some(Boolean) ? ` → ${item.targets!.filter(Boolean).map(t => describeTarget(g, t)).join(', ')}` : ''}.`);
   for (const s of sacked) { item.srcLki ??= undefined; s.lki = { p: power(g, s), t: toughness(g, s) }; log(g, `${p.name} sacrifices ${nm(s)}.`); sacrifice(g, s); }
   if (a.sac) { log(g, `${p.name} sacrifices ${nm(c)}.`); sacrifice(g, c); }
-  if (a.morphTurn) { delete c.faceDown; layer(g); if (CARDS[c.id]?.megamorph) { addCounters(g, c, '+1/+1', 1); log(g, `${nm(c)} is turned face up and gets a +1/+1 counter (megamorph).`); } else log(g, `${nm(c)} is turned face up.`); acted(g); return true; }
+  if (a.morphTurn) { delete c.faceDown; layer(g); if (CARDS[c.id]?.megamorph) { addCounters(g, c, '+1/+1', 1); log(g, `${nm(c)} is turned face up and gets a +1/+1 counter (megamorph).`); } else log(g, `${nm(c)} is turned face up.`); emit(g, 'turnedFaceUp', { player: pid }, c); acted(g); return true; }
   if (a.exileSelf) { if (p.graveyard.includes(c)) { p.graveyard = p.graveyard.filter(x => x !== c); p.exile.push(c); log(g, `${nm(c)} is exiled.`); emit(g, 'leaveGy', { player: pid, from: 'graveyard' }, c); } else if (p.battlefield.includes(c)) exileCard(g, c); }
   if (a.manaAb) { g.res = { item, i: 0, ans: {}, chosen: [], created: [], mana: true }; continueRes(g); emit(g, 'tappedForMana', { player: pid, mana: g.lastMana }, c); emit(g, 'activate', { player: pid }, c); if (g.winner === null && !g.decision) { /* mana abilities don't pass priority */ } return true; }
   g.stack.push(item); emitTargeted(g, item);
@@ -1725,6 +1725,7 @@ export function condOk(g: Game, pid: number, c: Cond, src?: Card, ev?: GameEvent
     case 'lifeLE': return p.life <= (c.n ?? 0);
     case 'anyLifeLE': return g.players.some(q => !q.lost && q.life <= (c.n ?? 0));
     case 'tgtTappedCreature': return !!(ctx?.item.targets ?? []).some(tg => { const x = tg?.card !== undefined ? findCard(g, tg.card) : undefined; return !!x && isType(x, 'Creature') && !!x.tapped; });
+    case 'attacksAlone': return attackers(g).length === 1;
     case 'kicked': return !!ctx?.item.kicked || !!src?.kicked || !!ctx?.item.blightPaid;
     case 'handLE': return p.hand.length <= (c.n ?? 0);
     case 'handGE': return p.hand.length >= (c.n ?? 0);
@@ -2026,6 +2027,20 @@ export function moveCard(g: Game, c: Card, dest: 'hand' | 'graveyard' | 'exile' 
     for (const st of back) { const t = findCard(g, st.uid); if (t && ctl(t) !== st.back) { changeControl(g, t, st.back); log(g, `${nm(t)} is no longer stolen.`); } }
   }
 }
+function manifestCard(g: Game, c: Card, pid: number) {
+  const id = c.id;
+  const d: CardDef = { id: `${id}#manifest`, name: 'Manifested creature', types: ['Creature'], cost: { generic: 0 }, colors: [], power: 2, toughness: 2, text: '', typeLine: 'Creature', token: false };
+  CARDS[d.id] = d;
+  c.origId ??= c.id;
+  c.id = d.id;
+  c.manifest = true;
+  enter(g, c, pid, {});
+  c.faceDown = true;
+  c.manifest = true;
+  layer(g);
+  log(g, `${g.players[pid].name} manifests ${nm(c)}.`);
+}
+
 export function enter(g: Game, c: Card, pid: number, o: { tapped?: boolean; attachTo?: number } = {}) {
   const morph = !!c.morphCast; delete c.morphCast; const impendN = c.impendCast ? (CARDS[c.id]?.impending?.n ?? 0) : 0; delete c.impendCast;
   delete c.eff; delete c.faceDown; delete c.impend; c.ts = nextTs(g); const d = CARDS[c.id] ?? def(c); const p = g.players[pid];
@@ -2110,18 +2125,18 @@ function noteDeath(g: Game, c: Card) {
   if (isModified(g, c)) p.modDied = g.turn;
   g.gyPerm = (g.gyPermT === g.turn ? (g.gyPerm ?? 0) : 0) + 1; g.gyPermT = g.turn;
 }
-export function destroy(g: Game, c: Card, why = 'dies') {
-  const o = g.players[c.owner]; if (!o.battlefield.includes(c)) return;
+export function destroy(g: Game, c: Card, why = 'dies'): boolean {
+  const o = g.players[c.owner]; if (!o.battlefield.includes(c)) return false;
   if (why !== 'sacrifice') {
-    if (hasKw(c, 'indestructible')) { log(g, `${nm(c)} is indestructible.`); return; }
-    if (c.regen) { c.regen--; c.tapped = true; c.damage = 0; c.deathtouched = false; delete c.attacking; delete c.blocking; log(g, `${nm(c)} regenerates.`); return; }
+    if (hasKw(c, 'indestructible')) { log(g, `${nm(c)} is indestructible.`); return false; }
+    if (c.regen) { c.regen--; c.tapped = true; c.damage = 0; c.deathtouched = false; delete c.attacking; delete c.blocking; log(g, `${nm(c)} regenerates.`); return false; }
   }
   if (isType(c, 'Creature')) {
     const umbra = g.players.flatMap(q => q.battlefield).find(a => a.attachedTo === c.uid && hasKw(a, 'umbra armor'));
-    if (umbra) { c.damage = 0; c.deathtouched = false; log(g, `${nm(umbra)} umbra armor: damage is removed from ${nm(c)} and ${nm(umbra)} is destroyed.`); destroy(g, umbra); return; }
+    if (umbra) { c.damage = 0; c.deathtouched = false; log(g, `${nm(umbra)} umbra armor: damage is removed from ${nm(c)} and ${nm(umbra)} is destroyed.`); destroy(g, umbra); return false; }
   }
-  if (c.exileIfDiesT === g.turn) { log(g, `${nm(c)} is exiled instead of dying this turn.`); exileCard(g, c); return; }
-  if (ctr(c, 'finality') > 0) { log(g, `${nm(c)} has a finality counter: exiled instead.`); exileCard(g, c); return; }
+  if (c.exileIfDiesT === g.turn) { log(g, `${nm(c)} is exiled instead of dying this turn.`); exileCard(g, c); return false; }
+  if (ctr(c, 'finality') > 0) { log(g, `${nm(c)} has a finality counter: exiled instead.`); exileCard(g, c); return false; }
   if (isType(c, 'Creature') && !c.token) {
     const kal = opponents(g, ctl(c)).flatMap(q => q.battlefield.filter(s => def(s).kalitas))[0];
     if (kal) {
@@ -2129,17 +2144,18 @@ export function destroy(g: Game, c: Card, why = 'dies') {
       log(g, `${nm(kal)} exiles ${nm(c)} instead, and creates a Zombie token.`);
       exileCard(g, c);
       createToken(g, pid, { name: 'Zombie', p: 2, t: 2, colors: ['B'], types: ['Creature'], sub: ['Zombie'] });
-      return;
+      return false;
     }
   }
   const cmd = isCommander(g, c); const wasCreature = isType(c, 'Creature');
   if (wasCreature) noteDeath(g, c);
   if (wasCreature && !c.token && hasKw(c, 'persist') && ctr(c, '-1/-1') === 0) c.willPersist = true;
-  if (c.unearthed) { moveCard(g, c, 'graveyard', { quiet: true }); if (why === 'sacrifice') emit(g, 'sacrificed', { player: c.owner }, c); return; }
+  if (c.unearthed) { moveCard(g, c, 'graveyard', { quiet: true }); if (why === 'sacrifice') emit(g, 'sacrificed', { player: c.owner }, c); return true; }
   moveCard(g, c, 'graveyard', { quiet: true });
   if (cmd) log(g, `${nm(c)} ${why === 'sacrifice' ? 'is sacrificed' : 'dies'} → command zone.`); else if (why !== 'sacrifice') log(g, `${nm(c)} ${wasCreature ? 'dies' : 'is put into the graveyard'}.`);
   emit(g, 'dies', { player: c.owner }, c);
   if (why === 'sacrifice') emit(g, 'sacrificed', { player: c.owner }, c);
+  return true;
 }
 export function sacrifice(g: Game, c: Card) {
   const locked = (c.noSacT !== undefined && c.noSacT >= g.turn) || (g.step === 'end' && g.active === c.owner && !!c.token && isTypeOrSub(def(c), 'Warrior') && g.players[c.owner].battlefield.some(s => def(s).statics?.some(st => st.k === 'noSacWarriors')));
@@ -2502,15 +2518,15 @@ export function amt(g: Game, ctx: ResCtx, a: Amt | undefined): number {
     if (a === 'spent') return ctx.item.event?.spent ?? 0;
     if (a === 'chosen') return ctx.chosen.length;
     if (a === 'created') return ctx.created.length;
-    if (a === 'destroyedNonArt') return (ctx.ans['destroyedNonArt'] as number) ?? 0;
+    if (a === 'destroyed' || a === 'destroyedNonArt') return (ctx.ans[a] as number) ?? 0;
     if (a === 'kicked') return ctx.item.x ?? (ctx.item.kicked ? 1 : 0);
     return 0;
   }
   if ('pips' in a) { const c = ctx.item.evCard; return c ? colorPips(def(c), a.pips) : 0; }
-  if ('maxPow' in a) return Math.max(0, ...g.players[me].battlefield.filter(c => isType(c, 'Creature') && matches(g, c, a.maxPow, me, -1)).map(c => power(g, c)));
+  if ('maxPow' in a) return Math.max(0, ...g.players[me].battlefield.filter(c => isType(c, 'Creature') && matches(g, c, a.maxPow, me, ctx.item.sourceUid)).map(c => power(g, c)));
   if ('count' in a) {
     const pls = a.pl ? refPlayers(g, ctx, a.pl) : g.players.map(p => p.id);
-    return pls.reduce((s, pid) => s + g.players[pid][a.zone ?? 'battlefield'].filter(c => matches(g, c, a.count, me, -1)).length, 0);
+    return pls.reduce((s, pid) => s + g.players[pid][a.zone ?? 'battlefield'].filter(c => matches(g, c, a.count, me, ctx.item.sourceUid)).length, 0);
   }
   if ('pow' in a || 'tough' in a) { const r = 'pow' in a ? a.pow : (a as { tough: Ref }).tough; const c = refCards(g, ctx, r)[0]; const lki = r === 'self' && !c ? ctx.item.srcLki : undefined; if (!c && !lki) return 0; const onBf = c && findCard(g, c.uid); const v = onBf ? ('pow' in a ? power(g, c!) : toughness(g, c!)) : (c?.lki ?? lki ?? { p: def(c!).power ?? 0, t: def(c!).toughness ?? 0 })['pow' in a ? 'p' : 't']; return Math.max(0, v); }
   if ('mv' in a) { const c = refCards(g, ctx, a.mv)[0]; return c ? cmc(def(c)) : 0; }
@@ -2644,7 +2660,7 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
       if (e.pl) for (const pid of refPlayers(g, ctx, e.pl)) dealDamage(g, ctx.item.sourceId, src, { player: pid }, k);
       break;
     }
-    case 'destroy': for (const c of onBf(g, e.who ? who() : tc ? [tc] : [])) destroy(g, c); break;
+    case 'destroy': { let nDes = (ctx.ans['destroyed'] as number) ?? 0; for (const c of onBf(g, e.who ? who() : tc ? [tc] : [])) if (destroy(g, c)) nDes++; ctx.ans['destroyed'] = nDes; break; }
     case 'exile': for (const c of e.who ? who() : tc ? [tc] : []) { if (findCard(g, c.uid)) exileCard(g, c); else if (locate(g, c.uid)) { moveCard(g, c, 'exile', { quiet: true }); log(g, `${nm(c)} is exiled.`); } if (def({ id: ctx.item.sourceId }).imprint) c.exBy = ctx.item.sourceUid; } break;
     case 'bounce': for (const c of e.who ? who() : tc ? [tc] : []) { if (!locate(g, c.uid)) continue; moveCard(g, c, 'hand'); log(g, `${nm(c)} returns to ${g.players[c.owner].name}'s hand.`); } break;
     case 'tuck': for (const c of onBf(g, who())) { const depth = typeof e.n === 'number' ? e.n : 0; moveCard(g, c, e.dest === 'top' ? 'top' : 'bottom'); if (depth) { const L = g.players[c.owner].library; const i = L.indexOf(c); if (i >= 0) { L.splice(i, 1); L.splice(Math.max(0, L.length - depth), 0, c); } log(g, `${nm(c)} is put into its owner's library ${depth === 1 ? 'second' : 'third'} from the top.`); continue; } log(g, `${nm(c)} is put on the ${e.dest === 'top' ? 'top' : 'bottom'} of its owner's library.`); } break;
@@ -2753,6 +2769,32 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
       for (const c of [...g.players[pid].battlefield]) if (isType(c, 'Creature') || (e.f?.types?.includes('Planeswalker') && isType(c, 'Planeswalker') && c !== wc)) dealDamage(g, ctx.item.sourceId, src, { card: c }, k); break; }
     case 'grant': for (const c of onBf(g, who())) { if (e.until === 'perm') c.pkw = [...(c.pkw ?? []), ...(e.kw ?? [])]; else if (e.until === 'yourNext') (c.nx ??= { by: me, p: 0, t: 0, kw: [] }).kw.push(...(e.kw ?? [])); else c.kw = [...(c.kw ?? []), ...(e.kw ?? [])]; } break;
     case 'addC': { const k = n(); for (const c of onBf(g, who())) addCounters(g, c, e.kind ?? '+1/+1', k); break; }
+    case 'incubate': {
+      const k = n(); const m = tokMul(g, me, false);
+      for (let i = 0; i < m; i++) { const tok = createToken(g, me, ensureIncubator()); if (k > 0) addCounters(g, tok, '+1/+1', k); ctx.created.push(tok); }
+      log(g, `${P.name} incubates ${k}.`); break;
+    }
+    case 'bolster': {
+      const k = n(); const cr = P.battlefield.filter(c => isType(c, 'Creature'));
+      if (!cr.length) break;
+      const minT = Math.min(...cr.map(c => toughness(g, c)));
+      const cands = cr.filter(c => toughness(g, c) === minT);
+      const pick = cands.length === 1 ? cands[0] : (cands.find(c => c.uid === (ask<number[]>(g, ctx, key, { pid: me, kind: 'pick', cards: cands, min: 1, max: 1, zone: 'battlefield', text: `Bolster ${k}: choose a creature you control with the least toughness.` })[0] ?? -1)) ?? cands[0]);
+      addCounters(g, pick, '+1/+1', k);
+      log(g, `${P.name} bolsters ${nm(pick)} (${k}).`); break;
+    }
+    case 'manifestDread': {
+      const top = P.library.slice(-2);
+      if (!top.length) break;
+      const shown = top.slice().reverse();
+      const uid = top.length === 1 ? top[0].uid : (ask<number[]>(g, ctx, key, { pid: me, kind: 'pick', cards: shown, min: 1, max: 1, zone: 'library', text: 'Manifest dread: manifest one of these cards. The other is put into your graveyard.' })[0] ?? shown[0].uid);
+      const chosen = top.find(c => c.uid === uid) ?? top[top.length - 1];
+      const rest = top.filter(c => c.uid !== chosen.uid);
+      P.library = P.library.filter(c => !top.some(x => x.uid === c.uid));
+      manifestCard(g, chosen, me);
+      for (const o of rest) { P.graveyard.push(o); log(g, `${nm(o)} is put into ${P.name}'s graveyard.`); }
+      break;
+    }
     case 'remC': { const k = n(); for (const c of onBf(g, who())) addCounters(g, c, e.kind ?? '+1/+1', -k); break; }
     case 'proliferate': { let times = e.n !== undefined ? Math.max(1, n()) : 1; if (P.battlefield.some(s => (def(s).statics ?? []).some(st => st.k === 'prolifTwice'))) times *= 2; for (let i = 0; i < times; i++) { for (const c of g.players.flatMap(p => p.battlefield)) for (const [k, v] of Object.entries(c.counters ?? {})) if (v > 0 && ((ctl(c) === me) === (k !== '-1/-1'))) addCounters(g, c, k, 1); for (const o of opponents(g, me)) if (o.poison) { o.poison++; } } log(g, `${P.name} proliferates` + (times > 1 ? ` ${times} times` : '') + '.'); break; }
     case 'token': {
@@ -2839,6 +2881,7 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
       if (e.op === 'scry') P.library.unshift(...away); else P.graveyard.push(...away);
       P.library.push(...[...keep].reverse());
       log(g, `${P.name} ${e.op === 'scry' ? 'scries' : 'surveils'} ${k} (${keep.length} on top, ${away.length} ${e.op === 'scry' ? 'to the bottom' : 'to the graveyard'}).`);
+      if (e.op === 'scry') emit(g, 'scry', { player: me, amount: k });
       break;
     }
     case 'look': {
@@ -4006,7 +4049,7 @@ export function declareBlockers(g: Game, defender: number, list: { blocker: numb
   for (const a of attackers(g)) if (a.attacking === defender && hasKw(a, 'menace') && a.blockedBy!.length === 1) { // menace: needs 2+ blockers
     const b = findCard(g, a.blockedBy![0]); if (b) delete b.blocking; a.blockedBy = [];
   }
-  for (const a of attackers(g)) if (a.attacking === defender) { for (const u of a.blockedBy!) { const b = findCard(g, u)!; log(g, `${nm(b)} blocks ${nm(a)}.`); emit(g, 'blocks', { player: defender }, b); } if (a.blockedBy!.length) emit(g, 'blocked', { player: g.active }, a); }
+  for (const a of attackers(g)) if (a.attacking === defender) { for (const u of a.blockedBy!) { const b = findCard(g, u)!; log(g, `${nm(b)} blocks ${nm(a)}.`); emit(g, 'blocks', { player: defender }, b); } if (a.blockedBy!.length) emit(g, 'blocked', { player: g.active }, a); else emit(g, 'unblocked', { player: defender }, a); }
   g.blockersDone.push(defender); maybeFinishBlocks(g); return true;
 }
 function maybeFinishBlocks(g: Game) { if (g.awaiting === 'block' && defenders(g).every(d => g.blockersDone.includes(d))) { g.awaiting = null; jewelCheck(g); givePriority(g); } }

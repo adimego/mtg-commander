@@ -47,6 +47,7 @@ export function parseFilter(s0: string): FP | null {
   const SUF: [RegExp, (m: RegExpExecArray) => void][] = [
     [/ you control $/, () => (f.ctrl = 'you')],
     [/ (?:an opponent controls|your opponents control|you don't control|target opponent controls|opponents control) $/, () => (f.ctrl = 'opp')],
+    [/ defending player controls $/, () => (f.defP = true)],
     [/ with toughness (\d+) or greater $/, m => (f.touGE = +m[1])], [/ with toughness (\d+) or less $/, m => (f.touLE = +m[1])],
     [/ with power (\d+) or less $/, m => (f.powLE = +m[1])], [/ with power (\d+) or greater $/, m => (f.powGE = +m[1])],
     [/ with (?:mana value|converted mana cost) (\d+) or less $/, m => (f.mvLE = +m[1])], [/ with (?:mana value|converted mana cost) (\d+) or greater $/, m => (f.mvGE = +m[1])],
@@ -216,6 +217,8 @@ function forEach(s: string, cx: Cx): Amt | null {
   if (/^aura you control that's attached to a creature you control$/.test(s)) return { aurasOnYours: true };
   if (/^aura you control that's attached to a creature$/.test(s)) return { aurasOnYours: true };
   if (/^instant and sorcery card in your graveyard$/.test(s)) return { cards: 'graveyard', pl: 'you', f: { anyType: ['Instant', 'Sorcery'] } };
+  if (/^instant and sorcery card in your graveyard$/.test(s)) return { cards: 'graveyard', pl: 'you', f: { anyType: ['Instant', 'Sorcery'] } };
+  if (/^(?:permanent|creature|artifact|enchantment)s? destroyed this way$/.test(s)) return 'destroyed';
   const fp = parseFilter(s); if (fp && !fp.card && !fp.spell) return { count: fp.f };
   return null;
 }
@@ -434,6 +437,29 @@ const PATS: Pat[] = [
   [/^each player shuffles their hand and graveyard into their library, then draws seven cards$/, () => [{ op: 'echoEons' }]],
   [/^create a number of (.+?) tokens?(?: with (.+?))? equal to the number of opponents you have$/, (m) => { const tok = tokenSpec(m[1]); if (!tok) return null; if (m[2]) { const k = kwList(m[2]); if (!k) return null; tok.kws = k; } return [{ op: 'token', n: { opps: true }, pl: 'you', tok }]; }],
   [/^destroy all creatures\. you gain 1 life for each creature destroyed this way$/, () => [{ op: 'destroy', who: { all: { types: ['Creature'] } } }, { op: 'gain', n: 'destroyed', pl: 'you' }]],
+  [/^destroy (.+?)\. you gain (\w+) life for each (?:permanent|creature|artifact|enchantment)s? destroyed this way$/, (m, cx) => {
+    const o = obj(m[1], cx, true); const k = num(m[2]); if (!o || o.card || k === null) return null;
+    return [{ op: 'destroy', who: o.ref }, { op: 'gain', n: k === 1 ? 'destroyed' : { mul: k as number, of: 'destroyed' }, pl: 'you' }];
+  }],
+  [/^destroy (.+?)\. you gain life equal to (?:that creature's|its) toughness$/, (m, cx) => {
+    const o = obj(m[1], cx, true); if (!o || o.card) return null;
+    return [{ op: 'gain', n: { tough: o.ref }, pl: 'you' }, { op: 'destroy', who: o.ref }];
+  }],
+  [/^support (\d+)$/, (m, cx) => { const o = obj(`up to ${+m[1]} target creatures`, cx, false); return o ? [{ op: 'addC', kind: '+1/+1', n: 1, who: o.ref }] : null; }],
+  [/^incubate (x|\w+)(?:, where x is (.+))?$/, (m, cx) => {
+    const a = m[1] === 'x' && m[2] ? amount(m[2], cx) : num(m[1]);
+    return a !== null ? [{ op: 'incubate', n: a }] : null;
+  }],
+  [/^bolster (\d+)$/, m => [{ op: 'bolster', n: +m[1] }]],
+  [/^manifest dread$/, () => [{ op: 'manifestDread' }]],
+  [new RegExp(`^(?:${P_RE} )?loses? half (?:their|your|his or her) life, rounded up$`), (m, cx) => {
+    const p = pl(m[1], cx, true); if (!p) return null;
+    return [{ op: 'lose', n: { half: { life: p } }, pl: p }];
+  }],
+  [/^create (?:a|one) token that's a copy of (.+?), except it has ([a-z ,]+)$/, (m, cx) => {
+    const o = obj(m[1], cx, false); const k = kwList(m[2]);
+    return o && k ? [{ op: 'copyTok', n: 1, who: o.ref, kw: k }] : null;
+  }],
   [/^destroy all creatures$/, () => [{ op: 'destroy', who: { all: { types: ['Creature'] } } }]],
   [/^create x 1\/1 colorless borg artifact creature tokens, where x is the number of nonartifact creatures destroyed this way$/, () => [{ op: 'token', n: 'destroyedNonArt', pl: 'you', tok: { name: 'Borg', p: 1, t: 1, colors: [], types: ['Artifact', 'Creature'], sub: ['Borg'] } }]],
 
@@ -876,6 +902,8 @@ export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partia
   if (/^~ becomes the target of a spell or ability$/.test(h)) return { defs: [{ ev: 'targeted', subj: 'self' }], cx: { it: 'self', that: 'ev' } };
   if (/^~ deals combat damage to a player or planeswalker$/.test(h) || /^~ deals combat damage to any target$/.test(h)) return { ...self('combatDamagePlayer'), cx: { it: 'self', thatPl: 'evp' } };
   if ((m = /^(equipped|enchanted) creature (dies|attacks|deals combat damage to a player|deals damage)$/.exec(h))) return { defs: [{ ev: m[2] === 'dies' ? 'dies' : m[2] === 'attacks' ? 'attacks' : m[2] === 'deals damage' ? 'damagePlayer' : 'combatDamagePlayer', subj: 'attached' }], cx: { it: 'attached', that: 'ev', thatPl: 'evp' } };
+  if (/^a creature dealt damage by ~ this turn dies$/.test(h))
+    return { defs: [{ ev: 'dies', subj: 'any', f: { types: ['Creature'] }, ifc: { k: 'srcDamagedEv' } }], cx: { it: 'ev', that: 'ev' } };
   if ((m = /^(?:(a|an|another|one or more|one or more other)|~ or (another|an?)) (.+?) (enters|dies|attacks|blocks|deals combat damage to a player|deals combat damage to an opponent|leaves the battlefield|is put into a graveyard from the battlefield|enter|die|attack)$/.exec(h))) {
     const fp = parseFilter(m[3]); if (!fp || fp.card || fp.spell) return null;
     const other = m[1] === 'another' || m[1] === 'one or more other'; if (other) fp.f.other = true;
@@ -957,6 +985,25 @@ export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partia
   if (/^the beginning of your second main phase$/.test(h)) return { defs: [{ ev: 'secondMain', pl: 'you' }], cx: { it: 'self', thatPl: 'evp' } };
   if (/^~ becomes the target of a spell or ability an opponent controls$/.test(h) || /^~ becomes the target of a spell or ability$/.test(h))
     return { defs: [{ ev: 'targeted', subj: 'self', pl: h.includes('opponent') ? 'opp' : 'any' }], cx: { it: 'self' } };
+  if (/^~ is turned face up$/.test(h)) return { defs: [{ ev: 'turnedFaceUp', subj: 'self' }], cx: { it: 'self' } };
+  if (/^~ becomes monstrous$/.test(h)) return { defs: [{ ev: 'monstrous', subj: 'self' }], cx: { it: 'self' } };
+  if (/^you scry$/.test(h)) return { defs: [{ ev: 'scry', pl: 'you' }], cx: { it: 'self' } };
+  if (/^you commit a crime$/.test(h)) return { defs: [{ ev: 'crime', pl: 'you' }], cx: { it: 'self' } };
+  if (/^~ exploits a creature$/.test(h)) return { defs: [{ ev: 'exploit', subj: 'self' }], cx: { it: 'self', that: 'ev' } };
+  if (/^you cycle or discard a card$/.test(h) || /^you discard or cycle a card$/.test(h))
+    return { defs: [{ ev: 'discard', pl: 'you' }], cx: { it: 'ev', that: 'ev' } };
+  if (/^~ attacks alone$/.test(h)) return { defs: [{ ev: 'attacks', subj: 'self', ifc: { k: 'attacksAlone' } }], cx: { it: 'self' } };
+  if ((m = /^(an?|another) (.+?) you control attacks alone$/.exec(h))) {
+    const fp = parseFilter(m[2]); if (!fp) return null;
+    if (m[1] === 'another') fp.f.other = true;
+    fp.f.ctrl = 'you';
+    return { defs: [{ ev: 'attacks', subj: m[1] === 'another' ? 'other' : 'any', f: fp.f, ifc: { k: 'attacksAlone' } }], cx: { it: 'ev', that: 'ev' } };
+  }
+  if (/^~ attacks and isn't blocked$/.test(h)) return { defs: [{ ev: 'unblocked', subj: 'self' }], cx: { it: 'self' } };
+  if (/^~ blocks a creature$/.test(h) || /^~ blocks$/.test(h)) return { defs: [{ ev: 'blocks', subj: 'self' }], cx: { it: 'self', that: 'ev' } };
+  if (/^~ becomes blocked by a creature$/.test(h) || /^~ becomes blocked$/.test(h)) return { defs: [{ ev: 'blocked', subj: 'self' }], cx: { it: 'self', that: 'ev' } };
+  if (/^~ blocks or becomes blocked by a creature$/.test(h))
+    return { defs: [{ ev: 'blocks', subj: 'self' }, { ev: 'blocked', subj: 'self' }], cx: { it: 'self', that: 'ev' } };
   return null;
 }
 export const pl2: Record<string, TriggerDef['pl']> = { you: 'you', any: 'any', notyou: 'opp' };

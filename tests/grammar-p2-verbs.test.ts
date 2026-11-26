@@ -145,3 +145,62 @@ describe('P2 leftover families flip Limited cards (exact Oracle shapes)', () => 
     expect(parsed.unparsed?.length).toBeGreaterThan(0);
   });
 });
+
+describe('P2 batch 2 leftover trigger heads', () => {
+  it('parses turned face up, monstrous, scry, crime, exploit', () => {
+    expect(trigger('~ is turned face up')?.defs[0]).toMatchObject({ ev: 'turnedFaceUp', subj: 'self' });
+    expect(trigger('~ becomes monstrous')?.defs[0]).toMatchObject({ ev: 'monstrous', subj: 'self' });
+    expect(trigger('you scry')?.defs[0]).toMatchObject({ ev: 'scry', pl: 'you' });
+    expect(trigger('you commit a crime')?.defs[0]).toMatchObject({ ev: 'crime', pl: 'you' });
+    expect(trigger('~ exploits a creature')?.defs[0]).toMatchObject({ ev: 'exploit', subj: 'self' });
+    expect(trigger('you cycle or discard a card')?.defs[0]).toMatchObject({ ev: 'discard', pl: 'you' });
+  });
+
+  it('parses attacks alone, unblocked, blocks, and damaged-by-~ dies', () => {
+    expect(trigger('~ attacks alone')?.defs[0]).toMatchObject({ ev: 'attacks', subj: 'self', ifc: { k: 'attacksAlone' } });
+    expect(trigger('a creature you control attacks alone')?.defs[0]).toMatchObject({ ev: 'attacks', subj: 'any' });
+    expect(trigger("~ attacks and isn't blocked")?.defs[0]).toMatchObject({ ev: 'unblocked', subj: 'self' });
+    expect(trigger('~ blocks a creature')?.defs[0]).toMatchObject({ ev: 'blocks', subj: 'self' });
+    expect(trigger('~ becomes blocked by a creature')?.defs[0]).toMatchObject({ ev: 'blocked', subj: 'self' });
+    expect(trigger('~ blocks or becomes blocked by a creature')?.defs.map(d => d.ev)).toEqual(['blocks', 'blocked']);
+    expect(trigger('a creature dealt damage by ~ this turn dies')?.defs[0])
+      .toMatchObject({ ev: 'dies', ifc: { k: 'srcDamagedEv' } });
+  });
+
+  it('fails closed on an unknown leftover head', () => {
+    expect(trigger('~ mutates')).toBeNull();
+    expect(trigger('you venture into the dungeon')).toBeNull();
+  });
+});
+
+describe('P2 batch 2 leftover verb bodies', () => {
+  it('parses support, incubate, bolster, manifest dread, and half life', () => {
+    const cx = newCx({ spell: true });
+    expect(effects('support 2', cx)).toEqual([{ op: 'addC', kind: '+1/+1', n: 1, who: 'tr:0-1' }]);
+    expect(cx.slots).toHaveLength(2);
+    expect(cx.slots.every(s => s.opt && s.f?.types?.includes('Creature'))).toBe(true);
+    expect(effects('incubate 3', newCx())).toEqual([{ op: 'incubate', n: 3 }]);
+    expect(effects('bolster 2', newCx())).toEqual([{ op: 'bolster', n: 2 }]);
+    expect(effects('manifest dread', newCx())).toEqual([{ op: 'manifestDread' }]);
+    expect(effects('you lose half your life, rounded up', newCx()))
+      .toEqual([{ op: 'lose', n: { half: { life: 'you' } }, pl: 'you' }]);
+  });
+
+  it('parses destroyed-this-way life gain, toughness gain, copy-except keyword, and typal for-each', () => {
+    expect(effects('destroy all creatures. you gain 2 life for each creature destroyed this way', newCx()))
+      .toEqual([{ op: 'destroy', who: { all: { types: ['Creature'] } } }, { op: 'gain', n: { mul: 2, of: 'destroyed' }, pl: 'you' }]);
+    expect(effects("destroy target creature. you gain life equal to that creature's toughness", newCx({ spell: true })))
+      .toEqual([{ op: 'destroy', who: 't0' }, { op: 'gain', n: { tough: 't0' }, pl: 'you' }]);
+    const copy = effects("create a token that's a copy of target creature, except it has menace", newCx({ spell: true }));
+    expect(copy).toEqual([{ op: 'copyTok', n: 1, who: 't0', kw: ['menace'] }]);
+    expect(effects('draw a card for each elf you control', newCx()))
+      .toEqual([{ op: 'draw', n: { count: { types: ['Elf'], ctrl: 'you' } }, pl: 'you' }]);
+    expect(effects("create a token that's a copy of target creature, except it has a unique unmodeled clause", newCx({ spell: true }))).toBeNull();
+  });
+
+  it('parses defending-player filters', () => {
+    const cx = newCx();
+    expect(effects('tap target creature defending player controls', cx)).toEqual([{ op: 'tap', who: 't0' }]);
+    expect(cx.slots[0]?.f).toMatchObject({ types: ['Creature'], defP: true });
+  });
+});

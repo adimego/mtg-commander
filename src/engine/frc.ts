@@ -17,7 +17,7 @@ const PHYREXIAN_ID = 'tok-incubator--back';
 const PHYREXIAN: CardDef = { id: PHYREXIAN_ID, name: 'Phyrexian', types: ['Artifact', 'Creature'], sub: ['Phyrexian'], cost: { generic: 0 }, colors: [], power: 0, toughness: 0, text: '', typeLine: 'Token Artifact Creature — Phyrexian', token: true };
 const INCUBATOR: CardDef = { id: INCUBATOR_ID, name: 'Incubator', types: ['Artifact'], sub: ['Incubator'], cost: { generic: 0 }, colors: [], text: '{2}: Transform this artifact.', typeLine: 'Token Artifact — Incubator', token: true, back: PHYREXIAN, abilities: [{ label: 'Transform', mana: { generic: 2 }, effects: [{ op: 'transform', who: 'self' }] }] };
 PHYREXIAN.back = INCUBATOR;
-function ensureIncubator() { CARDS[PHYREXIAN_ID] ??= PHYREXIAN; CARDS[INCUBATOR_ID] ??= INCUBATOR; return INCUBATOR_ID; }
+export function ensureIncubator() { CARDS[PHYREXIAN_ID] ??= PHYREXIAN; CARDS[INCUBATOR_ID] ??= INCUBATOR; return INCUBATOR_ID; }
 /** How much the caster wants a card. The opponent splits so the better pile is as weak as possible; the caster takes the stronger one. */
 function foilValue(g: Game, pid: number, c: Card): number {
   const d = def(c);
