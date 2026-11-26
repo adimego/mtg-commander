@@ -1,4 +1,4 @@
-import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretell, canNinjutsu, ninjutsu, sneakRets, teamworkPick, modesMax, crewPick,
+import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretell, canPlot, plot, canNinjutsu, ninjutsu, sneakRets, teamworkPick, modesMax, crewPick,
   Game, Card, Player, Target, TargetSpec, Effect, def, isType, hasKw, cmc, power, toughness, opponents, canCast, castSpell, playLand, canPlayLand,
   declareAttackers, declareBlockers, canAttack, canBlock, attackers, isCommander, isTypeOrSub, legalTargets, findCard, creatures, canActivate, activate, isMain,
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
@@ -74,6 +74,15 @@ export function decide(g: Game, d: Decision): unknown {
       if (/Pay \d+ life/.test(d.text)) return p.life > 12;
       if (/Begin the game with/.test(d.text)) return true;
       if (/extort/i.test(d.text)) return manaAvailable(p) >= 1;
+      if (/tribute/i.test(d.text) || d.key.startsWith('tribute:')) {
+        const c = findCard(g, +d.key.slice(8));
+        if (!c) return false;
+        const unpaid = (def(c).triggers ?? []).some(tr => tr.ifc?.k === 'tributeUnpaid' && (tr.effects ?? []).some(e => ['damage', 'lose', 'destroy', 'sac', 'sacThis', 'mill', 'discard'].includes(e.op)));
+        return unpaid;
+      }
+      if (/cumulative upkeep|echo cost/.test(d.text)) return manaAvailable(p) >= 2;
+      if (/Learn/.test(d.text)) return p.hand.some(c => cmc(def(c)) <= 2 && !isCommander(g, c));
+      if (/Cipher/.test(d.text)) return true;
       return !/sacrifice|discard|lose \d+ life/.test(d.text) || p.life > 10;
     }
     case 'pick': {
@@ -201,7 +210,9 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   const exileAlt = !normal && !omni && !free && !!d.exileAlt && canCast(g, pid, c, { exileAlt: true });
   let door: number | undefined;
   if (d.room) { door = d.room.doors.findIndex((_, i) => canCast(g, pid, c, { door: i })); if (door < 0) return false; }
-  if (!free && !normal && !evoke && !webRet && !omni && !surge && !exileAlt && !dash && !miracle && !madness && !spectacle && !blitz && !freerunning && !emerge && door === undefined) return false;
+  const proto = !!d.prototype && !normal && canCast(g, pid, c, { prototype: true });
+  const awaken = !!d.awaken && canCast(g, pid, c, { awaken: true }) && p.battlefield.some(x => isType(x, 'Land'));
+  if (!free && !normal && !evoke && !webRet && !omni && !surge && !exileAlt && !dash && !miracle && !madness && !spectacle && !blitz && !freerunning && !emerge && !proto && !awaken && door === undefined) return false;
   // teamwork: tap creatures that won't attack this turn anyway
   const tw = d.teamwork !== undefined ? teamworkPick(g, pid, c) : null;
   const teamwork = !!tw && (g.active !== pid || g.step === 'main2' || tw.every(x => !canAttack(g, x, true)));
@@ -225,7 +236,11 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   if (spellReplicate(g, pid, d) && door === undefined) { while (replicate < 8 && canCast(g, pid, c, { kicked, warp, x, evoke, webSling: !!webRet, omni, surge: surge && !omni && !normal, exileAlt, replicate: replicate + 1 })) replicate++; if (replicate > 2) replicate = 2; }
   let squad = 0;
   if (d.squad) { while (squad < 8 && canCast(g, pid, c, { kicked, warp, x, evoke, webSling: !!webRet, omni, surge: surge && !omni && !normal, exileAlt, door, replicate, squad: squad + 1 })) squad++; if (squad > 2) squad = 2; }
-  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, dash: dash && !normal, offspring, buyback, miracle, madness, entwine, spectacle, blitz: blitz && !normal, freerunning: freerunning && !normal, emerge: emerge && !normal, sacs: emerge && !normal && emergeSac ? [emergeSac.uid] : (casualty !== undefined ? [casualty] : undefined), bargain, casualty: casualty !== undefined ? d.casualty : undefined, conspire, splice: splice.length ? splice : undefined, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt, door, replicate: replicate || undefined, squad: squad || undefined, gift: def(c).gift ? (g.players.find(q => q.id !== pid && !q.lost)?.id ?? false) : undefined });
+  if (awaken && d.awaken) {
+    const land = p.battlefield.filter(x => isType(x, 'Land')).sort((a, b) => (a.tapped ? 0 : 1) - (b.tapped ? 0 : 1))[0];
+    if (land) targets = [...targets, { card: land.uid }];
+  }
+  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, dash: dash && !normal, offspring, buyback, miracle, madness, entwine, spectacle, blitz: blitz && !normal, freerunning: freerunning && !normal, emerge: emerge && !normal, sacs: emerge && !normal && emergeSac ? [emergeSac.uid] : (casualty !== undefined ? [casualty] : undefined), bargain, casualty: casualty !== undefined ? d.casualty : undefined, conspire, splice: splice.length ? splice : undefined, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt, door, replicate: replicate || undefined, squad: squad || undefined, gift: def(c).gift ? (g.players.find(q => q.id !== pid && !q.lost)?.id ?? false) : undefined, prototype: proto && !normal, awaken: !!(awaken && (!normal || (d.awaken && cmc(d) > (d.awaken.cost.generic ?? 0) + 2))) });
 }
 const isCounter = (d: CardDef) => !!(d.spell?.effects.some(e => e.op === 'counter' || (e.op === 'unless' && e.sub?.some(s => s.op === 'counter'))));
 const isPump = (d: CardDef) => !!d.spell?.effects.some(e => e.op === 'pump') && !d.spell.effects.some(e => HARMFUL.includes(e.op));
@@ -330,7 +345,7 @@ function mainPhase(g: Game, pid: number): boolean {
   for (const c of opts) if (tryCast(g, pid, c)) return true;
   if (useAbilities(g, pid, 'main')) return true;
   for (const c of p.battlefield) { const rm = def(c).room; if (!rm) continue; for (let i = 0; i < rm.doors.length; i++) if (canUnlockDoor(g, pid, c, i) && unlockDoor(g, pid, c.uid, i)) return true; }
-  if (g.step === 'main2') { const f = p.hand.find(c => canForetell(g, pid, c)); if (f && foretell(g, pid, f.uid)) return true; }
+  if (g.step === 'main2') { const f = p.hand.find(c => canForetell(g, pid, c)); if (f && foretell(g, pid, f.uid)) return true; const pl = p.hand.find(c => canPlot(g, pid, c) && !canCast(g, pid, c)); if (pl && plot(g, pid, pl.uid)) return true; }
   else for (const c of p.battlefield) { const abs = abilitiesOf(g, c); for (let i = 0; i < abs.length; i++) if ((abs[i].loyalty !== undefined || abs[i].equip || abs[i].crew !== undefined) && tryActivate(g, pid, c, i, abs[i], 'main')) return true; }
   return false;
 }
