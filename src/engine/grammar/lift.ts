@@ -53,6 +53,7 @@ export function liftCardDef(d: CardDef, opts: LiftOpts = {}): CardScript {
   if (d.statics) s.statics = d.statics.map(liftStatic);
   if (d.static) s.static = d.static;
   if (d.spell) s.spell = liftSpell(d.spell);
+  if (d.replacements?.length) s.replacements = d.replacements.map(r => ({ kind: r.ev, ...r }));
   if (d.back || d.prepDef) {
     s.faces = {};
     if (d.back) s.faces.back = liftCardDef(d.back, { source: s.source });

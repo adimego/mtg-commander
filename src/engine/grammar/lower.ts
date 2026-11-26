@@ -39,6 +39,10 @@ export function lowerCardScript(s: CardScript): CardDef {
   if (s.statics) d.statics = s.statics.map(lowerStatic);
   if (s.static) d.static = s.static;
   if (s.spell) d.spell = lowerSpell(s.spell);
+  if (s.replacements?.length) d.replacements = s.replacements.map(r => {
+    const { kind, span, effects, ...rest } = r as typeof r & { ev?: string };
+    return rest as unknown as import('../types').Replacement;
+  });
   if (s.faces?.back) d.back = lowerCardScript(s.faces.back);
   if (s.faces?.prepare) d.prepDef = lowerCardScript(s.faces.prepare);
   if (s.room) d.room = { doors: s.room.doors.map(lowerDoor) };

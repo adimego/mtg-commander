@@ -30,11 +30,64 @@ export interface Cond {
   f?: Filter; n?: number; max?: number; ref?: Ref; c?: Cond; or?: Cond[]; kind?: string; zone?: string; color?: Color;
 }
 export interface TokenSpec { name: string; p?: number; t?: number; colors: Color[]; types: string[]; sub?: string[]; kws?: string[]; legendary?: boolean; /** compiled quoted abilities (\"{t}: add {g}.\") */ ext?: Pick<CardDef, 'text' | 'mana' | 'abilities' | 'triggers' | 'statics' | 'keywords'>; preset?: 'Lander' | 'Heartwood' | 'Treasure' | 'Food' | 'Clue' | 'Blood' | 'Map' | 'Gold' | 'Powerstone' | 'Vibranium'; /** printed mana value (Gingerbrute is a {1} token) */ mv?: number }
+
+/** A “would…instead” replacement (CR 614 / 616). */
+export type ReplEv = 'damage' | 'die' | 'toGy' | 'draw' | 'token' | 'counters' | 'gainLife' | 'loseLife' | 'extraTurn';
+export type ReplInstead =
+  | { k: 'prevent'; n?: number }
+  | { k: 'redirect'; to: 'self' | 'attached' }
+  | { k: 'plus'; n: number }
+  | { k: 'mul'; n: number }
+  | { k: 'plusCount'; n: number }
+  | { k: 'plusToken'; preset: 'Treasure' | 'Food' | 'Clue' | 'Blood' | 'Gold' | 'Map' }
+  | { k: 'exile' }
+  | { k: 'shuffle' }
+  | { k: 'skip' }
+  | { k: 'floorLife'; n: number }
+  | { k: 'drawInstead' };
+export interface Replacement {
+  ev: ReplEv;
+  /** Subject filter (the permanent/card the event happens to). */
+  f?: Filter;
+  /** Affected player: you / an opponent / any. For toGy, “your graveyard” is the card’s owner. */
+  pl?: 'you' | 'opp' | 'any';
+  /** Damage source filter. */
+  srcF?: Filter;
+  srcYou?: boolean;
+  srcOther?: boolean;
+  colors?: Color[];
+  /** true = combat only; false = noncombat only; omit = any. */
+  combat?: boolean;
+  thisTurn?: boolean;
+  /** Creature dealt damage this way (same source this turn). */
+  thisWay?: boolean;
+  /** Creature dealt damage by this source this turn. */
+  bySrc?: boolean;
+  cond?: Cond;
+  may?: boolean;
+  /** CR 614.15 / 616.1a: this object replacing what happens to itself. */
+  self?: boolean;
+  /** CR 616.1b: this replacement would cause a zone change. */
+  zoneChange?: boolean;
+  instead: ReplInstead;
+  until?: 'eot';
+  /** Only tokens matching this (e.g. Treasure). */
+  tokenF?: Filter;
+  /** Only this counter kind; omit for any kind. */
+  ctrKind?: string;
+  /** “If you would put counters…” — the player putting them. */
+  ctrYou?: boolean;
+  fromAnywhere?: boolean;
+  /** Cards only (not tokens). */
+  cardsOnly?: boolean;
+  text?: string;
+}
+
 export interface Effect {
   op: string; n?: Amt; m?: Amt; toHand?: boolean;
   who?: Ref; pl?: PRef; f?: Filter; kw?: string[]; kind?: string; tok?: TokenSpec; dest?: 'hand' | 'battlefield' | 'top' | 'bottom' | 'graveyard' | 'exile';
   tapped?: boolean; attacking?: boolean; sub?: Effect[]; cond?: Cond; text?: string; mana?: string[]; rest?: 'bottom' | 'graveyard' | 'top' | 'hand' | 'exile'; take?: Amt; eot?: boolean; random?: boolean; upTo?: boolean;
-  zone?: 'graveyard' | 'library' | 'hand' | 'battlefield' | 'exile' | 'handOrGy'; reveal?: boolean; sh?: boolean; other?: Ref; until?: 'eot' | 'yourNext' | 'perm'; ctl?: PRef; ret?: 'eot' | 'now' | 'ownerEnd'; ifPaid?: Cost; /** continuous effect fields (op 'becomes') */ ce?: CEFx; /** reflexive trigger (op 'reflex') */ rt?: { effects: Effect[]; tslots?: TSlot[]; label: string }; free?: boolean; /** emblem definition (op 'emblem') */ emb?: CardDef; /** 'if' otherwise-branch ("... instead") */ else?: Effect[];
+  zone?: 'graveyard' | 'library' | 'hand' | 'battlefield' | 'exile' | 'handOrGy'; reveal?: boolean; sh?: boolean; other?: Ref; until?: 'eot' | 'yourNext' | 'perm'; ctl?: PRef; ret?: 'eot' | 'now' | 'ownerEnd'; ifPaid?: Cost; /** continuous effect fields (op 'becomes') */ ce?: CEFx; /** reflexive trigger (op 'reflex') */ rt?: { effects: Effect[]; tslots?: TSlot[]; label: string }; free?: boolean; /** emblem definition (op 'emblem') */ emb?: CardDef; /** 'if' otherwise-branch ("... instead") */ else?: Effect[]; /** temp replacement installed by a spell/ability */ repl?: Replacement;
 }
 export interface ManaAbility { /** spend restriction: artifact | hero | villain | ctypeSpell | ctypeAny | legendary */ only?: string; add: ManaSym[]; sac?: boolean; n?: Amt; cost?: Cost; tap?: boolean; /** damage dealt to you when tapped for colored mana (painlands) */ pain?: number; door?: number; /** this land doesn't untap during your next untap step after used */ skipNextUntap?: boolean }
 export interface ActAbility { /** waterbend: up to N generic paid by tapping artifacts/creatures */ wb?: number;
@@ -132,6 +185,7 @@ export interface CardDef {
   /** Characteristics it has outside the battlefield (Grist). */ offBf?: CEFx;
   /** layer-system result: timestamp of the latest 'loses all abilities' effect */ loseTs?: number;
   /** Names of the rules the compiler understood (for the in-game "Supported" note). */ compiled?: boolean;
+  /** Continuous “would…instead” replacements (CR 614). */ replacements?: Replacement[];
 }
 export interface DeckDef { id: string; name: string; /** Optional picker subtitle, e.g. FINAL FANTASY VI. */ subtitle?: string; commander: string; cards: string[]; partner?: string; /** alternative face commanders (a precon that lets you pick one). Not a partner: the game starts with exactly one of these in the command zone. */ extra?: string[] }
 
