@@ -53,12 +53,13 @@ function faces(c: ScryCard) { return c.card_faces?.length ? c.card_faces : null;
 export function images(c: ScryCard) { const f = faces(c); const iu = c.image_uris ?? f?.[0]?.image_uris; return { img: iu?.normal, art: iu?.art_crop }; }
 
 import { applyScripts } from '../engine/scripts';
-export function classify(c: ScryCard): Classified {
-  const b = builtinByName(c.name); if (b) return { def: b, support: 'builtin' };
-  return compileScry(c);
+import { maybeApplyGrammar, type GrammarOpts } from '../engine/grammar';
+export function classify(c: ScryCard, opts?: GrammarOpts): Classified {
+  const b = builtinByName(c.name); if (b) return maybeApplyGrammar({ def: b, support: 'builtin' }, opts);
+  return compileScry(c, opts);
 }
 /** Compile a Scryfall card with the Oracle-text compiler (no built-in lookup). */
-export function compileScry(c: ScryCard): Classified {
+export function compileScry(c: ScryCard, opts?: GrammarOpts): Classified {
   const f = faces(c); const front = f?.[0] ?? c;
   const typeLine = front.type_line ?? c.type_line;
   const types = typeLine.split('—')[0].trim().split(/\s+/).filter(t => !['Legendary', 'Basic', 'Snow', 'World', 'Tribal', 'Kindred', 'Ongoing'].includes(t));
@@ -77,9 +78,9 @@ export function compileScry(c: ScryCard): Classified {
   if (types.includes('Background')) { d.partner = true; d.canBeCommander = true; }
   const problems: string[] = [];
   let prepUn: string[] = [];
-  if (f && c.layout === 'prepare' && f[1]) { const b = compileScry({ ...(f[1] as ScryCard), name: f[1].name, layout: 'normal', card_faces: undefined, colors: (f[1] as ScryCard).colors ?? c.colors, color_identity: c.color_identity } as ScryCard); b.def.id = d.id + '--prep'; delete b.def.limited; d.prepDef = b.def; if (b.support !== 'auto') prepUn = (b.unparsed?.length ? b.unparsed : [b.reason ?? 'prepare spell']).map(x => `prepare spell: ${x}`); }
+  if (f && c.layout === 'prepare' && f[1]) { const b = compileScry({ ...(f[1] as ScryCard), name: f[1].name, layout: 'normal', card_faces: undefined, colors: (f[1] as ScryCard).colors ?? c.colors, color_identity: c.color_identity } as ScryCard, opts); b.def.id = d.id + '--prep'; delete b.def.limited; d.prepDef = b.def; if (b.support !== 'auto') prepUn = (b.unparsed?.length ? b.unparsed : [b.reason ?? 'prepare spell']).map(x => `prepare spell: ${x}`); }
   else if (f && f[1] && ['transform', 'modal_dfc', 'adventure', 'split', 'flip'].includes(c.layout ?? '') && !/Room/.test(c.type_line ?? typeLine)) {
-    const bf = f[1] as ScryCard; const b = compileScry({ ...bf, name: bf.name, layout: 'normal', card_faces: undefined, colors: bf.colors ?? c.colors, color_identity: c.color_identity, keywords: [], image_uris: bf.image_uris ?? c.image_uris } as ScryCard);
+    const bf = f[1] as ScryCard; const b = compileScry({ ...bf, name: bf.name, layout: 'normal', card_faces: undefined, colors: bf.colors ?? c.colors, color_identity: c.color_identity, keywords: [], image_uris: bf.image_uris ?? c.image_uris } as ScryCard, opts);
     b.def.id = d.id + '--back'; delete b.def.limited;
     if (c.layout === 'transform' || c.layout === 'flip') b.def.cost = { ...d.cost };
     if (c.layout === 'adventure') b.def.adventure = true;
@@ -91,7 +92,7 @@ export function compileScry(c: ScryCard): Classified {
   }
   else if (f && f.length >= 2 && /Room/.test(c.type_line ?? typeLine)) {
     const doors = f.map((face, i) => {
-      const fc = compileScry({ ...(face as ScryCard), name: face.name ?? c.name, layout: 'normal', card_faces: undefined, colors: (face as ScryCard).colors ?? c.colors, color_identity: c.color_identity, keywords: (face as ScryCard).keywords ?? [], image_uris: face.image_uris ?? c.image_uris } as ScryCard);
+      const fc = compileScry({ ...(face as ScryCard), name: face.name ?? c.name, layout: 'normal', card_faces: undefined, colors: (face as ScryCard).colors ?? c.colors, color_identity: c.color_identity, keywords: (face as ScryCard).keywords ?? [], image_uris: face.image_uris ?? c.image_uris } as ScryCard, opts);
       const fd = fc.def; delete fd.limited;
       for (const a of fd.abilities ?? []) a.door = i;
       for (const st of fd.statics ?? []) st.door = i;
@@ -123,11 +124,11 @@ export function compileScry(c: ScryCard): Classified {
   }
   if ((d.sub?.includes('Saga') && !d.saga) || (d.sub?.includes('Vehicle') && /\bcrew \d/i.test(d.text ?? '') && !d.abilities?.some(a => a.crew !== undefined))) problems.push(`${d.sub?.includes('Saga') ? 'Saga chapters' : 'crewing'} not modelled`);
   res.unparsed.push(...prepUn);
-  if (!res.unparsed.length && !problems.length) return { def: d, support: 'auto' };
+  if (!res.unparsed.length && !problems.length) return maybeApplyGrammar({ def: d, support: 'auto' }, opts);
   const works = describeWorks(d);
   const why = [res.unparsed.length ? `not modelled: "${res.unparsed.slice(0, 3).map(x => pretty(x, c.name)).map(x => x.length > 70 ? x.slice(0, 67) + '…' : x).join('" / "')}"${res.unparsed.length > 3 ? ` (+${res.unparsed.length - 3} more)` : ''}` : '', ...problems].filter(Boolean).join('; ');
   d.limited = `Limited support: ${works}. ${why[0].toUpperCase() + why.slice(1)}.`;
-  return { def: d, support: 'limited', reason: `${works[0].toUpperCase() + works.slice(1)}. ${why[0].toUpperCase() + why.slice(1)}.`, unparsed: res.unparsed };
+  return maybeApplyGrammar({ def: d, support: 'limited', reason: `${works[0].toUpperCase() + works.slice(1)}. ${why[0].toUpperCase() + why.slice(1)}.`, unparsed: res.unparsed }, opts);
 }
 function describeWorks(d: CardDef): string {
   const parts: string[] = [];

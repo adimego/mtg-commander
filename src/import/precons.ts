@@ -44,3 +44,14 @@ export function groupOfficialPrecons(precons: Precon[]): PreconSetGroup[] {
   }
   return [...groups.values()].sort((a, b) => (b.released || '').localeCompare(a.released || '') || a.setName.localeCompare(b.setName));
 }
+
+/** Unique Scryfall cards that appear in official (non-USR) precons, sorted by name. */
+export function officialPreconCardEntries(): { name: string; card: ScryCard }[] {
+  const raw = data as unknown as Raw;
+  const names = new Set<string>();
+  for (const d of raw.decks) {
+    for (const n of d.commanders) names.add(n);
+    for (const l of d.cards) names.add(l.name);
+  }
+  return [...names].sort().map(name => ({ name, card: raw.cards[name] }));
+}
