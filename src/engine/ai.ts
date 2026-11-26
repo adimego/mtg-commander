@@ -142,6 +142,10 @@ export function chooseModes(g: Game, pid: number, m: Modes, srcUid?: number): nu
 setAI({ targets: (g, pid, slots, effects, mandatory, srcUid) => chooseTargets(g, pid, slots, effects, mandatory, srcUid), decide, modes: chooseModes, castNow: (g, pid, c) => tryCast(g, pid, c) });
 
 /** Rough usefulness of a list of effects for the controller. */
+/** Prefer night when we control daybound fronts (want the back) or nightbound backs (want to stay). Don't stall spells just to force night. */
+function preferNight(g: Game, pid: number): boolean {
+  return g.players[pid].battlefield.some(c => hasKw(c, 'daybound') || hasKw(c, 'nightbound'));
+}
 function scoreFx(g: Game, pid: number, fx: Effect[], x = 0): number {
   let s = 0;
   for (const e of fx) {
@@ -152,6 +156,12 @@ function scoreFx(g: Game, pid: number, fx: Effect[], x = 0): number {
       case 'addC': case 'bolster': s += e.who === 'self' || e.who === 'chosen' ? 2 * n : 2; break;
       case 'gain': s += g.players[pid].life < 20 ? 1 : 0.3; break;
       case 'damage': case 'destroy': case 'exile': case 'bounce': case 'counter': case 'fight': case 'bite': case 'tuck': s += 4; break;
+      case 'becomeNight': s += preferNight(g, pid) ? 4 : 0.5; break;
+      case 'becomeDay': s += preferNight(g, pid) ? 0.4 : 2; break;
+      case 'becomeDayIfNeither': s += g.dayNight ? 0 : 2; break;
+      case 'toggleDayNight': s += preferNight(g, pid) === (g.dayNight !== 'night') ? 4 : 0.4; break;
+      case 'phaseOut': s += e.who === 'self' ? -1 : 3; break;
+      case 'extraTurn': s += 8 * (typeof e.n === 'number' ? e.n : 1); break;
       case 'lose': s += e.pl === 'you' ? -n * (g.players[pid].life < 10 ? 2 : 0.5) : n; break;
       case 'search': case 'ret': case 'retPick': case 'look': case 'exileTop': s += 3; break;
       case 'pump': case 'grant': s += isMain(g) || g.step === 'blockers' ? 1 : 0.2; break;

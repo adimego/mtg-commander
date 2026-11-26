@@ -981,6 +981,7 @@ export default function App() {
       <header>
         <b className="logo">Commander Arena</b>
         <div className="turninfo" style={{ borderColor: PCOLORS[g.active] }}>Turn {Math.ceil(g.turn / 4) || 1}<small> ({g.turn})</small> · <b style={{ color: PCOLORS[g.active] }}>{g.active === HUMAN ? 'Your turn' : `${g.players[g.active].name}'s turn`}</b></div>
+        {g.dayNight && <span className="autopass" title="The game's day or night designation">{g.dayNight === 'day' ? '☀ Day' : '🌙 Night'}</span>}
         <div className="phasebar">{SHOWN_STEPS.map(s => <span key={s} className={`ph ${s === g.step || (s === 'damage' && g.step === 'firstStrike') ? 'cur' : ''} ${STEPS.indexOf(s) < STEPS.indexOf(g.step) ? 'done' : ''}`}>{compact ? (PHASE_SHORT[s] ?? STEP_LABEL[s]) : STEP_LABEL[s]}</span>)}</div>
         {passUntil === g.turn && <span className="autopass">⏩ Auto-passing this turn</span>}
         {stopAll && <span className="autopass hold">✋ Holding priority</span>}
