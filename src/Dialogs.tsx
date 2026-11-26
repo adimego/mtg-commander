@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { groupTiles, stackCaption, pickFromStack } from './stacks';
-import { Game, Card, Decision, def, CARDS } from './engine/engine';
+import { Game, Card, Decision, def, CARDS, power } from './engine/engine';
 import type { Modes } from './engine/types';
 
 type Face = (p: { d: ReturnType<typeof def> }) => React.ReactElement;
@@ -145,6 +145,28 @@ export function WardBlightDialog({ name, amounts, creatures, pick, cancel }: { n
     </div>)}
     <div className="cbtns">
       <button className="big" data-ans="payward" disabled={!ready || !creatures.length} onClick={() => ready && pick(uids as number[])}>Pay ward</button>
+      <button className="sec" onClick={cancel}>Cancel</button>
+    </div>
+  </Box>;
+}
+
+export function StationDialog({ name, creatures, g, pick, cancel }: { name: string; creatures: Card[]; g: Game; pick: (uid: number) => void; cancel: () => void }) {
+  const [uid, setUid] = useState<number | undefined>(creatures[creatures.length - 1]?.uid);
+  return <Box title={name} sub="Station: tap another creature you control. This Spacecraft gets charge counters equal to that creature's power.">
+    <div className="cbtns">{creatures.map(c => <button key={c.uid} className={uid === c.uid ? 'big' : 'sec'} data-ans={c.uid} onClick={() => setUid(c.uid)}>{def(c).name} ({power(g, c)})</button>)}</div>
+    <div className="cbtns">
+      <button className="big" data-ans="station" disabled={uid === undefined} onClick={() => uid !== undefined && pick(uid)}>Station</button>
+      <button className="sec" onClick={cancel}>Cancel</button>
+    </div>
+  </Box>;
+}
+
+export function BroodshipDialog({ name, lands, pick, cancel }: { name: string; lands: Card[]; pick: (uid: number) => void; cancel: () => void }) {
+  const [uid, setUid] = useState<number | undefined>(lands[0]?.uid);
+  return <Box title={name} sub="Cast this permanent spell from your graveyard by sacrificing a land in addition to paying its other costs.">
+    <div className="cbtns">{lands.map(c => <button key={c.uid} className={uid === c.uid ? 'big' : 'sec'} data-ans={c.uid} onClick={() => setUid(c.uid)}>{def(c).name}</button>)}</div>
+    <div className="cbtns">
+      <button className="big" data-ans="brood" disabled={uid === undefined} onClick={() => uid !== undefined && pick(uid)}>Sacrifice and cast</button>
       <button className="sec" onClick={cancel}>Cancel</button>
     </div>
   </Box>;
