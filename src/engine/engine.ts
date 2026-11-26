@@ -81,7 +81,7 @@ export interface Player {
   library: Card[]; hand: Card[]; battlefield: Card[]; graveyard: Card[]; exile: Card[]; command: Card[]; cmdDamage: Record<string, number>; lost: boolean; landPlayed: boolean; mulligans: number; drewEmpty?: boolean;
   /** spells cast this turn (all / noncreature / instant-sorcery-or-villain / instant-or-sorcery / with {X}) */ spells?: { turn: number; n: number; nonc: number; isv: number; ins: number; x?: number };
   /** creatures that died under this player's control this turn */ diedN?: number; diedT?: number; /** turn a modified creature died under this player's control */ modDied?: number; /** Channel: may pay 1 life to add {C} this turn */ channel?: number; /** city's blessing (ascend) */ blessing?: boolean; isMaxMv?: number; leftGyT?: number; flashAll?: number; inkPrev?: number; inkN?: number; /** you put a counter on a permanent this turn */ ctrPutT?: number;
-  /** poison counters */ poison?: number; /** turn a permanent you controlled last left the battlefield */ leftTurn?: number; /** Storied: enduring story */ enduring?: boolean; /** Start your engines! speed (1-4) */ speed?: number; speedTurn?: number; /** firebending {R} that lasts until end of combat */ fireMana?: number; /** floating mana; each unit is a symbol like 'G', 'C', 'W|U' or 'ANY' */ pool: string[]; gained: number; lostLife: number; emblems?: Card[]; extraTurns?: number; extraLands?: number; landsPlayed?: number; /** Muldrotha types already used this turn */ muldrothaTypes?: { turn: number; types: string[] }; /** Exploration Broodship uses this turn */ broodUsed?: { turn: number; uids: number[] }; /** Solar Array: next artifact spell this turn gains sunburst */ solarGrantT?: number; /** a nontoken permanent was sacrificed this turn */ sacNontokenT?: number;
+  /** poison counters */ poison?: number; /** energy counters ({E}) */ energy?: number; /** turn a permanent you controlled last left the battlefield */ leftTurn?: number; /** Storied: enduring story */ enduring?: boolean; /** Start your engines! speed (1-4) */ speed?: number; speedTurn?: number; /** firebending {R} that lasts until end of combat */ fireMana?: number; /** floating mana; each unit is a symbol like 'G', 'C', 'W|U' or 'ANY' */ pool: string[]; gained: number; lostLife: number; emblems?: Card[]; extraTurns?: number; extraLands?: number; landsPlayed?: number; /** Muldrotha types already used this turn */ muldrothaTypes?: { turn: number; types: string[] }; /** Exploration Broodship uses this turn */ broodUsed?: { turn: number; uids: number[] }; /** Solar Array: next artifact spell this turn gains sunburst */ solarGrantT?: number; /** a nontoken permanent was sacrificed this turn */ sacNontokenT?: number;
   /** cards drawn this turn ({turn, n}) */ drawn?: { turn: number; n: number }; /** may cast sorceries at instant speed until their next turn */ flashSorc?: boolean; /** turn on which their creature spells can't be countered */ uncCreatures?: number; /** token creation doubled until end of this turn */ tokDouble?: number;
   /** last "can't lose" reason already announced (Platinum Angel / Darksteel Angel) */ angelWhy?: string; /** Teferi's Protection: life total can't change and protection from everything, until this player's next turn */ teferi?: boolean; /** prevent all damage that would be dealt to this player, until their next turn */ dmgShield?: boolean; /** creatures that entered under this player's control this turn */ etbN?: number; etbT?: number; /** nonland permanents that entered under this player this turn (celebration) */ nlEtbN?: number; nlEtbT?: number; /** first life-gain turn for Vanguard Seraph */ vanguardGainT?: number; /** combat+noncombat damage received this turn */ dmgThisTurn?: number; /** you dealt combat damage to a player with an Assassin or a commander this turn */ freerunT?: number; /** Circle of Protection: prevent the next damage to you from a color this turn */ preventColor?: { color: string; turn: number }[];  /** creatures that attacked this turn */ atkN?: number; /** total power of creatures that attacked this turn */ atkPow?: number; atkPowT?: number; /** opponent ids you attacked this turn */ atkOpps?: number[]; /** tokens you created this turn */ tokN?: number; tokT?: number; /** All-Out Assault: untap everything the next time you attack */ untapAtk?: number;
   /** Võx: this turn, next artifact creature and next spacecraft have undaunted */ voxUndaunted?: number; voxArt?: boolean; voxShip?: boolean;
@@ -740,11 +740,12 @@ const unitsOf = (c: Card, i = 0) => { const m = def(c).mana![i]; const n = m.n !
 /** Mana symbols of `col` in a card's printed mana cost. Hybrid and Phyrexian symbols that include the color each count as one. */
 export function colorPips(d: CardDef, col: Color): number { return (d.cost[col] ?? 0) + (d.cost.phy?.filter(x => x === col).length ?? 0) + (d.cost.hyb?.filter(h => h.split('|').includes(col)).length ?? 0); }
 export const manaAvailable = (p: Player) => p.pool.length + manaSources(p).filter(c => !def(c).mana![0].sac).reduce((s, c) => s + unitsOf(c).length, 0);
-export function costOf(g: Game, c: Card, o: { kicked?: boolean; flashback?: boolean; x?: number; warp?: boolean; sneak?: boolean; evoke?: boolean; mayhem?: boolean; webSling?: boolean; free?: boolean; omni?: boolean; surge?: boolean; morph?: boolean; impending?: boolean; door?: number; replicate?: number; squad?: number; bestow?: boolean; modes?: number[]; dash?: boolean; offspring?: boolean; buyback?: boolean; madness?: boolean; miracle?: boolean; entwine?: boolean; spectacle?: boolean; blitz?: boolean; freerunning?: boolean; emerge?: boolean; emergeMv?: number; plot?: boolean; awaken?: boolean; prototype?: boolean; targets?: (Target | undefined)[] } = {}): Cost {
+export function costOf(g: Game, c: Card, o: { kicked?: boolean; flashback?: boolean; x?: number; warp?: boolean; sneak?: boolean; evoke?: boolean; mayhem?: boolean; webSling?: boolean; free?: boolean; omni?: boolean; surge?: boolean; morph?: boolean; impending?: boolean; door?: number; replicate?: number; squad?: number; bestow?: boolean; modes?: number[]; dash?: boolean; offspring?: boolean; buyback?: boolean; madness?: boolean; miracle?: boolean; entwine?: boolean; spectacle?: boolean; blitz?: boolean; freerunning?: boolean; emerge?: boolean; emergeMv?: number; plot?: boolean; awaken?: boolean; prototype?: boolean; fuse?: boolean; targets?: (Target | undefined)[] } = {}): Cost {
+  if (o.fuse && frontDef(c)?.fuse) return withFused(c, () => costOf(g, c, { ...o, fuse: false }));
   const k0 = costOf0(g, c, o); if (!c.anyMana || !g.players.some(q => q.exile.includes(c))) return k0;
   const cs = ['W', 'U', 'B', 'R', 'G', 'C'] as const; const k = { ...k0 }; for (const s of cs) { k.generic += k[s] ?? 0; delete k[s]; } k.generic += k.hyb?.length ?? 0; delete k.hyb; return k;
 }
-function costOf0(g: Game, c: Card, o: { kicked?: boolean; flashback?: boolean; x?: number; warp?: boolean; sneak?: boolean; evoke?: boolean; mayhem?: boolean; webSling?: boolean; free?: boolean; omni?: boolean; surge?: boolean; morph?: boolean; impending?: boolean; door?: number; replicate?: number; squad?: number; bestow?: boolean; modes?: number[]; dash?: boolean; offspring?: boolean; buyback?: boolean; madness?: boolean; miracle?: boolean; entwine?: boolean; spectacle?: boolean; blitz?: boolean; freerunning?: boolean; emerge?: boolean; emergeMv?: number; plot?: boolean; awaken?: boolean; prototype?: boolean; targets?: (Target | undefined)[] } = {}): Cost {
+function costOf0(g: Game, c: Card, o: { kicked?: boolean; flashback?: boolean; x?: number; warp?: boolean; sneak?: boolean; evoke?: boolean; mayhem?: boolean; webSling?: boolean; free?: boolean; omni?: boolean; surge?: boolean; morph?: boolean; impending?: boolean; door?: number; replicate?: number; squad?: number; bestow?: boolean; modes?: number[]; dash?: boolean; offspring?: boolean; buyback?: boolean; madness?: boolean; miracle?: boolean; entwine?: boolean; spectacle?: boolean; blitz?: boolean; freerunning?: boolean; emerge?: boolean; emergeMv?: number; plot?: boolean; awaken?: boolean; prototype?: boolean; fuse?: boolean; targets?: (Target | undefined)[] } = {}): Cost {
   const d = def(c); const p = g.players[c.owner];
   if (o.free && d.freeCmdr) return o.kicked && d.kicker ? { ...d.kicker } : { generic: 0 };
   if ((g.castNow?.uid === c.uid && g.castNow.free) || (c.mayFree === g.turn && p.exile.includes(c)) || (c.playFree && g.players.some(q => q.exile.includes(c)))) return o.kicked && d.kicker ? { ...d.kicker } : { generic: 0 }; // without paying its mana cost
@@ -808,9 +809,10 @@ function costOf0(g: Game, c: Card, o: { kicked?: boolean; flashback?: boolean; x
   }
   return base;
 }
-export interface Payment { /** which mana ability of each src */ abs?: number[]; /** restriction tags of mana used */ tags?: string[]; /** unique colors of mana actually spent (converge) */ cols?: string[]; srcs: Card[]; pool: number[]; life: number; left: string[]; conv: Card[]; delve?: Card[]; imp?: Card[] }
+export interface Payment { /** which mana ability of each src */ abs?: number[]; /** restriction tags of mana used */ tags?: string[]; /** unique colors of mana actually spent (converge) */ cols?: string[]; srcs: Card[]; pool: number[]; life: number; left: string[]; conv: Card[]; delve?: Card[]; imp?: Card[]; energy?: number }
 /** Mana abilities don't use the stack: choose floating mana and sources (lands, rocks, dorks) that pay the cost. */
 export function planPayment(p: Player, cost: Cost, o: PayOpts = {}): Payment | null {
+  if ((cost.E ?? 0) > (p.energy ?? 0)) return null;
   type Src = { c?: Card; i?: number; pi?: number; units: string[][]; rank: number };
   const tagU = (u: string[], tg?: string) => { if (tg) (u as Tagged).tag = tg; return u; };
   const srcs: Src[] = [
@@ -850,10 +852,11 @@ export function planPayment(p: Player, cost: Cost, o: PayOpts = {}): Payment | n
   if ((life || cost.life) && p.teferi) return null;
   if (life && p.life <= life) return null;
   if (cost.life) { if (p.life < life + cost.life) return null; life += cost.life; }
+  const energy = cost.E ?? 0;
   const all = [...chosen];
   const used = all.filter(s => s.c && s.rank < 4);
   const chN = all.filter(s => s.rank === 6).length; if (chN) life += chN;
-  return { abs: used.map(s => s.i ?? 0), tags: all.flatMap(s => s.units.map(u => (u as Tagged).tag).filter((t): t is string => !!t)), cols: [...spentCols], srcs: used.map(s => s.c!), pool: all.filter(s => s.pi !== undefined).map(s => s.pi!), life, left: pool.map(u => (u.length >= 5 ? 'ANY' : u.join('|')) + ((u as Tagged).tag ? '@' + (u as Tagged).tag : '')), conv: all.filter(s => s.rank === 4).map(s => s.c!), delve: all.filter(s => s.rank === 5).map(s => s.c!), imp: all.filter(s => s.rank === 7).map(s => s.c!) };
+  return { abs: used.map(s => s.i ?? 0), tags: all.flatMap(s => s.units.map(u => (u as Tagged).tag).filter((t): t is string => !!t)), cols: [...spentCols], srcs: used.map(s => s.c!), pool: all.filter(s => s.pi !== undefined).map(s => s.pi!), life, left: pool.map(u => (u.length >= 5 ? 'ANY' : u.join('|')) + ((u as Tagged).tag ? '@' + (u as Tagged).tag : '')), conv: all.filter(s => s.rank === 4).map(s => s.c!), delve: all.filter(s => s.rank === 5).map(s => s.c!), imp: all.filter(s => s.rank === 7).map(s => s.c!), energy };
 }
 type Tagged = string[] & { tag?: string };
 /** What mana is being spent on (for "spend this mana only to …" restrictions). */
@@ -892,6 +895,7 @@ function payPlan(g: Game, p: Player, pl: Payment) {
   for (const c of pl.delve ?? []) { if (p.graveyard.includes(c)) { p.graveyard = p.graveyard.filter(x => x !== c); p.exile.push(c); log(g, `${p.name} delves ${nm(c)}.`); emit(g, 'leaveGy', { player: p.id, from: 'graveyard' }, c); } }
   p.pool = p.pool.filter((_, i) => !pl.pool.includes(i)); p.pool.push(...pl.left);
   if (pl.life) loseLife(g, p.id, pl.life);
+  if (pl.energy) { p.energy = Math.max(0, (p.energy ?? 0) - pl.energy); log(g, `${p.name} pays ${'{E}'.repeat(pl.energy)} (${p.energy} energy left).`); }
   for (const [k, c] of pl.srcs.entries()) if (def(c).mana?.[pl.abs?.[k] ?? 0]?.sac) { log(g, `${p.name} sacrifices ${nm(c)} for mana.`); sacrifice(g, c); }
   for (const [k, c] of pl.srcs.entries()) { const pn = def(c).mana?.[pl.abs?.[k] ?? 0]?.pain; if (pn) dealDamage(g, c.id, c, { player: p.id }, pn); }
 }
@@ -1064,10 +1068,10 @@ export function castZone(g: Game, pid: number, c: Card): 'hand' | 'command' | 'f
   if (c.mayPlay && c.mayPlay >= g.turn && p.exile.includes(c) && !(c.warpAfter !== undefined && c.warpAfter >= g.turn)) return 'exile';
   if (evendoPlayOk(g, pid, c)) return 'exile';
   if (p.graveyard.includes(c) && def(c).gyDiscard && !c.mayPlay && p.hand.length) return 'graveyard';
-  if (p.graveyard.includes(c)) return def(c).flashback || def(c).harmonize || def(c).jumpStart ? 'flashback' : def(c).mayhem && c.discarded === g.turn ? 'mayhem' : (def(c).retrace || def(c).escape || c.mayPlay || muldrothaCastOk(g, pid, c) || broodshipCastOk(g, pid, c) || (def(c).gyCast === 'zombie' && p.battlefield.some(x => isTypeOrSub(def(x), 'Zombie')))) ? 'graveyard' : null;
+  if (p.graveyard.includes(c)) return def(c).flashback || def(c).harmonize || def(c).jumpStart ? 'flashback' : def(c).mayhem && c.discarded === g.turn ? 'mayhem' : (def(c).aftermath || def(c).retrace || def(c).escape || c.mayPlay || muldrothaCastOk(g, pid, c) || broodshipCastOk(g, pid, c) || (def(c).gyCast === 'zombie' && p.battlefield.some(x => isTypeOrSub(def(x), 'Zombie')))) ? 'graveyard' : null;
   return null;
 }
-export interface CastOpts { dash?: boolean; offspring?: boolean; buyback?: boolean; madness?: boolean; miracle?: boolean; entwine?: boolean; spectacle?: boolean; blitz?: boolean; freerunning?: boolean; emerge?: boolean; bargain?: boolean; casualty?: number; conspire?: number[]; splice?: number[]; /** Gift a card: false = don't promise; number = opponent who receives it */ gift?: number | false;  /** cast face down for {3} */ morph?: boolean; plot?: boolean; awaken?: boolean; prototype?: boolean; /** cast for its impending cost */ impending?: boolean; /** cast for its overload cost */ overload?: boolean; /** cast without paying its mana cost (if you control a commander) */ free?: boolean; /** Omniscience: cast from hand without paying its mana cost */ omni?: boolean; /** cast for its surge cost */ surge?: boolean; /** Louisoix's Sacrifice: pay {2} instead of sacrificing */ orPay?: boolean; evoke?: boolean; webSling?: boolean; webRet?: number; harmTap?: number; /** cast the back face (modal DFC) or the Adventure */ back?: boolean; sneak?: boolean; sneakRet?: number; teamwork?: boolean | number[]; warp?: boolean; sacs?: number[]; discards?: number[]; targets?: (Target | undefined)[]; modes?: number[]; x?: number; kicked?: boolean; blightPaid?: boolean; blightUids?: number[]; flashback?: boolean; /** exile cards from hand rather than pay mana (Commandeer) */ exileAlt?: boolean; door?: number; replicate?: number; squad?: number; bestow?: boolean }
+export interface CastOpts { dash?: boolean; offspring?: boolean; buyback?: boolean; madness?: boolean; miracle?: boolean; entwine?: boolean; spectacle?: boolean; blitz?: boolean; freerunning?: boolean; emerge?: boolean; bargain?: boolean; casualty?: number; conspire?: number[]; splice?: number[]; /** Gift a card: false = don't promise; number = opponent who receives it */ gift?: number | false;  /** cast face down for {3} */ morph?: boolean; plot?: boolean; awaken?: boolean; prototype?: boolean; /** cast for its impending cost */ impending?: boolean; /** cast for its overload cost */ overload?: boolean; /** cast without paying its mana cost (if you control a commander) */ free?: boolean; /** Omniscience: cast from hand without paying its mana cost */ omni?: boolean; /** cast for its surge cost */ surge?: boolean; /** Louisoix's Sacrifice: pay {2} instead of sacrificing */ orPay?: boolean; evoke?: boolean; webSling?: boolean; webRet?: number; harmTap?: number; /** cast the back face (modal DFC, Adventure, split half, or aftermath) */ back?: boolean; /** Fuse: cast both halves of a split card from hand */ fuse?: boolean; sneak?: boolean; sneakRet?: number; teamwork?: boolean | number[]; warp?: boolean; sacs?: number[]; discards?: number[]; targets?: (Target | undefined)[]; modes?: number[]; x?: number; kicked?: boolean; blightPaid?: boolean; blightUids?: number[]; flashback?: boolean; /** exile cards from hand rather than pay mana (Commandeer) */ exileAlt?: boolean; door?: number; replicate?: number; squad?: number; bestow?: boolean }
 const isTarget = (o: unknown): o is Target => !!o && typeof o === 'object' && ('player' in o || 'card' in o || 'stack' in o);
 function modesOk(g: Game, pid: number, m: Modes, x: TCtx) { const n = m.list.filter(md => slotsFillable(g, pid, md.tslots, x)).length; return m.repeat ? n >= 1 : n >= m.min; }
 const wardCost = (g: Game, pid: number, ts: (Target | undefined)[]) => ts.reduce((s, t) => { const c = t?.card !== undefined ? findCard(g, t.card) : undefined; return s + (c && ctl(c) !== pid ? def(c).ward ?? 0 : 0); }, 0);
@@ -1193,13 +1197,19 @@ export function payBlight(g: Game, pid: number, n: number, uid?: number): boolea
 const isCastNow = (g: Game, pid: number, c: Card) => g.castNow?.uid === c.uid && g.castNow.pid === pid;
 /** Can the back face / Adventure of this card be cast from where it is? */
 export function backCastable(g: Game, pid: number, c: Card): boolean {
-  const f = frontDef(c); const b = f?.back; if (!b || c.face || c.onAdv || !(f.mdfc || b.adventure) || b.types.includes('Land')) return false;
+  const f = frontDef(c); const b = f?.back; if (!b || c.face || c.onAdv || b.types.includes('Land')) return false;
+  if (f.split || b.aftermath || f.aftermath) {
+    if (b.aftermath || f.aftermath) return c.owner === pid && g.players[pid].graveyard.includes(c);
+    return castZone(g, pid, c) === 'hand';
+  }
+  if (!(f.mdfc || b.adventure)) return false;
   const z = castZone(g, pid, c); return z === 'hand' || (z === 'command' && !!f.mdfc) || (z === 'exile' && !c.foretold);
 }
 function withBack<T>(c: Card, f: () => T): T { flipFace(c); try { return f(); } finally { frontFace(c); } }
 export function canCast(g: Game, pid: number, c: Card, o: CastOpts = {}): boolean {
   if (o.overload) { const oid = overloadId(c.id); if (!oid) return false; const id0 = c.id; c.id = oid; c.face = id0; try { return canCast(g, pid, c, { ...o, overload: false }); } finally { c.id = id0; delete c.face; } }
   if (o.back) return backCastable(g, pid, c) && withBack(c, () => canCast(g, pid, c, { ...o, back: false }));
+  if (o.fuse) { const f = frontDef(c); if (!f?.fuse || !f.back || c.face || c.onAdv || castZone(g, pid, c) !== 'hand') return false; return withFused(c, () => canCast(g, pid, c, { ...o, fuse: false })); }
   const p = g.players[pid]; const d = def(c); const now = isCastNow(g, pid, c);
   if ((!now && !hasPriority(g, pid)) || p.lost || isType(c, 'Land')) return false;
   if (!now && g.stack.some(it => it.kind === 'spell' && (it.card ? def(it.card).splitSecond : CARDS[it.sourceId]?.splitSecond))) return false;
@@ -1337,6 +1347,7 @@ export function castSpell(g: Game, pid: number, uid: number, opt?: Target | Cast
   const p = g.players[pid]; const c = [...p.hand, ...p.command, ...p.graveyard, ...p.exile, ...(p.library.length && topCastable(g, pid, p.library[p.library.length - 1]) ? [p.library[p.library.length - 1]] : [])].find(x => x.uid === uid); if (!c) return false;
   if (o.overload) { const oid = overloadId(c.id); if (!oid) return false; const id0 = c.id; c.id = oid; c.face = id0; const ok = castSpell(g, pid, uid, { ...o, overload: false }); if (!ok) { c.id = id0; delete c.face; } else log(g, `(${nm(c)} was cast for its overload cost.)`); return ok; }
   if (o.back) { if (!backCastable(g, pid, c)) return false; flipFace(c); const ok = castSpell(g, pid, uid, { ...o, back: false }); if (!ok) frontFace(c); return ok; }
+  if (o.fuse) { const f = frontDef(c); if (!f?.fuse || !f.back || c.face || c.onAdv || castZone(g, pid, c) !== 'hand') return false; const ok = withFused(c, () => castSpell(g, pid, uid, { ...o, fuse: false })); if (ok) { const it = g.stack[g.stack.length - 1]; if (it?.card === c) { it.sourceId = f.id; it.label = `${f.name} (fused)`; } } return ok; }
   const now = isCastNow(g, pid, c); const z = castZone(g, pid, c); const fb = z === 'flashback'; if (z) c.castFrom = z; if (z === 'graveyard' && def(c).escape) c.escaped = true;
   if (!canCast(g, pid, c, { kicked: o.kicked, dash: o.dash, offspring: o.offspring, buyback: o.buyback, madness: o.madness, miracle: o.miracle, entwine: o.entwine, spectacle: o.spectacle, blitz: o.blitz, freerunning: o.freerunning, emerge: o.emerge, x: o.x, warp: o.warp, morph: o.morph, impending: o.impending, sneak: o.sneak, evoke: o.evoke, webSling: o.webSling, free: o.free, omni: o.omni, surge: o.surge, orPay: o.orPay, exileAlt: o.exileAlt, door: o.door, replicate: o.replicate, squad: o.squad, bestow: o.bestow, plot: o.plot, awaken: o.awaken, prototype: o.prototype, targets: o.targets })) return false;
   const sneakRet = o.sneak ? (sneakRets(g, pid).find(q => q.uid === o.sneakRet) ?? sneakRets(g, pid).sort((a, b) => valueOf(g, a) - valueOf(g, b))[0]) : undefined;
@@ -1491,6 +1502,7 @@ export function castSpell(g: Game, pid: number, uid: number, opt?: Target | Cast
   const pub = o.morph ? FACE_DOWN_RULES : d;
   const item: StackItem = { id: g.nextUid++, kind: 'spell', controller: pid, sourceId: c.id, sourceUid: c.uid, card: c, effects, targetSpec: d.spell?.target, target: targets.find(Boolean), targets, tslots: slots, modes: o.entwine && d.spell?.modes ? d.spell.modes.list.map((_, i) => i) : modes, modeDef: d.spell?.modes, x: o.x ?? 0, kicked: !!o.kicked || !!o.blightPaid, blightPaid: !!o.blightPaid || undefined, flashback: fb || undefined, rebound: z === 'hand' && !!d.rebound && !prepSrc || undefined, label: o.morph ? 'Face-down creature' : d.name, uncounterable: o.morph ? undefined : d.uncounterable, faceDown: o.morph || undefined, evCard: extraSac, spentCols: (plan.cols ?? (['W','U','B','R','G'] as const).filter(k => (cost[k] ?? 0) > 0)).length };
   delete c.onAdv; delete c.foretold; delete c.plotted; c.kicked = !!o.kicked; c.dashed = !!o.dash; c.offspringPaid = !!o.offspring; c.blitzed = !!o.blitz; c.bargained = !!o.bargain || !!c.bargained; c.protoCast = !!o.prototype || undefined; c.x = o.x ?? 0; item.buyback = !!o.buyback; c.teamwork = !!team; item.teamwork = !!team; item.event = { player: pid, spent };
+  if (d.aftermath) item.awayTo = 'exile';
   g.stack.push(item); emitTargeted(g, item); c.spentCols = item.spentCols; if (p.solarGrantT === g.turn && isType(c, 'Artifact')) { c.gainedSunburst = true; delete p.solarGrantT; log(g, `${nm(c)} gains sunburst.`); }
   const tdesc = targets.filter(Boolean).map(t => describeTarget(g, t)).join(', ');
   log(g, `${p.name} casts ${prepSrc ? 'a copy of ' : ''}${o.morph ? 'a face-down creature' : d.name}${o.warp ? ' for its warp cost' : ''}${o.impending ? ' for its impending cost' : ''}${o.x ? ` (X=${o.x})` : ''}${o.kicked ? ' (kicked)' : ''}${fb ? ' with flashback' : ''}${tdesc ? ` targeting ${tdesc}` : ''}${fromCmd ? ` from the command zone (tax ${2 * (p.casts[c.id] - 1)})` : ''}.`);
@@ -2295,7 +2307,26 @@ export function createToken(g: Game, pid: number, spec: TokenSpec | string, o: {
 
 // ---------------- resolution ----------------
 const WAIT = { wait: true };
-export const costText = (c: Cost) => `${c.x ? '{X}'.repeat(c.x) : ''}${c.generic ? `{${c.generic}}` : ''}${(c.hyb ?? []).map(h => `{${h.replace('|', '/')}}`).join('')}${(['W', 'U', 'B', 'R', 'G', 'C'] as const).map(k => `{${k}}`.repeat(c[k] || 0)).join('')}${(c.phy ?? []).map(k => `{${k}/P}`).join('')}` || '{0}';
+export const costText = (c: Cost) => `${c.x ? '{X}'.repeat(c.x) : ''}${c.generic ? `{${c.generic}}` : ''}${(c.hyb ?? []).map(h => `{${h.replace('|', '/')}}`).join('')}${(['W', 'U', 'B', 'R', 'G', 'C'] as const).map(k => `{${k}}`.repeat(c[k] || 0)).join('')}${(c.phy ?? []).map(k => `{${k}/P}`).join('')}${c.E ? '{E}'.repeat(c.E) : ''}` || '{0}';
+export function addCost(a: Cost, b: Cost): Cost {
+  const r: Cost = { generic: (a.generic ?? 0) + (b.generic ?? 0) };
+  for (const k of ['W', 'U', 'B', 'R', 'G', 'C', 'x', 'life', 'E'] as const) { const n = (a[k] ?? 0) + (b[k] ?? 0); if (n) r[k] = n; }
+  if (a.hyb?.length || b.hyb?.length) r.hyb = [...(a.hyb ?? []), ...(b.hyb ?? [])];
+  if (a.phy?.length || b.phy?.length) r.phy = [...(a.phy ?? []), ...(b.phy ?? [])];
+  return r;
+}
+/** Combined front+back face for Fuse. */
+export function fusedDef(d: CardDef): CardDef | null {
+  const b = d.back; if (!d.fuse || !b) return null;
+  const tslots = [...spellSlots(d), ...spellSlots(b)];
+  return { ...d, cost: addCost(d.cost, b.cost), colors: [...new Set([...d.colors, ...b.colors])] as Color[], spell: { effects: [...(d.spell?.effects ?? []), ...(b.spell?.effects ?? [])], tslots: tslots.length ? tslots : undefined } };
+}
+function withFused<T>(c: Card, fn: () => T): T {
+  const f = frontDef(c); const fd = f && fusedDef(f); if (!fd) return fn();
+  const nid = `${f.id}#fuse`; CARDS[nid] ??= { ...fd, id: nid };
+  const id0 = c.id; const face0 = c.face; c.id = nid; delete c.face;
+  try { return fn(); } finally { c.id = id0; if (face0) c.face = face0; else delete c.face; }
+}
 function resolveTop(g: Game): boolean {
   const it = g.stack.pop()!;
   const slots = it.tslots ?? (it.targetSpec ? [slotOf(it.targetSpec)] : []);
@@ -2514,12 +2545,25 @@ export function amt(g: Game, ctx: ResCtx, a: Amt | undefined): number {
   if ('cmdCasts' in a) return g.players[me].commanderCasts ?? Object.values(g.players[me].casts ?? {}).reduce((s, n) => s + n, 0);
   if ('domain' in a) return domainCount(g, me);
   if ('gyTypes' in a) return gyCardTypes(g, me);
+  if ('gyTypesAll' in a) return gyCardTypesAll(g);
+  if ('energy' in a) return g.players[me].energy ?? 0;
+  if ('maxMv' in a) return Math.max(0, ...g.players.flatMap(p => p.battlefield).filter(c => matches(g, c, a.maxMv, me, -1)).map(c => cmc(def(c))));
+  if ('maxOppHand' in a) return Math.max(0, ...opponents(g, me).map(o => o.hand.length));
   return 0;
 }
 const BASIC_LAND_TYPES = ['Plains', 'Island', 'Swamp', 'Mountain', 'Forest'];
 function domainCount(g: Game, pid: number): number {
   const have = new Set<string>();
   for (const c of g.players[pid].battlefield) if (isType(c, 'Land')) for (const ty of BASIC_LAND_TYPES) if (isTypeOrSub(def(c), ty)) have.add(ty);
+  return have.size;
+}
+function gyCardTypesAll(g: Game): number {
+  const T = new Set(['Artifact','Battle','Creature','Enchantment','Instant','Kindred','Land','Planeswalker','Sorcery']);
+  const have = new Set<string>();
+  for (const p of g.players) for (const c of p.graveyard) for (const ty of def(c).types) {
+    if (ty === 'Tribal') have.add('Kindred');
+    else if (T.has(ty)) have.add(ty);
+  }
   return have.size;
 }
 function gyCardTypes(g: Game, pid: number): number {
@@ -2576,6 +2620,8 @@ function exec(g: Game, ctx: ResCtx, e: Effect, key: string): void {
     // ---- legacy hand-written ops ----
     case 'loseLife': loseLife(g, me, n()); break;
     case 'gainLife': gainLife(g, me, n()); break;
+    case 'energy': { const k = n(); for (const pid of refPlayers(g, ctx, e.pl ?? 'you')) { const q = g.players[pid]; q.energy = (q.energy ?? 0) + k; log(g, `${q.name} gets ${'{E}'.repeat(k)} (${q.energy} energy).`); } break; }
+    case 'flip': { const c = (e.who ? refCards(g, ctx, e.who)[0] : undefined) ?? src; if (c && frontDef(c)?.flip && !c.face && flipFace(c)) { layer(g); log(g, `${nm(c)} flips.`); } break; }
     case 'damageEachOpp': for (const o of opponents(g, me)) dealDamage(g, ctx.item.sourceId, src, { player: o.id }, n()); break;
     case 'damageEventPlayer': if (ctx.item.event?.player !== undefined) dealDamage(g, ctx.item.sourceId, src, { player: ctx.item.event.player }, n()); break;
     case 'drain': { const os = opponents(g, me); for (const o of os) loseLife(g, o.id, n()); gainLife(g, me, n() * os.length); break; }

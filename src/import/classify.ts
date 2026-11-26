@@ -72,16 +72,22 @@ export function compileScry(c: ScryCard): Classified {
   const isCreature = types.includes('Creature');
   const pStar = isCreature && !(/^\d+$/.test(front.power ?? '') && /^\d+$/.test(front.toughness ?? ''));
   if (!isCreature && /\b(Vehicle|Spacecraft)\b/.test(typeLine) && /^\d+$/.test(front.power ?? '')) { d.power = +front.power!; d.toughness = parseInt(front.toughness ?? '0') || 0; }
-  if (isCreature) { d.power = parseInt(front.power ?? '0') || 0; d.toughness = parseInt(front.toughness ?? '0') || 0; }
+  if (isCreature) { d.power = /^\d+$/.test(front.power ?? '') ? +front.power! : 0; d.toughness = /^\d+$/.test(front.toughness ?? '') ? +front.toughness! : 0; }
   if (types.includes('Planeswalker') && (front as ScryCard).loyalty) d.loyalty = parseInt((front as ScryCard).loyalty!) || 0;
   if (types.includes('Background')) { d.partner = true; d.canBeCommander = true; }
   const problems: string[] = [];
   let prepUn: string[] = [];
   if (f && c.layout === 'prepare' && f[1]) { const b = compileScry({ ...(f[1] as ScryCard), name: f[1].name, layout: 'normal', card_faces: undefined, colors: (f[1] as ScryCard).colors ?? c.colors, color_identity: c.color_identity } as ScryCard); b.def.id = d.id + '--prep'; delete b.def.limited; d.prepDef = b.def; if (b.support !== 'auto') prepUn = (b.unparsed?.length ? b.unparsed : [b.reason ?? 'prepare spell']).map(x => `prepare spell: ${x}`); }
-  else if (f && f[1] && ['transform', 'modal_dfc', 'adventure'].includes(c.layout ?? '')) {
+  else if (f && f[1] && ['transform', 'modal_dfc', 'adventure', 'split', 'flip'].includes(c.layout ?? '') && !/Room/.test(c.type_line ?? typeLine)) {
     const bf = f[1] as ScryCard; const b = compileScry({ ...bf, name: bf.name, layout: 'normal', card_faces: undefined, colors: bf.colors ?? c.colors, color_identity: c.color_identity, keywords: [], image_uris: bf.image_uris ?? c.image_uris } as ScryCard);
-    b.def.id = d.id + '--back'; delete b.def.limited; if (c.layout === 'transform') b.def.cost = { ...d.cost }; if (c.layout === 'adventure') b.def.adventure = true; if (c.layout === 'modal_dfc') d.mdfc = true; d.back = b.def;
-    if (b.support !== 'auto') prepUn = (b.unparsed?.length ? b.unparsed : [b.reason ?? 'back face']).map(x => `${c.layout === 'adventure' ? 'adventure' : 'back face'}: ${x}`);
+    b.def.id = d.id + '--back'; delete b.def.limited;
+    if (c.layout === 'transform' || c.layout === 'flip') b.def.cost = { ...d.cost };
+    if (c.layout === 'adventure') b.def.adventure = true;
+    if (c.layout === 'modal_dfc') d.mdfc = true;
+    if (c.layout === 'split') { d.split = true; if (b.def.fuse) d.fuse = true; }
+    if (c.layout === 'flip') { d.flip = true; d.name = front.name ?? d.name; }
+    d.back = b.def;
+    if (b.support !== 'auto') prepUn = (b.unparsed?.length ? b.unparsed : [b.reason ?? 'back face']).map(x => `${c.layout === 'adventure' ? 'adventure' : c.layout === 'split' ? (b.def.aftermath ? 'aftermath' : 'back half') : 'back face'}: ${x}`);
   }
   else if (f && f.length >= 2 && /Room/.test(c.type_line ?? typeLine)) {
     const doors = f.map((face, i) => {
@@ -108,7 +114,7 @@ export function compileScry(c: ScryCard): Classified {
     ? { unparsed: [] as string[] }
     : compile({ ...front, name: f ? front.name ?? c.name : c.name, oracle_text: front.oracle_text ?? (f ? '' : c.oracle_text) } as ScryLike, d);
   applyScripts(c.name, d, res.unparsed);
-  if (pStar && !d.statics?.some(s => s.k === 'pt' && s.who === 'self' && typeof s.p !== 'number')) { if (!d.toughness) d.toughness = 1; problems.push(`variable power/toughness (${front.power}/${front.toughness}) played as ${d.power}/${d.toughness}`); }
+  if (pStar && !d.statics?.some(s => s.k === 'pt' && s.who === 'self' && (typeof s.p !== 'number' || typeof s.t !== 'number'))) { if (!d.toughness) d.toughness = 1; problems.push(`variable power/toughness (${front.power}/${front.toughness}) played as ${d.power}/${d.toughness}`); }
   const basicT: Record<string, string> = { Plains: 'W', Island: 'U', Swamp: 'B', Mountain: 'R', Forest: 'G' };
   const intrinsic = (d.sub ?? []).map(t => basicT[t]).filter(Boolean);
   if (types.includes('Land') && intrinsic.length) { const add = (intrinsic.length === 1 ? intrinsic[0] : intrinsic.join('|')) as ManaSym; d.mana = d.mana ? [{ ...d.mana[0], add: [[...new Set([...d.mana[0].add[0].split('|'), ...intrinsic])].join('|') as ManaSym] }] : [{ add: [add] }]; }

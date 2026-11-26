@@ -106,7 +106,7 @@ export function GlanceBoard({ ui, pid }: { ui: DuoUi; pid: number }) {
       <div className="glance-head">
         <b className="glance-name" style={{ color: 'var(--pc)' }}>{p.name}</b>
         <span className="glance-life" title="Life">{p.life}</span>
-        {p.poison ? <span className="glance-poison" data-poison={p.poison}>☠{p.poison}</span> : null}
+        {p.poison ? <span className="glance-poison" data-poison={p.poison}>☠{p.poison}</span> : null}{(p.energy ?? 0) > 0 ? <span className="glance-energy" data-energy={p.energy} title="energy counters">{`{E} ${p.energy}`}</span> : null}
         <span title="Cards in hand">✋{p.hand.length}</span>
         <span title="Cards in library">📚{p.library.length}</span>
         <button type="button" className="zbtn" title="View graveyard" onClick={e => { e.stopPropagation(); ui.openZone(pid, 'graveyard'); }}>🪦{p.graveyard.length}</button>

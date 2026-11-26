@@ -5,7 +5,7 @@ import type { ScryCard } from './import/scryfall';
 import * as decks from './import/deck';
 import { createPortal } from 'react-dom';
 import { DragEvent, type ReactElement, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
-import { backCastable, flipFace, frontFace, canForetell, foretell, canNinjutsu, ninjutsu, sneakRets, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, locate, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell, log, checkState, abilitiesOf, canUnlockDoor, unlockDoor, spellReplicate , evokeCost, wardBlightAmounts, payBlight, crewCands, broodshipCastOk, broodshipLandCands} from './engine/engine';
+import { backCastable, flipFace, frontFace, fusedDef, canForetell, foretell, canNinjutsu, ninjutsu, sneakRets, emblemsOf, teamworkPick, modesMax, sorceryTiming, Game, Card, CardDef, Target, TargetSpec, StackItem, Cost, newGame, layer, startGame, mulligan, def, isType, hasKw, power, toughness, costOf, canCast, canPlayLand, castSpell, playLand, validTarget, canAttack, declareAttackers, declareBlockers, attackers, canBlock, opponents, findCard, locate, COLORS, STEPS, DECKS, CARDS, manaAvailable, pass, activate, canActivate, chooseTriggerTargets, describeTarget, validSlot, spellSlots, abilitySlots, trigSlots, answerDecision, maxX, modeRange, castZone, tapForMana, ctr, costText, defenders, isCommander, blockReason, menaceShort, registerCards, omniOn, topLook, topCastable, faceCommanders, visibleSpell, log, checkState, abilitiesOf, canUnlockDoor, unlockDoor, spellReplicate , evokeCost, wardBlightAmounts, payBlight, crewCands, broodshipCastOk, broodshipLandCands} from './engine/engine';
 import { AI_RANDOM, buildAiPool, normalizeAiPicks, resolveAiDecks } from './setup/aiDecks';
 import { AttackDock, BlockDock, GlanceBoard, commanderCastInfo } from './Duo';
 import { needsBack, type BoardViews } from './setup/views';
@@ -31,7 +31,7 @@ const KW_HELP: Record<string, string> = {
 type AbLike = { tap?: boolean; untap?: boolean; mana?: Cost; sac?: boolean; loyalty?: number; loyX?: boolean; sacF?: { n: number }; discard?: number; life?: number; remC?: { kind: string; n: number }; exileGy?: { n: number; self?: boolean }; tapF?: { n: number } };
 const abCost = (a: AbLike) => [a.loyalty !== undefined ? (a.loyX ? '−X' : `${a.loyalty > 0 ? '+' : a.loyalty === 0 ? '±' : '−'}${Math.abs(a.loyalty)}`) : '', a.mana ? costText(a.mana) : '', a.tap ? '{T}' : '', a.untap ? '{Q}' : '', a.sac ? 'Sac' : '', a.sacF ? `Sac ${a.sacF.n}` : '', a.discard ? `Discard ${a.discard}` : '', a.life ? `${a.life} life` : '', a.remC ? `−${a.remC.n} ${a.remC.kind}` : '', a.exileGy ? (a.exileGy.self ? 'Exile from gy' : `Exile ${a.exileGy.n} from gy`) : '', a.tapF ? `Tap ${a.tapF.n}` : ''].filter(Boolean).join(', ');
 /** A cast or activation being set up: kicker → X → modes → one target per active slot. */
-type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; alt?: 'evoke' | 'web' | 'free' | 'overload' | 'omni' | 'surge' | 'exile' | ''; warp?: boolean; morph?: boolean; impending?: boolean; sneak?: boolean; teamwork?: boolean; kicked?: boolean; blightPaid?: boolean; blightUids?: number[]; x?: number; modes?: number[]; orPay?: boolean; door?: number; replicate?: number; squad?: number; crew?: number[]; sacs?: number[]; gift?: number | false; ts: (Target | undefined)[] };
+type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; alt?: 'evoke' | 'web' | 'free' | 'overload' | 'omni' | 'surge' | 'exile' | ''; warp?: boolean; morph?: boolean; impending?: boolean; sneak?: boolean; teamwork?: boolean; kicked?: boolean; blightPaid?: boolean; blightUids?: number[]; x?: number; modes?: number[]; orPay?: boolean; door?: number; replicate?: number; squad?: number; crew?: number[]; sacs?: number[]; gift?: number | false; fuse?: boolean; ts: (Target | undefined)[] };
 type PendingAct = Flow;
 const SAVED0 = decks.activateAll();
 const PRECONS = loadPrecons();
@@ -202,7 +202,7 @@ function PlayerHeader({ ui, pid, big, trail }: { ui: UI; pid: number; big?: bool
           {pid === HUMAN && p.pool.length > 0 && <span className="pool" data-pool={p.pool.join(',')} title="Floating mana: spent first, empties at the end of each step"><span className="lbl">POOL</span>{p.pool.map((m, i) => <i key={i} className={`pip pip-${m.includes('|') || m === 'ANY' || m === 'IDENTITY' ? 'multi' : m}`}>{m.includes('|') ? m.replace('|', '/') : m === 'ANY' ? '★' : m}</i>)}</span>}
         </div>
       </div>
-      <LifeTotal v={p.life} big={big} />{p.poison ? <span className="poison" data-poison={p.poison} title="poison counters (10 loses)">☠ {p.poison}</span> : null}
+      <LifeTotal v={p.life} big={big} />{p.poison ? <span className="poison" data-poison={p.poison} title="poison counters (10 loses)">☠ {p.poison}</span> : null}{(p.energy ?? 0) > 0 ? <span className="energy" data-energy={p.energy} title="energy counters">{'{E}'.repeat(Math.min(p.energy!, 8))}{p.energy! > 8 ? ` ×${p.energy}` : ` ${p.energy}`}</span> : null}
       {trail}
       <CommandZone ui={ui} pid={pid} />
     </div>
@@ -521,10 +521,11 @@ export default function App() {
   // the active flow: a human trigger needing targets/modes takes over from any half-built cast
   const flow: Flow | null = g && humanChoice ? (pending?.kind === 'trigger' && pending.uid === humanChoice.sourceUid ? pending : { kind: 'trigger', uid: humanChoice.sourceUid, ts: [] }) : pending;
   const flowCard = g && flow && flow.kind !== 'trigger' ? [...me!.hand, ...me!.command, ...me!.battlefield, ...me!.graveyard, ...me!.exile, ...(me!.library.length ? [me!.library[me!.library.length - 1]] : [])].find(c => c.uid === flow.uid) : undefined;
-  const flowName = flow ? (flow.kind === 'trigger' ? CARDS[humanChoice!.sourceId].name : flowCard ? def(flowCard).name : '') : '';
+  const flowDef = flowCard ? ((flow?.fuse && fusedDef(def(flowCard))) || def(flowCard)) : undefined;
+  const flowName = flow ? (flow.kind === 'trigger' ? CARDS[humanChoice!.sourceId].name : flowCard ? (flow.fuse ? `${def(flowCard).name} (fused)` : def(flowCard).name) : '') : '';
   const flowAb = g && flow?.kind === 'ability' && flowCard ? abilitiesOf(g, flowCard)[flow.idx!] : undefined;
-  const flowModes: Modes | undefined = !flow ? undefined : flow.kind === 'trigger' ? humanChoice!.trig.modes : flow.kind === 'ability' ? flowAb?.modes : flowCard ? def(flowCard).spell?.modes : undefined;
-  const baseSlots: TSlot[] = !flow ? [] : flow.kind === 'trigger' ? trigSlots(humanChoice!.trig) : flow.kind === 'ability' ? (flowAb ? abilitySlots(flowAb) : []) : flowCard ? (flow.alt === 'overload' ? [] : spellSlots(def(flowCard))) : [];
+  const flowModes: Modes | undefined = !flow ? undefined : flow.kind === 'trigger' ? humanChoice!.trig.modes : flow.kind === 'ability' ? flowAb?.modes : flowDef ? flowDef.spell?.modes : undefined;
+  const baseSlots: TSlot[] = !flow ? [] : flow.kind === 'trigger' ? trigSlots(humanChoice!.trig) : flow.kind === 'ability' ? (flowAb ? abilitySlots(flowAb) : []) : flowDef ? (flow.alt === 'overload' ? [] : spellSlots(flowDef)) : [];
   const flowSlots: TSlot[] = flowModes?.repeat && flow?.modes ? flow.modes.flatMap(i => modeRange(flowModes, i).map(j => flowModes.list.flatMap(md => md.tslots ?? [])[j])) : baseSlots;
   const flowModesEff = flowModes && flow?.kind === 'cast' && g ? { ...flowModes, max: modesMax(g, HUMAN, flowModes, { teamwork: flow.teamwork }) } : flowModes;
   const flowActive = flowModes?.repeat && flow?.modes ? flowSlots.map((_, i) => i) : flowModes ? (flow?.modes ?? []).flatMap(i => modeRange(flowModes, i)) : flowSlots.map((_, i) => i);
@@ -543,7 +544,7 @@ export default function App() {
     : flow.kind === 'cast' && flowCard && !!def(flowCard).squad && flow.squad === undefined ? 'squad'
     : flow.kind === 'ability' && flowAb?.station && flow.crew === undefined ? 'station'
     : flow.kind === 'cast' && flowCard && me!.graveyard.includes(flowCard) && broodshipCastOk(g, HUMAN, flowCard) && flow.sacs === undefined ? 'broodship'
-    : flow.x === undefined && (flow.kind === 'cast' ? !!flowCard && (!!costOf(g, flowCard).x || !!def(flowCard).extraCost?.lifeX) : flow.kind === 'ability' ? !!flowAb?.mana?.x || !!flowAb?.loyX : false) ? 'x'
+    : flow.x === undefined && (flow.kind === 'cast' ? !!flowCard && (!!costOf(g, flowCard, { fuse: flow.fuse }).x || !!def(flowCard).extraCost?.lifeX) : flow.kind === 'ability' ? !!flowAb?.mana?.x || !!flowAb?.loyX : false) ? 'x'
     : flowModes && !flow.modes ? 'modes'
     : flow.ts.length < flowActive.length ? 'targets'
     : flow.kind === 'cast' && flowCard && flow.blightUids === undefined && wardBlightAmounts(g, HUMAN, (() => { const full: (Target | undefined)[] = flowSlots.map(() => undefined); flowActive.forEach((i, k) => { full[i] = flow!.ts[k]; }); return full; })()).length > 0 ? 'wardBlight'
@@ -568,7 +569,7 @@ export default function App() {
     if (!g) return;
     const card = f.kind === 'trigger' ? undefined : [...me!.hand, ...me!.command, ...me!.battlefield, ...me!.graveyard, ...me!.exile, ...(me!.library.length ? [me!.library[me!.library.length - 1]] : [])].find(c => c.uid === f.uid);
     const ab = f.kind === 'ability' && card ? def(card).abilities?.[f.idx!] : undefined;
-    const slots0 = f.kind === 'trigger' ? trigSlots(g.choice!.trig) : ab ? abilitySlots(ab) : card ? (f.alt === 'overload' ? [] : spellSlots(def(card))) : [];
+    const slots0 = f.kind === 'trigger' ? trigSlots(g.choice!.trig) : ab ? abilitySlots(ab) : card ? (f.alt === 'overload' ? [] : spellSlots((f.fuse && fusedDef(def(card))) || def(card))) : [];
     const ms = f.kind === 'trigger' ? g.choice!.trig.modes : ab ? ab.modes : card ? def(card).spell?.modes : undefined;
     if (ms && !f.modes) { setPending(f); return; }
     const repeat = !!ms?.repeat && !!f.modes;
@@ -586,7 +587,7 @@ export default function App() {
     setPending(null);
     act(g => {
       if (f.kind === 'trigger') chooseTriggerTargets(g, full, f.modes);
-      else if (f.kind === 'cast') { if (!castSpell(g, HUMAN, f.uid, { targets: full, modes: f.modes, x: f.alt === 'omni' ? 0 : f.x, kicked: f.kicked, blightPaid: f.blightPaid, blightUids: f.blightUids, free: f.alt === 'free', omni: f.alt === 'omni', surge: f.alt === 'surge', orPay: f.orPay, evoke: f.alt === 'evoke', overload: f.alt === 'overload', webSling: f.alt === 'web', warp: f.warp, morph: f.morph, impending: f.impending, sneak: f.sneak, teamwork: f.teamwork, exileAlt: f.alt === 'exile', door: f.door, replicate: f.replicate, squad: f.squad, sacs: f.sacs, gift: f.gift })) flash("Couldn't cast that (targets or mana no longer valid)."); }
+      else if (f.kind === 'cast') { if (!castSpell(g, HUMAN, f.uid, { targets: full, modes: f.modes, x: f.alt === 'omni' ? 0 : f.x, kicked: f.kicked, blightPaid: f.blightPaid, blightUids: f.blightUids, free: f.alt === 'free', omni: f.alt === 'omni', surge: f.alt === 'surge', orPay: f.orPay, evoke: f.alt === 'evoke', overload: f.alt === 'overload', webSling: f.alt === 'web', warp: f.warp, morph: f.morph, impending: f.impending, sneak: f.sneak, teamwork: f.teamwork, exileAlt: f.alt === 'exile', door: f.door, replicate: f.replicate, squad: f.squad, sacs: f.sacs, gift: f.gift, fuse: f.fuse })) flash("Couldn't cast that (targets or mana no longer valid)."); }
       else if (!activate(g, HUMAN, f.uid, f.idx!, { targets: full, modes: f.modes, x: f.x, crew: f.crew })) flash("Couldn't activate that.");
     });
   }
@@ -1005,14 +1006,15 @@ export default function App() {
           {(() => { const top = me.library[me.library.length - 1]; if (!top || (!topLook(g, HUMAN) && !topCastable(g, HUMAN, top))) return null; const ok = topCastable(g, HUMAN, top) && (canCast(g, HUMAN, top) || canCast(g, HUMAN, top, { omni: true })); return (
             <div key={top.uid} data-hand={top.uid} className={`hcard ${ok ? 'playable' : ''}`} title="Top of your library" onPointerDown={e => pressStart({ id: top.id, uid: top.uid }, e)} onContextMenu={e => e.preventDefault()} onClick={() => { if (eat()) return; if (ok) startCast(top); else peek({ id: top.id, uid: top.uid }); }} onMouseEnter={() => setHover({ id: top.id })} onMouseLeave={() => setHover(null)}>
               <div className="hinner"><CardFace d={def(top)} /></div><div className="handab"><span>Top of library</span></div></div>); })()}
-          {hand.map((c, i) => { const ok = canPlayLand(g, HUMAN, c) || canCast(g, HUMAN, c) || canCast(g, HUMAN, c, { warp: true }) || canCast(g, HUMAN, c, { sneak: true }) || canCast(g, HUMAN, c, { back: true }) || canPlayLand(g, HUMAN, c, true) || canForetell(g, HUMAN, c) || canNinjutsu(g, HUMAN, c) || canCast(g, HUMAN, c, { evoke: true }) || canCast(g, HUMAN, c, { free: true }) || canCast(g, HUMAN, c, { webSling: true }) || canCast(g, HUMAN, c, { overload: true }) || canCast(g, HUMAN, c, { exileAlt: true }); const off = i - (n - 1) / 2; return (
+          {hand.map((c, i) => { const ok = canPlayLand(g, HUMAN, c) || canCast(g, HUMAN, c) || canCast(g, HUMAN, c, { warp: true }) || canCast(g, HUMAN, c, { sneak: true }) || canCast(g, HUMAN, c, { back: true }) || canPlayLand(g, HUMAN, c, true) || canForetell(g, HUMAN, c) || canNinjutsu(g, HUMAN, c) || canCast(g, HUMAN, c, { evoke: true }) || canCast(g, HUMAN, c, { free: true }) || canCast(g, HUMAN, c, { webSling: true }) || canCast(g, HUMAN, c, { overload: true }) || canCast(g, HUMAN, c, { exileAlt: true }) || canCast(g, HUMAN, c, { fuse: true }); const off = i - (n - 1) / 2; return (
             <div key={c.uid} data-hand={c.uid} data-discarding={discardSel.includes(c.uid) ? '1' : undefined} className={`hcard ${ok && !cleanupDiscard ? 'playable' : ''} ${pending?.uid === c.uid ? 'selected' : ''} ${discardSel.includes(c.uid) ? 'discarding' : ''}`} style={{ ['--r' as string]: `${off * Math.min(4, 24 / Math.max(n, 1))}deg`, ['--y' as string]: `${Math.abs(off) * Math.abs(off) * 0.25}vh`, zIndex: i + 1 }}
               draggable={!compact && ok && spellSlots(def(c)).length > 0} onDragStart={e => dragStart(c, e)} onDragEnd={() => { /* keep pending if not dropped on target */ }}
               onPointerDown={e => pressStart({ id: c.id, uid: c.uid }, e)} onContextMenu={e => e.preventDefault()}
               onClick={() => clickHand(c)} onMouseEnter={() => setHover({ id: c.id, uid: c.uid })} onMouseLeave={() => setHover(null)}>
               <div className="hinner"><CardFace d={def(c)} />{discardSel.includes(c.uid) && <span className="discardmark">Discard</span>}</div>
               {(() => { const b = def(c).back; const bs: ReactElement[] = [];
-                if (b && backCastable(g, HUMAN, c) && canCast(g, HUMAN, c, { back: true })) bs.push(<button key="b" data-back={c.uid} title={b.name} onMouseEnter={e => { e.stopPropagation(); setHover({ id: b.id }); }} onClick={e => { e.stopPropagation(); flipFace(c); startCast(c); }}>▶ {b.adventure ? 'Adventure' : 'Back'}: {b.name.length > 18 ? b.name.slice(0, 16) + '…' : b.name}</button>);
+                if (b && backCastable(g, HUMAN, c) && canCast(g, HUMAN, c, { back: true })) bs.push(<button key="b" data-back={c.uid} title={b.name} onMouseEnter={e => { e.stopPropagation(); setHover({ id: b.id }); }} onClick={e => { e.stopPropagation(); flipFace(c); startCast(c); }}>▶ {b.aftermath ? 'Aftermath' : b.adventure ? 'Adventure' : def(c).split ? 'Other half' : 'Back'}: {b.name.length > 18 ? b.name.slice(0, 16) + '…' : b.name}</button>);
+                if (def(c).fuse && canCast(g, HUMAN, c, { fuse: true })) bs.push(<button key="fuse" data-fuse={c.uid} title={`Cast both halves (${costText(costOf(g, c, { fuse: true }))})`} onClick={e => { e.stopPropagation(); startCast(c, { fuse: true }); }}>⚡ Fuse {costText(costOf(g, c, { fuse: true }))}</button>);
                 if (b && canPlayLand(g, HUMAN, c, true)) bs.push(<button key="l" data-backland={c.uid} title={b.name} onMouseEnter={e => { e.stopPropagation(); setHover({ id: b.id }); }} onClick={e => { e.stopPropagation(); act(g => playLand(g, HUMAN, c.uid, true)); }}>⛰ Play {b.name.length > 18 ? b.name.slice(0, 16) + '…' : b.name}</button>);
                 if (canForetell(g, HUMAN, c)) bs.push(<button key="f" data-foretell={c.uid} title="Pay {2}: exile it face down; cast it on a later turn for its foretell cost" onClick={e => { e.stopPropagation(); act(g => foretell(g, HUMAN, c.uid)); }}>Foretell {'{2}'}</button>);
                 if (canNinjutsu(g, HUMAN, c)) bs.push(<button key="nj" data-ninjutsu={c.uid} title="Return an unblocked attacker you control to hand: put this card onto the battlefield tapped and attacking" onClick={e => { e.stopPropagation(); const rets = sneakRets(g, HUMAN); const ret = rets[0]; if (ret) act(gg => ninjutsu(gg, HUMAN, c.uid, ret.uid)); }}>Ninjutsu {costText(def(c).ninjutsu!)}</button>);
@@ -1022,6 +1024,7 @@ export default function App() {
         </div>
         {(() => { const gy = [...me.graveyard, ...me.exile].flatMap(c => [
           ...(castZone(g, HUMAN, c) && canCast(g, HUMAN, c) ? [<button key={`c${c.uid}`} data-gycast={c.uid} onClick={() => startCast(c)} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}>{castZone(g, HUMAN, c) === 'mayhem' ? '▶ Mayhem' : castZone(g, HUMAN, c) === 'flashback' ? (def(c).flashback ? '↺ Flashback' : '♫ Harmonize') : '▶ Cast'} {def(c).name}</button>] : []),
+          ...(backCastable(g, HUMAN, c) && canCast(g, HUMAN, c, { back: true }) ? [<button key={`ab${c.uid}`} data-aftermath={c.uid} onClick={() => { flipFace(c); startCast(c); }} onMouseEnter={() => setHover({ id: def(c).back?.id ?? c.id })} onMouseLeave={() => setHover(null)}>▶ Aftermath {def(c).back?.name ?? def(c).name}</button>] : []),
           ...abilitiesOf(g, c).map((a, i) => a.zone === 'graveyard' && canActivate(g, HUMAN, c, i) ? <button key={`a${c.uid}-${i}`} onClick={() => activateAb(c, i)} onMouseEnter={() => setHover({ id: c.id })} onMouseLeave={() => setHover(null)}>🪦 {def(c).name}: {abCost(a)}</button> : null).filter(Boolean)]);
           return gy.length ? <div className="gyplay">{gy}</div> : null; })()}
         <StackView g={g} ui={ui} />

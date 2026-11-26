@@ -28,6 +28,7 @@ export function parseCost(mc = ''): Cost | null {
     else if (s === 'C') cost.C = (cost.C ?? 0) + 1;
     else if ('WUBRG'.includes(s) && s.length === 1) cost[s as Color] = (cost[s as Color] ?? 0) + 1;
     else if (s === 'X') cost.x = (cost.x ?? 0) + 1;
+    else if (s === 'E') cost.E = (cost.E ?? 0) + 1;
     else if (/^[WUBRG]\/P$/.test(s)) (cost.phy ??= []).push(s[0] as Color);
     else if (/^([WUBRG2])\/([WUBRG])$/.test(s)) (cost.hyb ??= []).push(s.replace('/', '|'));
     else return null;
@@ -88,7 +89,7 @@ export function parseFilter(s0: string): FP | null {
   if (/(^| )cards?$/.test(core)) { card = true; if (/cards$/.test(core)) plural = true; core = core.replace(/ ?cards?$/, ''); }
   if (/(^| )spells?$/.test(core)) { spell = true; if (/spells$/.test(core)) plural = true; core = core.replace(/ ?spells?$/, ''); }
   if (core === 'permanents' || core === 'permanent') { if (core.endsWith('s')) plural = true; core = ''; f.types = ['Permanent']; }
-  if (core && / and /.test(core)) { const ps = core.split(/,? and |, /); if (ps.length > 1 && ps.every(p => /^[a-z]+s$/.test(p) && typeWord(p))) core = ps.join(', '); }
+  if (core && / and /.test(core)) { const ps = core.split(/,? and |, /); if (ps.length > 1 && ps.every(p => !!typeWord(p))) core = ps.join(', '); }
   if (core) {
     const parts = core.split(/,? or |, (?:and\/or )?| and\/or /).map(x => x.trim()).filter(Boolean);
     if (parts.length > 1) { const ts = parts.map(p => p.split(' ').map(typeWord)); if (ts.some(t => t.some(x => !x))) return null; if (ts.every(t => t.length === 1)) f.anyType = ts.map(t => t[0]!); else return null; if (parts.some(p => /s$/.test(p) && typeWord(p) !== p)) plural = true; }
@@ -170,7 +171,9 @@ function amount(s: string, cx: Cx): Amt | null {
     return m[2] === 'power' ? { pow: r } : m[2] === 'toughness' ? { tough: r } : { mv: r };
   }
   if ((m = /^the number of cards in (your|target player's|target opponent's|that player's|their) hand$/.exec(eq))) return { cards: 'hand', pl: playerRef(m[1], cx) ?? 'you' };
-  if ((m = /^the number of (.+?) ?cards in your graveyard$/.exec(eq))) { const fp = m[1] ? parseFilter(m[1]) : { f: {} }; return fp ? { cards: 'graveyard', pl: 'you', f: fp.f } : null; }
+  if (/^the number of card types among cards in your graveyard$/.test(eq)) return { gyTypes: true };
+  if (/^the number of card types among cards in all graveyards$/.test(eq)) return { gyTypesAll: true };
+  if ((m = /^the number of (.+?) ?cards in your graveyard$/.exec(eq))) { const fp = m[1] ? parseFilter(m[1]) : { f: {} }; if (fp) return { cards: 'graveyard', pl: 'you', f: fp.f }; }
   if ((m = /^the number of (?:\+1\/\+1 )?counters on ~$/.exec(eq))) return { ctr: '+1/+1', who: 'self' };
   if ((m = /^the number of ([a-z]+) counters on ~$/.exec(eq))) return { ctr: m[1], who: 'self' };
   if (/^the number of opponents you have$/.test(eq)) return { opps: true };
@@ -188,9 +191,13 @@ function amount(s: string, cx: Cx): Amt | null {
     const a1 = amount('the number of ' + m[1], cx); const a2 = amount('the number of ' + m[2], cx);
     if (a1 !== null && a2 !== null) return { sum: [a1, a2] };
   }
-  if ((m = /^the number of (.+?) cards in all graveyards$/.exec(eq))) { const fp = parseFilter(m[1] + ' cards'); return fp ? { count: fp.f, zone: 'graveyard' as const } : null; }
+  if ((m = /^the number of (.+?) cards in all graveyards$/.exec(eq))) { const fp = parseFilter(m[1] + ' cards'); if (fp) return { count: fp.f, zone: 'graveyard' as const }; }
   if (/^the number of basic land types among lands you control$/.test(eq)) return { domain: true };
   if (/^the number of card types among cards in your graveyard$/.test(eq)) return { gyTypes: true };
+  if (/^the number of energy counters you have$/.test(eq) || /^the amount of \{e\} you have$/.test(eq) || /^the number of \{e\} you have$/.test(eq)) return { energy: true };
+  if (/^the number of card types among cards in all graveyards$/.test(eq)) return { gyTypesAll: true };
+  if ((m = /^(?:the )?(?:greatest|highest) mana value among (.+)$/.exec(eq))) { const fp = parseFilter(m[1]); return fp && !fp.card ? { maxMv: fp.f } : null; }
+  if (/^the number of cards in the hand of the opponent with the most cards in hand$/.test(eq)) return { maxOppHand: true };
   if ((m = /^the number of (.+?)$/.exec(eq))) { const fp = parseFilter(m[1]); return fp && !fp.card && !fp.spell ? { count: fp.f } : null; }
   return null;
 }
@@ -409,6 +416,11 @@ function becDesc(s0: string, cx: Cx): { ce: CEFx; n?: Amt; m?: Amt } | null {
 }
 const BEC_UNTIL = (a?: string, b?: string): Effect['until'] => { const u = a ?? b ?? ''; return /next turn/.test(u) ? 'yourNext' : /end of turn/.test(u) ? 'eot' : undefined; };
 const PATS: Pat[] = [
+  [/^you get ((?:\{e\})+)$/, (m) => { const n = (m[1].match(/\{e\}/g) || []).length; return n ? [{ op: 'energy', n, pl: 'you' }] : null; }],
+  [/^get ((?:\{e\})+)$/, (m) => { const n = (m[1].match(/\{e\}/g) || []).length; return n ? [{ op: 'energy', n, pl: 'you' }] : null; }],
+  [/^(?:you )?get (one|two|three|four|five|six|seven|eight|nine|ten|\d+) \{e\}$/, (m) => { const n = ({ one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10 } as Record<string, number>)[m[1]] ?? +m[1]; return n ? [{ op: 'energy', n, pl: 'you' }] : null; }],
+  [/^flip (?:~|this creature|it)$/, () => [{ op: 'flip', who: 'self' }]],
+
   [/^double the number of each kind of counter on (.+)$/, (m, cx) => { const o = obj(m[1], cx, true); return o && !o.card ? [{ op: 'doubleCtr', who: o.ref }] : null; }],
   [/^untap all creatures that attacked this turn$/, () => [{ op: 'untap', who: { all: { types: ['Creature'], ctrl: 'you', attackedT: true } } }]],
   [/^choose a color$/, () => [{ op: 'chooseColor' }]],
@@ -802,6 +814,8 @@ function parseCosts(s: string, name: string): ParsedCost | null {
     else if ((m = /^sacrifice (a|an|another|two|three|x|\w+) (.+)$/.exec(p))) { const n = m[1] === 'another' ? 1 : num(m[1]); const fp = parseFilter(m[2]); if (!fp || n === null || n === 'X') return null; ab.sacF = { f: fp.f, n, other: m[1] === 'another' || fp.f.other }; }
     else if (p === 'discard ~') ab.zone = 'hand';
     else if ((m = /^discard (a|an|one|two|three) cards?( at random)?$/.exec(p))) { ab.discard = num(m[1]) as number; ab.discardRandom = !!m[2]; }
+    else if ((m = /^pay ((\{[^}]+\})+)$/i.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return null; ab.mana = ab.mana ? { ...ab.mana, ...c, generic: (ab.mana.generic ?? 0) + (c.generic ?? 0), E: (ab.mana.E ?? 0) + (c.E ?? 0) } : c; }
+    else if ((m = /^pay (one|two|three|four|five|six|seven|eight|nine|ten|\d+) \{e\}$/i.exec(p))) { const n = ({ one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10 } as Record<string, number>)[m[1]] ?? +m[1]; if (!n) return null; ab.mana = { ...(ab.mana ?? { generic: 0 }), E: (ab.mana?.E ?? 0) + n }; }
     else if ((m = /^pay (\d+) life$/.exec(p))) ab.life = +m[1];
     else if ((m = /^remove (a|an|one|two|three|\d+) ([+-]\d\/[+-]\d|[a-z]+) counters? from ~$/.exec(p))) ab.remC = { kind: m[2], n: num(m[1]) as number };
     else if ((m = /^put (a|an|one|two) ([+-]\d\/[+-]\d|[a-z]+) counters? on ~$/.exec(p))) ab.addC = { kind: m[2], n: num(m[1]) as number };
@@ -1348,6 +1362,8 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
   if ((m = /^prototype (\{[^}]+\}(?:\{[^}]+\})*) [—\-] (\d+)\/(\d+)$/.exec(p))) {
     const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.prototype = { cost: c, power: +m[2], toughness: +m[3] }; return true;
   }
+  if (p === 'fuse') { d.fuse = true; return true; }
+  if (p === 'aftermath') { d.aftermath = true; return true; }
   if (p === 'cipher') { d.cipher = true; return true; }
   if ((m = /^fading (\d+)$/.exec(p))) { d.fading = +m[1]; return true; }
   if ((m = /^vanishing (\d+)$/.exec(p))) { d.vanishing = +m[1]; return true; }
@@ -1579,7 +1595,9 @@ if ((m = /^(?:you may pay|pay) (\d+) life rather than pay (?:this spell's|~'s) m
     statics.push({ k: m[4] === 'less' ? 'costLess' : 'costMore', who: 'all', n: +m[3], spellF: fp.f, cond: c }); return true;
   }
   if ((m = /^~'s power and toughness are each equal to (.+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; statics.push({ k: 'pt', who: 'self', p: a, t: a }); return true; }
+  if ((m = /^~'s power is equal to (.+?) and (?:its |~'s )?toughness is (?:equal to )?that number plus (\d+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; statics.push({ k: 'pt', who: 'self', p: a, t: { plus: +m[2], of: a } }); return true; }
   if ((m = /^~'s power is equal to (.+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; statics.push({ k: 'pt', who: 'self', p: a, t: 0 }); return true; }
+  if ((m = /^~'s toughness is equal to (.+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; statics.push({ k: 'pt', who: 'self', p: 0, t: a }); return true; }
   if ((m = /^enchanted creature gets \+(\d+)\/\+(\d+), has (.+), and is an? ([a-z]+) in addition to its other types$/.exec(s))) {
     const k = kwList(m[3]); if (!k) return false;
     const sub = m[4][0].toUpperCase() + m[4].slice(1);
