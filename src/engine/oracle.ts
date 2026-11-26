@@ -394,6 +394,7 @@ const PATS: Pat[] = [
   [/^exile target player's graveyard$/, (_m, cx) => { playerRef('target player', cx, true); return [{ op: 'exileGrave', pl: 't' + (cx.slots.length - 1) }]; }],
   [/^each player shuffles their hand and graveyard into their library, then draws seven cards$/, () => [{ op: 'echoEons' }]],
   [/^create a number of (.+?) tokens?(?: with (.+?))? equal to the number of opponents you have$/, (m) => { const tok = tokenSpec(m[1]); if (!tok) return null; if (m[2]) { const k = kwList(m[2]); if (!k) return null; tok.kws = k; } return [{ op: 'token', n: { opps: true }, pl: 'you', tok }]; }],
+  [/^destroy all creatures\. you gain 1 life for each creature destroyed this way$/, () => [{ op: 'destroy', who: { all: { types: ['Creature'] } } }, { op: 'gain', n: 'destroyed', pl: 'you' }]],
   [/^destroy all creatures$/, () => [{ op: 'destroy', who: { all: { types: ['Creature'] } } }]],
   [/^create x 1\/1 colorless borg artifact creature tokens, where x is the number of nonartifact creatures destroyed this way$/, () => [{ op: 'token', n: 'destroyedNonArt', pl: 'you', tok: { name: 'Borg', p: 1, t: 1, colors: [], types: ['Artifact', 'Creature'], sub: ['Borg'] } }]],
 
@@ -834,6 +835,7 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if (/^one or more creatures you control deal combat damage to a player$/.test(h)) return { defs: [{ ev: 'combatBatch', pl: 'you' }], cx: { it: 'self' } };
   if ((m = /^one or more (.+?) you control deal combat damage to a player$/.exec(h))) { const fp = parseFilter(m[1]); return fp ? { defs: [{ ev: 'combatBatch', pl: 'you', f: { ...fp.f, ctrl: 'you' } }], cx: { it: 'self' } } : null; }
   if (/^you attack$|^you attack with one or more creatures$/.test(h)) return { defs: [{ ev: 'youAttack', pl: 'you' }], cx: { it: 'self' } };
+  if (/^you attack a player$/.test(h)) return { defs: [{ ev: 'attackPlayer', pl: 'you' }], cx: { it: 'self' } };
   if ((m = /^you sacrifice (a|an|another|one or more) (.+)$/.exec(h))) { const fp = parseFilter(m[2]); if (!fp) return null; if (m[1] === 'another') fp.f.other = true; return { defs: [{ ev: 'sacrificed', subj: 'any', f: fp.f, pl: 'you' }], cx: { it: 'ev', that: 'ev' } }; }
   { const ch = /^§chapter ([\d+]+)$/.exec(h); if (ch) return { defs: ch[1].split('+').map(n => ({ ev: 'chapter', subj: 'self', ifc: { k: 'evAmt', n: +n } })), cx: {} } as never; }
   { const lv = /^~ becomes level (\d+)$/.exec(h); if (lv) return { defs: [{ ev: 'classLevel', subj: 'self', ifc: { k: 'evAmt', n: +lv[1] } }], cx: {} } as never; }
@@ -1046,6 +1048,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   if (kws.size) d.keywords = [...kws];
   if (d.aura) { const bad = statics.some(s => s.who === 'attached' && ((s.k === 'pt' && typeof s.t === 'number' && s.t < 0) || s.k === 'cantBlock' || s.k === 'cantAttack')); d.aura.harm = bad; if (!bad && d.aura.f && !d.aura.f.ctrl) d.aura = { ...d.aura }; }
   if (isSpell && !d.spell && !triggers.some(t => (t as TriggerDef & { ev?: string }).ev === 'castSelf') && unparsed.length === 0 && text.trim()) unparsed.push('(no effect)');
+  if (d.legendary && (d.stationAt || d.sub?.includes('Spacecraft')) && !d.types.includes('Creature')) d.canBeCommander = true;
   d.compiled = true;
   return { unparsed, notes, ok: unparsed.length === 0 };
 }
@@ -1077,6 +1080,8 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
     abilities.push({ label: `Equip ${m[2].toUpperCase()}`, mana: c, sorcery: true, equip: true, tslots: [{ who: 'perm', f, harm: false }], effects: [{ op: 'attach', who: 'self', other: 't0' }] }); return true;
   }
   if ((m = /^warp (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.warp = c; return true; }
+  if (p === 'sunburst') { d.sunburst = true; kws.add('sunburst'); return true; }
+  if ((m = /^dredge (\d+)$/.exec(p))) { d.dredge = +m[1]; kws.add('dredge'); return true; }
   { const ak = /^(evoke|mayhem|harmonize|web-slinging) (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p); if (ak && !d.types.includes('Land')) { const c = parseCost(ak[2].toUpperCase()); if (!c) return false; if (ak[1] === 'evoke') { if (!d.types.includes('Creature')) return false; d.evoke = c; } else if (ak[1] === 'mayhem') d.mayhem = c; else if (ak[1] === 'harmonize') d.harmonize = c; else d.webSling = c; return true; } }
   if ((m = /^foretell (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && !d.types.includes('Land')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.foretell = c; return true; }
   if ((m = /^sneak (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p)) && !d.types.includes('Land')) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.sneak = c; return true; }
@@ -1150,10 +1155,16 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   const dm = /^during your turn, (.+)$/.exec(s); if (dm) { c = { k: 'yourTurn' }; s = dm[1]; }
   { const um = /^(~ can't attack or block|~ can't attack|~ can't block) unless (.+)$/.exec(s); if (um && !c) { const cc = cond(um[2], newCx()); if (!cc) return false; const nc: Cond = { k: 'not', c: cc } as Cond; const ks: Static['k'][] = um[1].endsWith('attack or block') ? ['cantAttack', 'cantBlock'] : um[1].endsWith('attack') ? ['cantAttack'] : ['cantBlock']; for (const k of ks) statics.push({ k, who: 'self', cond: nc }); return true; } }
   if (/^~ enters tapped$/.test(s) && !c) { d.etbTapped = true; return true; }
+  if ((m = /^(?:~|this (?:creature|artifact|permanent)) enters tapped with (a|an|one|two|three|four|five|six|\d+) ([a-z+-\/]+) counters? on it$/.exec(s))) {
+    const n = num(m[1]); if (typeof n !== 'number') return false;
+    d.etbTapped = true; d.etbCounters = { kind: m[2], n }; return true;
+  }
   if (/^nonbasic lands don't untap during their controllers' untap steps$/.test(s) && !c) { statics.push({ k: 'doesntUntap', who: 'all', f: { types: ['Land'], nonbasic: true } }); return true; }
   if (/^nonbasic lands are islands$/.test(s) && !c) { statics.push({ k: 'areIsland', who: 'self' }); return true; }
   if (/^you may cast spells from your hand without paying their mana costs$/.test(s) && !c) { statics.push({ k: 'omni', who: 'self' }); return true; }
   if (/^you may look at the top card of your library any time$/.test(s) && !c) { statics.push({ k: 'topLook', who: 'self' }); return true; }
+  if (/^play with the top card of your library revealed$/.test(s) && !c) { statics.push({ k: 'topLook', who: 'self' }); return true; }
+  if (/^lands you control enter untapped$/.test(s) && !c) { statics.push({ k: 'landsUntapped', who: 'self' }); return true; }
   if ((m = /^you may cast (.+?) spells from the top of your library$/.exec(s)) && !c) { const fp = parseFilter(m[1] + ' spell'); if (!fp) return false; statics.push({ k: 'topCast', who: 'self', spellF: fp.f }); return true; }
   if ((m = /^spells your opponents cast that target a (.+?) you control cost \{(\d+)\} more to cast$/.exec(s)) && !c) { const fp = parseFilter(m[1]); if (!fp) return false; statics.push({ k: 'taxSpell', who: 'self', n: +m[2], spellF: fp.f }); return true; }
   if ((m = /^abilities your opponents activate that target a (.+?) you control cost \{(\d+)\} more to activate$/.exec(s)) && !c) { const fp = parseFilter(m[1]); if (!fp) return false; statics.push({ k: 'taxAct', who: 'self', n: +m[2], spellF: fp.f }); return true; }
@@ -1190,6 +1201,7 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   if (/^~ enters with a charge counter on it for each time it was kicked$/.test(s)) { d.etbCounters = { kind: 'charge', n: 'kicked' }; return true; }
   if ((m = /^~ enters with (a|an|one|two|three|four|five|six|x|\d+) ([+-]\d\/[+-]\d|[a-z]+) counters? on it(?: if (.+))?$/.exec(s))) { const cc = m[3] ? cond(m[3], newCx()) : undefined; if (m[3] && !cc) return false; d.etbCounters = { kind: m[2], n: num(m[1])! }; if (cc) d.etbCountersIf = cc; return true; }
   if ((m = /^~ enters with a number of \+1\/\+1 counters on it equal to (.+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; d.etbCounters = { kind: '+1/+1', n: a }; return true; }
+  if (/^(?:converge — )?~ enters with a \+1\/\+1 counter on it for each color of mana spent to (?:cast it|pay its (?:mana )?cost)$/.test(s)) { d.sunburst = true; return true; }
   if ((m = /^(?:this spell|~) costs \{(\d+)\} less to cast for each (.+)$/.exec(s))) { const a = forEach(m[2], newCx()); if (!a) return false; d.selfCostLess = { n: +m[1], per: a }; return true; }
   if ((m = /^(?:this spell|~) costs \{(\d+)\} less to cast if (.+)$/.exec(s))) { const cc = cond(m[2], newCx()); if (!cc) return false; d.costLessIf = { n: +m[1], cond: cc }; return true; }
   if ((m = /^(?:this spell|~) costs \{x\} less to cast, where x is (.+)$/.exec(s))) { const a = amount(m[1], newCx()); if (a === null) return false; d.selfCostLess = { n: 1, per: a }; return true; }
@@ -1236,6 +1248,7 @@ if ((m = /^(?:you may pay|pay) (\d+) life rather than pay (?:this spell's|~'s) m
   if (/^creatures you control with toxic have lifelink$/.test(s)) { statics.push({ k: 'toxicLink', who: 'self', cond: c }); return true; }
   if (/^you may play an additional land on each of your turns$/.test(s)) { statics.push({ k: 'noMaxHand', who: 'self', n: -1 }); return true; }
   if (/^you may play lands from your graveyard$/.test(s) && !c) { d.landsFromGy = true; return true; }
+  if ((m = /^when (?:~|this artifact) has (\w+) or more charge counters on it, you win the game$/.exec(s))) { const n0 = num(m[1]); if (typeof n0 !== 'number') return false; d.winAtCharge = n0; return true; }
   if (/^you may play lands from the top of your library$/.test(s) && !c) { statics.push({ k: 'topPlayLand', who: 'self' }); return true; }
   if (/^if you would gain life, you gain twice that much life instead$/.test(s) && !c) { statics.push({ k: 'doubleLife', who: 'self' }); return true; }
   if (/^if you would draw a card except the first one you draw in each of your draw steps, draw two cards instead$/.test(s) && !c) { statics.push({ k: 'doubleDraw', who: 'self' }); return true; }

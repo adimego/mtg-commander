@@ -8,6 +8,7 @@ const SETS = [
   { file: 'scripts/data/soc-decklists.html', set: 'SOC', setName: 'Secrets of Strixhaven Commander', released: '2026-04-24', ncmd: { 'Silverquill Influence': 2, 'Prismari Artistry': 2, 'Witherbloom Pestilence': 2, 'Lorehold Spirit': 2, 'Quandrix Unlimited': 2 } },
   { file: 'scripts/data/fic-decklists.html', set: 'FIC', setName: 'Final Fantasy Commander', released: '2025-06-13', ncmd: { 'Revival Trance': 2, 'Limit Break': 2, 'Counter Blitz': 2, 'Scions & Spellcraft': 2 } },
   { file: 'scripts/data/ecc-decklists.html', set: 'ECC', setName: 'Lorwyn Eclipsed Commander', released: '2026-01-23', ncmd: { 'Dance of the Elements': 2, 'Blight Curse': 2 } },
+  { file: 'scripts/data/eoc-decklists.html', set: 'EOC', setName: 'Edge of Eternities Commander', released: '2025-08-01', ncmd: { 'World Shaper': 2, 'Counter Intelligence': 2 } },
 ];
 const un = s => s.replace(/&#39;|&#x27;/g, "'").replace(/&amp;/g, '&').replace(/&quot;/g, '"');
 const cleanName = s => un(s).replace(/\s+\[[^\]]+\]\s*$/, '').trim();
