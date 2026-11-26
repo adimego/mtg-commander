@@ -218,6 +218,7 @@ function forEach(s: string, cx: Cx): Amt | null {
   if (/^aura you control that's attached to a creature$/.test(s)) return { aurasOnYours: true };
   if (/^instant and sorcery card in your graveyard$/.test(s)) return { cards: 'graveyard', pl: 'you', f: { anyType: ['Instant', 'Sorcery'] } };
   if (/^instant and sorcery card in your graveyard$/.test(s)) return { cards: 'graveyard', pl: 'you', f: { anyType: ['Instant', 'Sorcery'] } };
+  if (/^creatures? in your party$/.test(s)) return { party: true };
   if (/^(?:permanent|creature|artifact|enchantment)s? destroyed this way$/.test(s)) return 'destroyed';
   const fp = parseFilter(s); if (fp && !fp.card && !fp.spell) return { count: fp.f };
   return null;
@@ -240,9 +241,9 @@ export function cond(s: string, cx: Cx): Cond | null {
   if (/^there is no monarch$/.test(s)) return { k: 'noMonarch' };
   if ((m = /^you control (\w+) or fewer other lands$/.exec(s)) && typeof num(m[1]) === 'number') return { k: 'otherLandsLE', n: num(m[1]) as number };
   if (/^(this spell|~|it) was kicked$/.test(s)) return { k: 'kicked' };
-  if (/^(this spell was |you )?bargained$/.test(s) || /^you bargained$/.test(s)) return { k: 'bargained' };
+  if (/^(this spell was |you )?bargained$/.test(s) || /^you bargained$/.test(s) || /^it was bargained$/.test(s)) return { k: 'bargained' };
   if (/^tribute wasn'?t paid$/.test(s)) return { k: 'tributeUnpaid' };
-  if ((m = /^you control (?:at least )?(a|an|another|one|two|three|four|five|six|seven|eight|nine|ten|\d+)(?: or more)? (.+)$/.exec(s))) { const fp = parseFilter(m[2].replace(/,? or (?:a|an) /g, ' or ')); if (!fp) return null; if (m[1] === 'another') fp.f.other = true; return { k: 'control', f: { ...fp.f, ctrl: undefined }, n: m[1] === 'another' ? 1 : num(m[1]) as number }; }
+  if ((m = /^you control (?:at least )?(a|an|another|one|two|three|four|five|six|seven|eight|nine|ten|\d+)(?: or more)? (.+)$/.exec(s))) { const fp = parseFilter(m[2].replace(/,? or (?:a|an) /g, ' or ')); if (fp) { if (m[1] === 'another') fp.f.other = true; return { k: 'control', f: { ...fp.f, ctrl: undefined }, n: m[1] === 'another' ? 1 : num(m[1]) as number }; } }
   if ((m = /^you control no (.+)$|^you don't control (?:a|an|any) (.+)$/.exec(s))) { const fp = parseFilter(m[1] ?? m[2]); return fp ? { k: 'controlNo', f: { ...fp.f, ctrl: undefined } } : null; }
   if ((m = /^you have (\d+) or more life$|^you have at least (\d+) life$/.exec(s))) return { k: 'lifeGE', n: +(m[1] ?? m[2]) };
   if ((m = /^you have (\d+) or less life$/.exec(s))) return { k: 'lifeLE', n: +m[1] };
@@ -282,7 +283,7 @@ export function cond(s: string, cx: Cx): Cond | null {
   if (/^a card left your graveyard this turn$/.test(s)) return { k: 'leftGyYou' };
   if ((m = /^a player lost (\w+) or more life this turn$/.exec(s))) { const n0 = num(m[1]); return typeof n0 === 'number' ? { k: 'lostLifeGE', n: n0 } : null; }
   if ((m = /^an opponent has (\w+) or more cards in (?:their|his or her) graveyard$/.exec(s))) { const n0 = num(m[1]); return typeof n0 === 'number' ? { k: 'oppGyGE', n: n0 } : null; }
-  if (/^it's the first combat phase of your turn$/.test(s)) return { k: 'firstCombat' };
+  if (/^it's the first combat phase of (?:your |the )?turn$/.test(s)) return { k: 'firstCombat' };
   if (/^a counter was put on ~ this turn$/.test(s)) return { k: 'gotCtrSelf' };
   if (/^you put a counter on a creature this turn$/.test(s)) return { k: 'putCtrYou' };
   if ((m = /^you(?:'ve)? gained (\d+) or more life this turn$/.exec(s))) return { k: 'lifeGainedThisTurn', n: +m[1] };
@@ -311,6 +312,24 @@ export function cond(s: string, cx: Cx): Cond | null {
   if (/^this spell was cast during your main phase$/.test(s) || /^you cast (?:this spell|it|~) during your main phase$/.test(s)) return { k: 'yourMain' };
   if (/^there are two or more instant (?:and|or|and\/or) sorcery cards in your graveyard$/.test(s)) return { k: 'spellMastery' };
   if (/^you control your commander$/.test(s)) return { k: 'ctlCommander' };
+  if (/^(you cast it|it was cast|~ was cast)$/.test(s)) return { k: 'wasCast' };
+  if (/^you cast it from your hand$/.test(s) || /^(?:this spell|~|it) was? cast from your hand$/.test(s)) return { k: 'castFromHand' };
+  if ((m = /^(?:~|it) is an? (.+)$/.exec(s))) { const fp = parseFilter(m[1]); return fp ? { k: 'srcType', f: fp.f } : null; }
+  if (/^~ is in your graveyard$/.test(s)) return { k: 'srcZone', zone: 'graveyard' };
+  if (/^an opponent lost life this turn$/.test(s)) return { k: 'oppLostLife', n: 1 };
+  if (/^a creature died under your control this turn$/.test(s)) return { k: 'diedYou' };
+  if (/^no creatures are on the battlefield$/.test(s)) return { k: 'noCreatures' };
+  if ((m = /^(?:that player|they) (?:has|have) (\w+) or fewer cards in hand$/.exec(s))) { const n0 = num(m[1]); return typeof n0 === 'number' ? { k: 'evHandLE', n: n0 } : null; }
+  if (/^you have a full party$/.test(s)) return { k: 'fullParty' };
+  if ((m = /^there is an? (.+?) cards? in your graveyard$/.exec(s))) { const fp = parseFilter(m[1] + ' card'); return fp ? { k: 'gyGE', n: 1, f: fp.f } : null; }
+  { const mm = /^at least (\w+) mana was spent to cast (?:that spell|it|~)$/.exec(s); const nn = num(mm?.[1]); if (mm && typeof nn === 'number') return { k: 'spentGE', n: nn }; }
+  if (/\bor\b/.test(s) && !/ or (?:more|fewer|less|equal)\b/.test(s)) {
+    const i = s.lastIndexOf(' or ');
+    if (i > 0) {
+      const a = cond(s.slice(0, i), cx); const b = cond(s.slice(i + 4), cx);
+      if (a && b) return { k: 'or', or: [a, b] };
+    }
+  }
   return null;
 }
 
@@ -706,6 +725,11 @@ function dmg(srcS: string, n: Amt, toS: string, cx: Cx, fe?: string): Effect[] |
   return out;
 }
 
+const IFDID_OPS = new Set(['sac', 'sacThis', 'sacUid', 'discard', 'mill', 'search', 'destroy', 'exile', 'draw', 'lose', 'blight', 'ret', 'putLand']);
+function canDetectIfDid(fx: Effect[]): boolean {
+  return fx.length > 0 && fx.every(e => IFDID_OPS.has(e.op) || (e.op === 'may' && canDetectIfDid(e.sub ?? [])));
+}
+
 function clause(s: string, cx: Cx): Effect[] | null {
   s = s.trim().replace(/^then /, '').replace(/\.$/, '').replace(/\beach of (up to \w+|\w+) target\b/, '$1 target')
     .replace(/ (tokens?) named ([a-z'-]+(?: [a-z'-]+){0,3}?)(?= with |$| that )/, (_, t, nm) => ` named:${nm.replace(/ /g, '_')} ${t}`);
@@ -716,7 +740,7 @@ function clause(s: string, cx: Cx): Effect[] | null {
   if ((m = /^if (.+?), (.+)$/.exec(s))) { const c = cond(m[1], cx); const sub = c && clause(m[2], cx); if (c && sub) return [{ op: 'if', cond: c, sub }]; }
   if ((m = /^for each ([^,]+), (.+)$/.exec(s)) && !/ for each /.test(m[2])) { const save = cx.slots.length; const r = clause(`${m[2]} for each ${m[1]}`, cx); if (r) return r; cx.slots.length = save; }
   if ((m = /^(.+?) §gainlost$/.exec(s))) { const a = clause(m[1], cx); return a ? [...a, { op: 'gain', n: { lostWay: true }, pl: 'you' }] : null; }
-  if ((m = /^(.+?) §ifdid (.+)$/.exec(s))) { const a = clause(m[1], cx); const b = a && clause(m[2], cx); return a && b ? [{ op: 'ifDid', sub: a, else: b }] : null; }
+  if ((m = /^(.+?) §ifdid (.+)$/.exec(s))) { const a = clause(m[1], cx); const b = a && clause(m[2], cx); return a && b && canDetectIfDid(a) ? [{ op: 'ifDid', sub: a, else: b }] : null; }
   if ((m = /^you may pay (\{[^}]+\}(?:\{[^}]+\})*) §ifdo (.+)$/.exec(s))) { const c = parseCost(m[1].toUpperCase()); const sub = c && clause(m[2], cx); return c && sub ? [{ op: 'may', text: `pay ${m[1].toUpperCase()} to ${m[2]}`, ifPaid: c, sub }] : null; }
   if ((m = /^you may (.+?) §ifdo (.+)$/.exec(s))) { const a = clause(m[1], cx); const b = a && clause(m[2], cx); return a && b ? [{ op: 'may', text: m[1], sub: [...a, ...b] }] : null; }
   if ((m = /^(.+), where x is (.+)$/.exec(s))) { const a = amount(m[2], cx); if (a !== null) cx.xAmt = a; const sub = a !== null && clause(m[1], cx); if (sub) { const fix = (e: Effect) => { for (const k of ['n', 'm'] as const) if (e[k] === 'X') e[k] = a!; e.sub?.forEach(fix); }; sub.forEach(fix); return sub; } }
@@ -772,6 +796,7 @@ export function effects(text: string, cx: Cx): Effect[] | null {
     .replace(/that's still a planeswalker\. prevent all damage that would be dealt to (?:him|her|it|them) this turn/, "that's still a planeswalker §prevent");
   t = t.replace(/(that player|they) may pay \{(\d+)\}\. if (?:the player|they|that player) (?:doesn't|don't|does not|do not), ([^.]+)/g, '$3 unless $1 pays {$2}')
     .replace(/(you may [^.]+)\. if you do, /g, '$1 §ifdo ')
+    .replace(/([^.]+)\. if you do, /g, '$1 §ifdid ')
     .replace(/\. you gain life equal to the life lost this way/, ' §gainlost')
     .replace(/look at the top card of (target player's|target opponent's) library\. you may put that card on the bottom of that player's library/, (_, p: string) => `§looktb ${p.replace(/'s$/, '')}`)
     .replace(/separate all permanents (target player|target opponent) controls into two piles\. /, 'separate all permanents $1 controls into two piles§ ')
@@ -1568,6 +1593,7 @@ export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<st
 
   if ((m = /^as an additional cost to cast (?:this spell|~), (sacrifice|discard|pay) (an|a|one|two|x|\d+) (.*?)$/.exec(s))) {
     if (m[1] === 'pay' && m[2] === 'x' && m[3] === 'life') { d.extraCost = { lifeX: true }; return true; }
+    if (m[1] === 'discard' && m[2] === 'x' && /^cards?$/.test(m[3])) { d.extraCost = { discardX: true }; return true; }
     const n0 = num(m[2]); if (typeof n0 !== "number") return false; const n = n0;
     if (m[1] === 'pay' && /^life$/.test(m[3])) { d.extraCost = { life: +m[2] }; return true; }
     if (m[1] === 'discard' && /^cards?$/.test(m[3])) { d.extraCost = { discard: n }; return true; }
