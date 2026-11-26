@@ -8,7 +8,7 @@ const inDeck = (p: Player, id: string) => [...p.library, ...p.hand].filter(c => 
 
 /** Supported-card floors per official Marvel Super Heroes Commander precon. Target is 100/100;
  * these floors only stop regressions. The cards still missing are listed by scripts/precon-check.ts and docs/coverage.md. */
-const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100, 'Multiverse Reforged': 100, 'Namor the Sub-Mariner': 100, "Zurgo, Thunder's Decree": 100, 'Krenko, Mob Boss': 100, 'Federation Fleet': 100, 'Landing Party': 100, 'Klingon Fury': 100, 'We Are the Borg': 100, 'Silverquill Influence': 100, 'Prismari Artistry': 100, 'Witherbloom Pestilence': 100, 'Lorehold Spirit': 100, 'Quandrix Unlimited': 100, 'Revival Trance': 100, 'Limit Break': 100, 'Counter Blitz': 100, 'Scions & Spellcraft': 100, 'Dance of the Elements': 100, 'Blight Curse': 100, 'World Shaper': 100, 'Counter Intelligence': 100 };
+const FLOOR: Record<string, number> = { 'Avengers Assemble': 100, 'Wakanda Forever': 100, 'The Fantastic Four': 100, 'Doom Prevails': 100, 'Multiverse Reforged': 100, 'Namor the Sub-Mariner': 100, "Zurgo, Thunder's Decree": 100, 'Krenko, Mob Boss': 100, 'Federation Fleet': 100, 'Landing Party': 100, 'Klingon Fury': 100, 'We Are the Borg': 100, 'Silverquill Influence': 100, 'Prismari Artistry': 100, 'Witherbloom Pestilence': 100, 'Lorehold Spirit': 100, 'Quandrix Unlimited': 100, 'Revival Trance': 100, 'Limit Break': 100, 'Counter Blitz': 100, 'Scions & Spellcraft': 100, 'Dance of the Elements': 100, 'Blight Curse': 100, 'World Shaper': 100, 'Counter Intelligence': 100, 'Calling All Angels': 80, 'Keen Engineering': 87, 'Wretched Ranks': 88, 'Reign of Dragons': 76, 'Tramplesaurus Rex': 77 };
 
 describe('official precons', () => {
   const ps = loadPrecons();
@@ -20,8 +20,8 @@ describe('official precons', () => {
     const p = ps.find(x => x.name === name)!; expect(p.supported).toBeGreaterThanOrEqual(FLOOR[name]);
     expect(p.supported + p.unsupported.length).toBeLessThanOrEqual(100);
   });
-  it('Namor is a custom preset; Marvel, Reality Fracture, Star Trek, Secrets of Strixhaven, Final Fantasy, Edge of Eternities, and Lorwyn Eclipsed are the official precons', () => {
-    expect(ps.filter(isOfficialPrecon).map(p => p.name).sort()).toEqual(['Avengers Assemble', 'Blight Curse', 'Counter Blitz', 'Counter Intelligence', 'Dance of the Elements', 'Doom Prevails', 'Federation Fleet', 'Klingon Fury', 'Landing Party', 'Limit Break', 'Lorehold Spirit', 'Multiverse Reforged', 'Prismari Artistry', 'Quandrix Unlimited', 'Revival Trance', 'Scions & Spellcraft', 'Silverquill Influence', 'The Fantastic Four', 'Wakanda Forever', 'We Are the Borg', 'Witherbloom Pestilence', 'World Shaper']);
+  it('Namor is a custom preset; Marvel, Reality Fracture, Foundations, Star Trek, Secrets of Strixhaven, Final Fantasy, Edge of Eternities, and Lorwyn Eclipsed are the official precons', () => {
+    expect(ps.filter(isOfficialPrecon).map(p => p.name).sort()).toEqual(['Avengers Assemble', 'Blight Curse', 'Calling All Angels', 'Counter Blitz', 'Counter Intelligence', 'Dance of the Elements', 'Doom Prevails', 'Federation Fleet', 'Keen Engineering', 'Klingon Fury', 'Landing Party', 'Limit Break', 'Lorehold Spirit', 'Multiverse Reforged', 'Prismari Artistry', 'Quandrix Unlimited', 'Reign of Dragons', 'Revival Trance', 'Scions & Spellcraft', 'Silverquill Influence', 'The Fantastic Four', 'Tramplesaurus Rex', 'Wakanda Forever', 'We Are the Borg', 'Witherbloom Pestilence', 'World Shaper', 'Wretched Ranks']);
     expect(ps.filter(p => !isOfficialPrecon(p)).map(p => p.name)).toEqual(['Namor the Sub-Mariner', "Zurgo, Thunder's Decree", 'Krenko, Mob Boss']);
   });
   it('The Fantastic Four and Multiverse Reforged list more than one face commander', () => {
