@@ -145,6 +145,8 @@ export function compileScry(c: ScryCard, opts?: GrammarOpts): Classified {
     const pm = c.produced_mana.filter(x => 'WUBRGC'.includes(x)); if (pm.length) d.mana = [{ add: [pm.length === 1 ? pm[0] as ManaSym : pm.join('|') as ManaSym] }];
   }
   if ((d.sub?.includes('Saga') && !d.saga) || (d.sub?.includes('Vehicle') && /\bcrew \d/i.test(d.text ?? '') && !d.abilities?.some(a => a.crew !== undefined))) problems.push(`${d.sub?.includes('Saga') ? 'Saga chapters' : 'crewing'} not modelled`);
+  // "Add X. Threshold — Add Y instead if ..." must be if/else, not both.
+  { const fx = d.spell?.effects; if (fx && fx.length >= 2) { const last = fx[fx.length - 1]; if (last.op === 'if' && !last.else && fx.slice(0, -1).every(e => e.op === 'addMana')) d.spell!.effects = [{ op: 'if', cond: last.cond, sub: last.sub, else: fx.slice(0, -1) }]; } }
   res.unparsed.push(...prepUn);
   if (!res.unparsed.length && !problems.length) return maybeApplyGrammar({ def: d, support: 'auto', failures }, opts);
   const works = describeWorks(d);

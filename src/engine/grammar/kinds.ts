@@ -27,6 +27,7 @@ export const EFFECT_KINDS = [
   'transform', 'tuck', 'uncCreatures', 'undying', 'unearth', 'unless', 'unlessAct',
   'unlessDmg', 'untap', 'untapLands', 'warpExile', 'watch', 'watchCombatUntap',
   'winGame', 'retarget', 'protAll', 'windfall', 'tokenOr', 'delayMain', 'gainAbil', 'maySearch',
+  'silence', 'nextUnc', 'pactPay', 'retAsEnch', 'loseKwUntil', 'protChoice',
 ] as const;
 export type EffectKind = typeof EFFECT_KINDS[number];
 export const EFFECT_KIND_SET: ReadonlySet<string> = new Set(EFFECT_KINDS);
@@ -48,6 +49,7 @@ export const STATIC_KINDS = [
   'equip0Metalcraft', 'secondSpellLess', 'landsUntapped', 'prolifTwice', 'flashSpell',
   'manaPersistColor', 'etbTypalCtr', 'blockMax1', 'controlAttached', 'blockOnlyBy', 'blockMin2',
   'goadedCantBlock', 'cantActivate', 'extraBlock', 'mustBlock', 'addLandType', 'oppsCantAct',
+  'extraLands', 'allCreatureTypes', 'oppUntapAll', 'oppUntapSelf', 'protNotIdent',
 ] as const;
 export type StaticKind = typeof STATIC_KINDS[number];
 export const STATIC_KIND_SET: ReadonlySet<string> = new Set(STATIC_KINDS);
