@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const SETS = [
   { file: 'scripts/data/msc-decklists.html', set: 'MSC', setName: 'Marvel Super Heroes Commander', released: '2026-06-26', ncmd: { 'The Fantastic Four': 4 } },
   { file: 'scripts/data/frc-decklist.html', set: 'FRC', setName: 'Reality Fracture Commander', released: '2026-10-02', ncmd: { 'Multiverse Reforged': 2 } },
+  { file: 'scripts/data/fdc-decklists.html', set: 'FDC', setName: 'Foundations Commander', released: '2026-10-02', ncmd: { 'Calling All Angels': 1, 'Keen Engineering': 1, 'Wretched Ranks': 1, 'Reign of Dragons': 1, 'Tramplesaurus Rex': 1 } },
   { file: 'scripts/data/trc-decklists.html', set: 'TRC', setName: 'Star Trek Commander', released: '2026-11-13', ncmd: { 'Federation Fleet': 2, 'Landing Party': 2, 'Klingon Fury': 2, 'We Are the Borg': 2 } },
   { file: 'scripts/data/soc-decklists.html', set: 'SOC', setName: 'Secrets of Strixhaven Commander', released: '2026-04-24', ncmd: { 'Silverquill Influence': 2, 'Prismari Artistry': 2, 'Witherbloom Pestilence': 2, 'Lorehold Spirit': 2, 'Quandrix Unlimited': 2 } },
   { file: 'scripts/data/fic-decklists.html', set: 'FIC', setName: 'Final Fantasy Commander', released: '2025-06-13', ncmd: { 'Revival Trance': 2, 'Limit Break': 2, 'Counter Blitz': 2, 'Scions & Spellcraft': 2 } },

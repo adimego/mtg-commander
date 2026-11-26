@@ -11,6 +11,7 @@ describe('groupOfficialPrecons', () => {
     const groups = groupOfficialPrecons(ps);
     expect(groups.map(g => [g.set, g.setName, g.released, g.decks.length])).toEqual([
       ['TRC', 'Star Trek Commander', '2026-11-13', 4],
+      ['FDC', 'Foundations Commander', '2026-10-02', 5],
       ['FRC', 'Reality Fracture Commander', '2026-10-02', 1],
       ['MSC', 'Marvel Super Heroes Commander', '2026-06-26', 4],
       ['SOC', 'Secrets of Strixhaven Commander', '2026-04-24', 5],
@@ -20,9 +21,9 @@ describe('groupOfficialPrecons', () => {
     ]);
     expect(groups.flatMap(g => g.decks).every(isOfficialPrecon)).toBe(true);
     expect(groups.flatMap(g => g.decks).map(d => d.name).sort()).toEqual([
-      'Avengers Assemble', 'Blight Curse', 'Counter Blitz', 'Counter Intelligence', 'Dance of the Elements', 'Doom Prevails', 'Federation Fleet', 'Klingon Fury',
+      'Avengers Assemble', 'Blight Curse', 'Calling All Angels', 'Counter Blitz', 'Counter Intelligence', 'Dance of the Elements', 'Doom Prevails', 'Federation Fleet', 'Keen Engineering', 'Klingon Fury',
       'Landing Party', 'Limit Break', 'Lorehold Spirit', 'Multiverse Reforged', 'Prismari Artistry', 'Quandrix Unlimited',
-      'Revival Trance', 'Scions & Spellcraft', 'Silverquill Influence', 'The Fantastic Four', 'Wakanda Forever', 'We Are the Borg', 'Witherbloom Pestilence', 'World Shaper',
+      'Reign of Dragons', 'Revival Trance', 'Scions & Spellcraft', 'Silverquill Influence', 'The Fantastic Four', 'Tramplesaurus Rex', 'Wakanda Forever', 'We Are the Borg', 'Witherbloom Pestilence', 'World Shaper', 'Wretched Ranks',
     ]);
     expect(ps.filter(p => p.set === 'USR').map(p => p.name)).toEqual(['Namor the Sub-Mariner', "Zurgo, Thunder's Decree", 'Krenko, Mob Boss']);
   });
@@ -35,6 +36,6 @@ describe('groupOfficialPrecons', () => {
     const groups = groupOfficialPrecons([...loadPrecons(), extra]);
     expect(groups[0]).toMatchObject({ set: 'ZZZ', setName: 'Future Commander', released: '2027-01-01' });
     expect(groups[0].decks.map(d => d.name)).toEqual(['Future Precon']);
-    expect(groups.map(g => g.set)).toEqual(['ZZZ', 'TRC', 'FRC', 'MSC', 'SOC', 'ECC', 'EOC', 'FIC']);
+    expect(groups.map(g => g.set)).toEqual(['ZZZ', 'TRC', 'FDC', 'FRC', 'MSC', 'SOC', 'ECC', 'EOC', 'FIC']);
   });
 });

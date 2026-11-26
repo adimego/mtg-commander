@@ -183,6 +183,11 @@ function amount(s: string, cx: Cx): Amt | null {
   if ((m = /^the (?:greatest|highest) power among (.+)$/.exec(eq))) { const fp = parseFilter(m[1]); return fp && !fp.card ? { maxPow: fp.f } : null; }
   if (/^the life you've gained this turn$|^the amount of life you gained this turn$/.test(eq)) return { lifeGained: true };
   if (/^the total power of creatures you control$/.test(eq)) return { powSum: { types: ['Creature'], ctrl: 'you' } };
+  if ((m = /^the number of (.+?) plus the number of (.+)$/.exec(eq))) {
+    const a1 = amount('the number of ' + m[1], cx); const a2 = amount('the number of ' + m[2], cx);
+    if (a1 !== null && a2 !== null) return { sum: [a1, a2] };
+  }
+  if ((m = /^the number of (.+?) cards in all graveyards$/.exec(eq))) { const fp = parseFilter(m[1] + ' cards'); return fp ? { count: fp.f, zone: 'graveyard' as const } : null; }
   if ((m = /^the number of (.+?)$/.exec(eq))) { const fp = parseFilter(m[1]); return fp && !fp.card && !fp.spell ? { count: fp.f } : null; }
   return null;
 }
@@ -994,7 +999,8 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       if (body.includes('§FAIL')) { fail(raw); continue; }
       // mana abilities
       let only: string | undefined;
-      body = body.replace(/\. (?:spend this mana only to (.+)|this mana can't be spent to (?:cast (?:a )?nonartifact spells?|pay generic mana costs))$/, (_, w?: string) => { only = !w ? (/generic mana costs/.test(body) ? 'nongeneric' : 'artifact') : ({ 'cast a creature spell of the chosen type': 'ctypeSpell', 'cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type': 'ctypeAny', 'cast a hero spell or to activate an ability of a hero source': 'hero', 'cast a villain spell or to activate an ability of a villain source': 'villain', 'cast a legendary spell': 'legendary', 'cast an instant or sorcery spell': 'is', 'cast artifact spells or activate abilities of artifacts': undefined, 'cast a creature spell': 'creature', 'cast elemental spells or activate abilities of elemental sources': 'elemental', 'cast an elemental spell or activate an ability of an elemental': 'elemental', 'cast elemental spells or activate abilities of elementals': 'elemental' } as Record<string, string | undefined>)[w] ?? '§'; return ''; });
+      body = body.replace(/\. if that mana is spent on a dragon creature spell, it gains haste until end of turn$/, () => { only = 'dragonHaste'; return ''; });
+      body = body.replace(/\. (?:spend this mana only to (.+)|this mana can't be spent to (?:cast (?:a )?nonartifact spells?|pay generic mana costs))$/, (_, w?: string) => { only = !w ? (/generic mana costs/.test(body) ? 'nongeneric' : 'artifact') : ({ 'cast a creature spell of the chosen type': 'ctypeSpell', 'cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type': 'ctypeAny', 'cast a hero spell or to activate an ability of a hero source': 'hero', 'cast a villain spell or to activate an ability of a villain source': 'villain', 'cast a legendary spell': 'legendary', 'cast an instant or sorcery spell': 'is', 'cast artifact spells or activate abilities of artifacts': undefined, 'cast a creature spell': 'creature', 'cast elemental spells or activate abilities of elemental sources': 'elemental', 'cast an elemental spell or activate an ability of an elemental': 'elemental', 'cast elemental spells or activate abilities of elementals': 'elemental', 'cast an angel spell': 'angel', 'cast a dragon creature spell': 'dragonCreature', 'cast dragon spells or activate abilities of dragons': 'dragon' } as Record<string, string | undefined>)[w] ?? '§'; return ''; });
       body = body.replace(/^(add one mana of any color in your commander's color identity)\. when that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1$/, (_, x) => { only = 'path'; return x; });
       if (only === '§') { fail(raw); continue; }
       if (only) { const r = /^add (.+)$/.exec(body) && manaAdd(body.slice(4), newCx()); if (!r || !ab.tap || Object.keys(pc.ab).length !== 1) { fail(raw); continue; } manaLines.push({ add: r.mana, n: r.n, only }); continue; }
@@ -1040,11 +1046,13 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   if (d.evolve) triggers.push({ on: 'x', ev: 'etb', subj: 'other', f: { types: ['Creature'], ctrl: 'you' }, ifc: { k: 'evolve' }, label: 'Evolve', effects: [{ op: 'addC', kind: '+1/+1', n: 1, who: 'self' }] } as TriggerDef);
   if (kws.has('undying')) triggers.push({ on: 'x', ev: 'dies', subj: 'self', ifc: { k: 'noP1P1' }, label: 'Undying', effects: [{ op: 'undying' }] } as TriggerDef);
   if (d.soulbond) triggers.push({ on: 'x', ev: 'etb', subj: 'self', label: 'Soulbond: pair with another unpaired creature you control', effects: [{ op: 'soulPair' }] } as TriggerDef, { on: 'x', ev: 'etb', subj: 'other', f: { types: ['Creature'], ctrl: 'you' }, label: 'Soulbond: you may pair with that creature', effects: [{ op: 'soulPair', who: 'ev' }] } as TriggerDef);
+  if (d.impending) triggers.push({ on: 'x', label: 'remove a time counter', ev: 'endStep', pl: 'you', effects: [{ op: 'script', kind: 'remTime' }] });
+  if (d.dethrone) triggers.push({ on: 'x', ev: 'attacks', subj: 'self', ifc: { k: 'atkMostLife' }, label: 'Dethrone', effects: [{ op: 'addC', kind: '+1/+1', n: 1, who: 'self' }] } as TriggerDef);
   if (abilities.length) d.abilities = [...(d.abilities ?? []), ...abilities];
   if (triggers.length) d.triggers = [...(d.triggers ?? []), ...triggers];
   if (statics.length) d.statics = statics;
   if (spellFx.length || spellModes) d.spell = { effects: spellFx, tslots: spellSlots.length ? spellSlots : undefined, modes: spellModes };
-  if (d.impending) triggers.push({ on: 'x', label: 'remove a time counter', ev: 'endStep', pl: 'you', effects: [{ op: 'script', kind: 'remTime' }] });
+  if (d.escalateCost && d.spell?.modes) d.spell.modes.escalateCost = d.escalateCost;
   if (kws.size) d.keywords = [...kws];
   if (d.aura) { const bad = statics.some(s => s.who === 'attached' && ((s.k === 'pt' && typeof s.t === 'number' && s.t < 0) || s.k === 'cantBlock' || s.k === 'cantAttack')); d.aura.harm = bad; if (!bad && d.aura.f && !d.aura.f.ctrl) d.aura = { ...d.aura }; }
   if (isSpell && !d.spell && !triggers.some(t => (t as TriggerDef & { ev?: string }).ev === 'castSelf') && unparsed.length === 0 && text.trim()) unparsed.push('(no effect)');
@@ -1143,11 +1151,35 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
   if ((m = /^escape[—\-]?(\{[^}]+\}(?:\{[^}]+\})*), exile (\w+) other cards? from your graveyard$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.escape = { cost: c, n: num(m[2]) as number }; return true; }
   if ((m = /^bestow (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.bestow = c; return true; }
   if (p === 'strive') { d.strive = true; return true; }
+  if (p === 'dethrone') { d.dethrone = true; return true; }
+  if (p === 'imprint') { d.imprint = true; return true; }
+  if (p === 'read ahead') { d.readAhead = true; return true; }
+  { const em = /^escalate \{([wubrgc])\}$/.exec(p); if (em) { const k = em[1].toUpperCase() as 'W'|'U'|'B'|'R'|'G'|'C'; d.escalateCost = { generic: 0, [k]: 1 }; return true; } }
+  if (p === 'gift a card') { d.gift = 'card'; return true; }
+  { const wl = /^ward[—\-]pay (\d+) life$/.exec(p); if (wl) { d.wardLife = +wl[1]; return true; } }
   if (p === 'demonstrate' || p === 'myriad' || p === 'gravestorm' || /^annihilator \d+$/.test(p) || p === 'populate') return false;
   void sc; return false;
 }
 function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>): boolean {
   let m: RegExpExecArray | null; let c: Cond | undefined; let s = l;
+  if (/^gift a card$/.test(s)) { d.gift = 'card'; return true; }
+  { const em = /^escalate \{([wubrgc])\}$/.exec(s); if (em) { const k = em[1].toUpperCase() as 'W'|'U'|'B'|'R'|'G'|'C'; d.escalateCost = { generic: 0, [k]: 1 }; return true; } }
+
+  if (/^you don't lose unspent red mana as steps and phases end$/.test(s)) { statics.push({ k: 'manaPersistColor', who: 'self', color: 'R' }); return true; }
+  if (/^you may cast green creature spells as though they had flash$/.test(s)) { statics.push({ k: 'flashSpell', who: 'self', spellF: { types: ['Creature'], colors: ['G'] } }); return true; }
+  if (/^you may cast artifact spells as though they had flash$/.test(s)) { statics.push({ k: 'flashSpell', who: 'self', spellF: { types: ['Artifact'] } }); return true; }
+  if ((m = /^you can't cast ~ during your first, second, or third turns of the game$/.exec(s))) { d.noCastTurns = 3; return true; }
+  if ((m = /^each other ([a-z]+) you control enters with an additional \+1\/\+1 counter on it for each \1 you already control$/.exec(s))) {
+    const ty = m[1][0].toUpperCase() + m[1].slice(1);
+    statics.push({ k: 'etbTypalCtr', who: 'self', f: { types: [ty] }, kws: [ty] });
+    return true;
+  }
+  if ((m = /^each ([a-z]+) you control enters with an additional \+1\/\+1 counter on it$/.exec(s))) {
+    const ty = m[1][0].toUpperCase() + m[1].slice(1);
+    statics.push({ k: 'etbTypalCtr', who: 'self', f: { types: [ty] }, n: 1 });
+    return true;
+  }
+  if (/^each creature you control with power 4 or greater can't be blocked by more than one creature$/.test(s)) { statics.push({ k: 'blockMax1', who: 'all', f: { types: ['Creature'], ctrl: 'you', powGE: 4 } }); return true; }
   if (/^as long as ~ is in your graveyard and you control a mountain, creatures you control have haste$/.test(s)) { d.gyHaste = true; return true; }
   if (/^as long as ~ is paired with another creature, each of those creatures has "whenever ~ deals damage to an opponent, draw a card\.?"$/.test(s)) { statics.push({ k: 'soulDraw', who: 'self' }); return true; }
   const cm = /^(.+?) as long as (.+)$/.exec(s) ?? /^as long as (.+?), (.+)$/.exec(s);

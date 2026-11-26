@@ -103,6 +103,15 @@ export function KickerDialog({ name, cost, pick, cancel }: { name: string; cost:
   return <Box title={name} sub={`Pay the kicker cost ${cost} as well?`}><div className="cbtns">
     <button className="big" data-ans="kick" onClick={() => pick(true)}>Kick it ({cost})</button><button className="sec" data-ans="nokick" onClick={() => pick(false)}>Cast without kicker</button><button className="sec" onClick={cancel}>Cancel</button></div></Box>;
 }
+export function GiftDialog({ name, opponents, pick, cancel }: { name: string; opponents: { id: number; name: string }[]; pick: (to: number | false) => void; cancel: () => void }) {
+  return <Box title={name} sub="As you cast this, you may promise a gift. If you do, an opponent draws a card when it resolves.">
+    <div className="cbtns">
+      {opponents.map(o => <button key={o.id} className="big" data-ans={`gift-${o.id}`} onClick={() => pick(o.id)}>Promise a gift to {o.name}</button>)}
+      <button className="sec" data-ans="nogift" onClick={() => pick(false)}>Don't promise a gift</button>
+      <button className="sec" onClick={cancel}>Cancel</button>
+    </div>
+  </Box>;
+}
 export function XDialog({ name, max, pick, cancel }: { name: string; max: number; pick: (x: number) => void; cancel: () => void }) {
   const [x, setX] = useState(max);
   return <Box title={`${name}: choose X`} sub={`You can afford up to X = ${max}.`}>

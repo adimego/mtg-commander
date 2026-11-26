@@ -185,7 +185,7 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   if (spellReplicate(g, pid, d) && door === undefined) { while (replicate < 8 && canCast(g, pid, c, { kicked, warp, x, evoke, webSling: !!webRet, omni, surge: surge && !omni && !normal, exileAlt, replicate: replicate + 1 })) replicate++; if (replicate > 2) replicate = 2; }
   let squad = 0;
   if (d.squad) { while (squad < 8 && canCast(g, pid, c, { kicked, warp, x, evoke, webSling: !!webRet, omni, surge: surge && !omni && !normal, exileAlt, door, replicate, squad: squad + 1 })) squad++; if (squad > 2) squad = 2; }
-  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt, door, replicate: replicate || undefined, squad: squad || undefined });
+  return castSpell(g, pid, c.uid, { targets, modes, x: omni ? 0 : x, kicked, warp, free: free && !omni, omni, surge: surge && !omni && !normal, orPay, evoke, webSling: !!webRet, webRet: webRet?.uid, teamwork: teamwork ? tw!.map(q => q.uid) : undefined, exileAlt, door, replicate: replicate || undefined, squad: squad || undefined, gift: def(c).gift ? (g.players.find(q => q.id !== pid && !q.lost)?.id ?? false) : undefined });
 }
 const isCounter = (d: CardDef) => !!(d.spell?.effects.some(e => e.op === 'counter' || (e.op === 'unless' && e.sub?.some(s => s.op === 'counter'))));
 const isPump = (d: CardDef) => !!d.spell?.effects.some(e => e.op === 'pump') && !d.spell.effects.some(e => HARMFUL.includes(e.op));
