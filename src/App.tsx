@@ -9,7 +9,7 @@ import { backCastable, flipFace, frontFace, canForetell, foretell, canNinjutsu, 
 import { AI_RANDOM, buildAiPool, normalizeAiPicks, resolveAiDecks } from './setup/aiDecks';
 import { AttackDock, BlockDock, GlanceBoard, commanderCastInfo } from './Duo';
 import { needsBack, type BoardViews } from './setup/views';
-import { DecisionDialog, KickerDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog, BlightCostDialog, WardBlightDialog, StationDialog, BroodshipDialog } from './Dialogs';
+import { DecisionDialog, KickerDialog, GiftDialog, WarpDialog, AltCostDialog, TeamworkDialog, XDialog, ModesDialog, BlightCostDialog, WardBlightDialog, StationDialog, BroodshipDialog } from './Dialogs';
 import type { TSlot, Modes } from './engine/types';
 import { tick, waitingForHuman, shouldAutoPass, PassOpts } from './engine/controller';
 import { groupTiles, stackCaption, crowdedCardWidth, pickFromStack, type Tile } from './stacks';
@@ -31,7 +31,7 @@ const KW_HELP: Record<string, string> = {
 type AbLike = { tap?: boolean; untap?: boolean; mana?: Cost; sac?: boolean; loyalty?: number; loyX?: boolean; sacF?: { n: number }; discard?: number; life?: number; remC?: { kind: string; n: number }; exileGy?: { n: number; self?: boolean }; tapF?: { n: number } };
 const abCost = (a: AbLike) => [a.loyalty !== undefined ? (a.loyX ? '−X' : `${a.loyalty > 0 ? '+' : a.loyalty === 0 ? '±' : '−'}${Math.abs(a.loyalty)}`) : '', a.mana ? costText(a.mana) : '', a.tap ? '{T}' : '', a.untap ? '{Q}' : '', a.sac ? 'Sac' : '', a.sacF ? `Sac ${a.sacF.n}` : '', a.discard ? `Discard ${a.discard}` : '', a.life ? `${a.life} life` : '', a.remC ? `−${a.remC.n} ${a.remC.kind}` : '', a.exileGy ? (a.exileGy.self ? 'Exile from gy' : `Exile ${a.exileGy.n} from gy`) : '', a.tapF ? `Tap ${a.tapF.n}` : ''].filter(Boolean).join(', ');
 /** A cast or activation being set up: kicker → X → modes → one target per active slot. */
-type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; alt?: 'evoke' | 'web' | 'free' | 'overload' | 'omni' | 'surge' | 'exile' | ''; warp?: boolean; morph?: boolean; impending?: boolean; sneak?: boolean; teamwork?: boolean; kicked?: boolean; blightPaid?: boolean; blightUids?: number[]; x?: number; modes?: number[]; orPay?: boolean; door?: number; replicate?: number; squad?: number; crew?: number[]; sacs?: number[]; ts: (Target | undefined)[] };
+type Flow = { kind: 'cast' | 'ability' | 'trigger'; uid: number; idx?: number; alt?: 'evoke' | 'web' | 'free' | 'overload' | 'omni' | 'surge' | 'exile' | ''; warp?: boolean; morph?: boolean; impending?: boolean; sneak?: boolean; teamwork?: boolean; kicked?: boolean; blightPaid?: boolean; blightUids?: number[]; x?: number; modes?: number[]; orPay?: boolean; door?: number; replicate?: number; squad?: number; crew?: number[]; sacs?: number[]; gift?: number | false; ts: (Target | undefined)[] };
 type PendingAct = Flow;
 const SAVED0 = decks.activateAll();
 const PRECONS = loadPrecons();
@@ -528,7 +528,7 @@ export default function App() {
   const flowSlots: TSlot[] = flowModes?.repeat && flow?.modes ? flow.modes.flatMap(i => modeRange(flowModes, i).map(j => flowModes.list.flatMap(md => md.tslots ?? [])[j])) : baseSlots;
   const flowModesEff = flowModes && flow?.kind === 'cast' && g ? { ...flowModes, max: modesMax(g, HUMAN, flowModes, { teamwork: flow.teamwork }) } : flowModes;
   const flowActive = flowModes?.repeat && flow?.modes ? flowSlots.map((_, i) => i) : flowModes ? (flow?.modes ?? []).flatMap(i => modeRange(flowModes, i)) : flowSlots.map((_, i) => i);
-  const flowStage: null | 'alt' | 'or' | 'teamwork' | 'warp' | 'morph' | 'impending' | 'kicker' | 'blight' | 'door' | 'replicate' | 'squad' | 'x' | 'modes' | 'targets' | 'wardBlight' | 'station' | 'broodship' = !g || !flow ? null
+  const flowStage: null | 'alt' | 'or' | 'teamwork' | 'warp' | 'morph' | 'impending' | 'kicker' | 'gift' | 'blight' | 'door' | 'replicate' | 'squad' | 'x' | 'modes' | 'targets' | 'wardBlight' | 'station' | 'broodship' = !g || !flow ? null
     : flow.kind === 'cast' && flowCard && flow.alt === undefined && (evokeCost(g, HUMAN, flowCard) || def(flowCard).webSling || def(flowCard).freeCmdr || def(flowCard).overload || (me!.hand.includes(flowCard) && omniOn(g, HUMAN)) || (!!def(flowCard).surge && canCast(g, HUMAN, flowCard, { surge: true }))) ? 'alt'
     : flow.kind === 'cast' && flowCard && def(flowCard).costOr && flow.orPay === undefined ? 'or'
     : flow.kind === 'cast' && flowCard && flow.warp === undefined && def(flowCard).warp && me!.hand.includes(flowCard) ? 'warp'
@@ -536,6 +536,7 @@ export default function App() {
     : flow.kind === 'cast' && flowCard && flow.impending === undefined && def(flowCard).impending ? 'impending'
     : flow.kind === 'cast' && flowCard && def(flowCard).teamwork !== undefined && flow.teamwork === undefined ? 'teamwork'
     : flow.kind === 'cast' && flowCard && def(flowCard).kicker && flow.kicked === undefined ? 'kicker'
+    : flow.kind === 'cast' && flowCard && def(flowCard).gift && flow.gift === undefined ? 'gift'
     : flow.kind === 'cast' && flowCard && def(flowCard).optBlight && flow.blightPaid === undefined ? 'blight'
     : flow.kind === 'cast' && flowCard && def(flowCard).room && flow.door === undefined ? 'door'
     : flow.kind === 'cast' && flowCard && !!spellReplicate(g, HUMAN, def(flowCard)) && flow.replicate === undefined ? 'replicate'
@@ -585,7 +586,7 @@ export default function App() {
     setPending(null);
     act(g => {
       if (f.kind === 'trigger') chooseTriggerTargets(g, full, f.modes);
-      else if (f.kind === 'cast') { if (!castSpell(g, HUMAN, f.uid, { targets: full, modes: f.modes, x: f.alt === 'omni' ? 0 : f.x, kicked: f.kicked, blightPaid: f.blightPaid, blightUids: f.blightUids, free: f.alt === 'free', omni: f.alt === 'omni', surge: f.alt === 'surge', orPay: f.orPay, evoke: f.alt === 'evoke', overload: f.alt === 'overload', webSling: f.alt === 'web', warp: f.warp, morph: f.morph, impending: f.impending, sneak: f.sneak, teamwork: f.teamwork, exileAlt: f.alt === 'exile', door: f.door, replicate: f.replicate, squad: f.squad, sacs: f.sacs })) flash("Couldn't cast that (targets or mana no longer valid)."); }
+      else if (f.kind === 'cast') { if (!castSpell(g, HUMAN, f.uid, { targets: full, modes: f.modes, x: f.alt === 'omni' ? 0 : f.x, kicked: f.kicked, blightPaid: f.blightPaid, blightUids: f.blightUids, free: f.alt === 'free', omni: f.alt === 'omni', surge: f.alt === 'surge', orPay: f.orPay, evoke: f.alt === 'evoke', overload: f.alt === 'overload', webSling: f.alt === 'web', warp: f.warp, morph: f.morph, impending: f.impending, sneak: f.sneak, teamwork: f.teamwork, exileAlt: f.alt === 'exile', door: f.door, replicate: f.replicate, squad: f.squad, sacs: f.sacs, gift: f.gift })) flash("Couldn't cast that (targets or mana no longer valid)."); }
       else if (!activate(g, HUMAN, f.uid, f.idx!, { targets: full, modes: f.modes, x: f.x, crew: f.crew })) flash("Couldn't activate that.");
     });
   }
@@ -816,7 +817,7 @@ export default function App() {
       primary = { label: `Confirm (${discardSel.length}/${need})`, run: () => { if (discardSel.length !== need) return; const pick = [...discardSel]; setDiscardSel([]); act(g => { answerDecision(g, pick); }); } };
     }
     else if (humanDecision) { prompt = `❓ ${humanDecision.src ? `${CARDS[humanDecision.src]?.name}: ` : ''}${humanDecision.text}`; tone = 'target'; }
-    else if (flow && flowStage && flowStage !== 'targets') { prompt = `${flowName}: ${flowStage === 'alt' ? 'choose how to cast it' : flowStage === 'warp' ? 'warp it?' : flowStage === 'morph' ? 'cast it face down?' : flowStage === 'impending' ? 'cast it for impending?' : flowStage === 'teamwork' ? 'use teamwork?' : flowStage === 'kicker' ? 'kick it?' : flowStage === 'door' ? 'choose a door to unlock' : flowStage === 'replicate' ? 'how many times to pay replicate?' : flowStage === 'squad' ? 'how many times to pay squad?' : flowStage === 'station' ? 'choose a creature to station it' : flowStage === 'broodship' ? 'sacrifice a land to cast it from the graveyard' : flowStage === 'x' ? 'choose X' : 'choose mode(s)'}`; tone = 'target'; }
+    else if (flow && flowStage && flowStage !== 'targets') { prompt = `${flowName}: ${flowStage === 'alt' ? 'choose how to cast it' : flowStage === 'warp' ? 'warp it?' : flowStage === 'morph' ? 'cast it face down?' : flowStage === 'impending' ? 'cast it for impending?' : flowStage === 'teamwork' ? 'use teamwork?' : flowStage === 'kicker' ? 'kick it?' : flowStage === 'gift' ? 'promise a gift?' : flowStage === 'door' ? 'choose a door to unlock' : flowStage === 'replicate' ? 'how many times to pay replicate?' : flowStage === 'squad' ? 'how many times to pay squad?' : flowStage === 'station' ? 'choose a creature to station it' : flowStage === 'broodship' ? 'sacrifice a land to cast it from the graveyard' : flowStage === 'x' ? 'choose X' : 'choose mode(s)'}`; tone = 'target'; }
     else if (flow && curSlot) {
       const n = flowActive.length; const k = flow.ts.length + 1;
       prompt = `${flow.kind === 'trigger' ? '⚡ Your trigger' : '🎯'} ${flowName}: choose ${curSlot.label ?? 'a target'}${n > 1 ? ` (target ${k} of ${n})` : ''}${curSlot.who === 'card' ? ' from a graveyard' : ''}. Legal targets glow green.`;
@@ -1058,6 +1059,7 @@ export default function App() {
       {!blockDec && flow && flowStage === 'impending' && flowCard && def(flowCard).impending && <WarpDialog name={flowName} cost={costText(def(flowCard).impending!.cost)} normal={costText(def(flowCard).cost)} yes="Impending" blurb={`Cast it for its impending cost? It enters with ${def(flowCard).impending!.n} time counters and isn't a creature until the last one is removed.`} cancel={() => setPending(null)} pick={w => startCast(flowCard, { ...flow, impending: w })} />}
       {!blockDec && flow && flowStage === 'teamwork' && flowCard && <TeamworkDialog name={flowName} n={def(flowCard).teamwork!} cancel={() => setPending(null)} pick={t => begin2({ ...flow, teamwork: t }, flowCard)} />}
       {!blockDec && flow && flowStage === 'kicker' && flowCard && <KickerDialog name={flowName} cost={costText(def(flowCard).kicker!)} cancel={() => setPending(null)} pick={k => begin2({ ...flow, kicked: k }, flowCard)} />}
+      {!blockDec && flow && flowStage === 'gift' && flowCard && <GiftDialog name={flowName} opponents={opponents(g, HUMAN).map(p => ({ id: p.id, name: p.name }))} cancel={() => setPending(null)} pick={to => begin2({ ...flow, gift: to }, flowCard)} />}
       {!blockDec && flow && flowStage === 'blight' && flowCard && <BlightCostDialog name={flowName} n={def(flowCard).optBlight!} creatures={me.battlefield.filter(c => def(c).types.includes('Creature'))} cancel={() => setPending(null)} pick={(paid, uid) => begin2({ ...flow, blightPaid: paid, blightUids: uid !== undefined ? [uid] : [] }, flowCard)} />}
       {!blockDec && flow && flowStage === 'wardBlight' && flowCard && <WardBlightDialog name={flowName} amounts={wardBlightAmounts(g, HUMAN, (() => { const full: (Target | undefined)[] = flowSlots.map(() => undefined); flowActive.forEach((i, k) => { full[i] = flow!.ts[k]; }); return full; })())} creatures={me.battlefield.filter(c => def(c).types.includes('Creature'))} cancel={() => setPending(null)} pick={uids => advance({ ...flow, blightUids: uids })} />}
       {!blockDec && flow && flowStage === 'station' && flowCard && <StationDialog name={flowName} g={g} creatures={crewCands(g, HUMAN, flowCard)} cancel={() => setPending(null)} pick={uid => advance({ ...flow, crew: [uid] })} />}

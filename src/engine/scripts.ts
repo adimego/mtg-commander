@@ -10,6 +10,7 @@ import { FIC_SCRIPTS } from './fic-scripts';
 import { FIC_LEFTOVERS } from './fic-leftovers';
 import { ECC_SCRIPTS } from './ecc-scripts';
 import { EOC_SCRIPTS } from './eoc-scripts';
+import { FDC_SCRIPTS } from './fdc-scripts';
 
 type Patch = (d: CardDef) => void;
 const S = (kind: string, extra: Partial<Effect> = {}): Effect => ({ op: 'script', kind, ...extra });
@@ -376,6 +377,7 @@ Object.assign(SCRIPTS, FIC_SCRIPTS);
 Object.assign(SCRIPTS, FIC_LEFTOVERS);
 Object.assign(SCRIPTS, ECC_SCRIPTS);
 Object.assign(SCRIPTS, EOC_SCRIPTS);
+Object.assign(SCRIPTS, FDC_SCRIPTS);
 
 /** Apply scripts for lines the compiler couldn't parse; covered lines are removed from `unparsed`. */
 export function applyScripts(name: string, d: CardDef, unparsed: string[]) {
