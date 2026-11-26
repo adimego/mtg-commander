@@ -120,3 +120,32 @@ export function ModesDialog({ name, m, avail, pick, cancel }: { name: string; m:
     <div className="cbtns"><button className="big" disabled={!ok} data-ans="confirm" onClick={() => pick(m.repeat ? sel : [...sel].sort((a, b) => a - b))}>Confirm</button>{cancel && <button className="sec" onClick={cancel}>Cancel</button>}</div>
   </Box>;
 }
+
+export function BlightCostDialog({ name, n, creatures, pick, cancel }: { name: string; n: number; creatures: Card[]; pick: (paid: boolean, uid?: number) => void; cancel: () => void }) {
+  const [uid, setUid] = useState<number | undefined>(creatures[0]?.uid);
+  return <Box title={name} sub={`As an additional cost, you may blight ${n} (put ${n} -1/-1 counter${n > 1 ? 's' : ''} on a creature you control).`}>
+    {creatures.length ? <div className="cbtns">{creatures.map(c => <button key={c.uid} className={uid === c.uid ? 'big' : 'sec'} data-ans={c.uid} onClick={() => setUid(c.uid)}>{def(c).name}</button>)}</div> : <p className="csub">You control no creatures to blight.</p>}
+    <div className="cbtns">
+      <button className="big" data-ans="blight" disabled={!uid} onClick={() => uid !== undefined && pick(true, uid)}>Blight {n}</button>
+      <button className="sec" data-ans="noblight" onClick={() => pick(false)}>Cast without blighting</button>
+      <button className="sec" onClick={cancel}>Cancel</button>
+    </div>
+  </Box>;
+}
+
+export function WardBlightDialog({ name, amounts, creatures, pick, cancel }: { name: string; amounts: number[]; creatures: Card[]; pick: (uids: number[]) => void; cancel: () => void }) {
+  const [uids, setUids] = useState<(number | undefined)[]>(amounts.map(() => creatures[0]?.uid));
+  const setAt = (i: number, u: number) => setUids(xs => xs.map((x, j) => j === i ? u : x));
+  const ready = uids.every((u): u is number => u !== undefined);
+  const total = amounts.reduce((s, n) => s + n, 0);
+  return <Box title={name} wide={amounts.length > 1} sub={`Ward — Blight: put -1/-1 counters on a creature you control (${amounts.map(n => `blight ${n}`).join(', ')}; ${total} total).`}>
+    {amounts.map((n, i) => <div key={i} style={{ marginBottom: 8 }}>
+      <p className="csub">Blight {n}</p>
+      <div className="cbtns">{creatures.map(c => <button key={c.uid} className={uids[i] === c.uid ? 'big' : 'sec'} onClick={() => setAt(i, c.uid)}>{def(c).name}</button>)}</div>
+    </div>)}
+    <div className="cbtns">
+      <button className="big" data-ans="payward" disabled={!ready || !creatures.length} onClick={() => ready && pick(uids as number[])}>Pay ward</button>
+      <button className="sec" onClick={cancel}>Cancel</button>
+    </div>
+  </Box>;
+}

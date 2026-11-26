@@ -8,6 +8,7 @@ import { TREK_SCRIPTS } from './trek-scripts';
 import { SOC_SCRIPTS } from './soc-scripts';
 import { FIC_SCRIPTS } from './fic-scripts';
 import { FIC_LEFTOVERS } from './fic-leftovers';
+import { ECC_SCRIPTS } from './ecc-scripts';
 
 type Patch = (d: CardDef) => void;
 const S = (kind: string, extra: Partial<Effect> = {}): Effect => ({ op: 'script', kind, ...extra });
@@ -283,6 +284,14 @@ export const SCRIPTS: Record<string, Record<string, Patch>> = {
     '~ enters tapped. as it enters, choose a color other than black': d => { d.etbTapped = true; d.asEnters = [S('thriving', { kind: 'B' })]; d.colorMana = 'B'; },
     '{t}: add {b} or one mana of the chosen color': d => { /* mana is granted once the color is chosen */ },
   },
+  'Thriving Grove': {
+    '~ enters tapped. as it enters, choose a color other than green': d => { d.etbTapped = true; d.asEnters = [S('thriving', { kind: 'G' })]; d.colorMana = 'G'; },
+    '{t}: add {g} or one mana of the chosen color': d => { /* mana is granted once the color is chosen */ },
+  },
+  'Thriving Isle': {
+    '~ enters tapped. as it enters, choose a color other than blue': d => { d.etbTapped = true; d.asEnters = [S('thriving', { kind: 'U' })]; d.colorMana = 'U'; },
+    '{t}: add {u} or one mana of the chosen color': d => { /* mana is granted once the color is chosen */ },
+  },
   "Vincent's Limit Break": {
     'tiered': d => { /* mode costs live on the spell built by the next line */ },
     'until end of turn, target creature you control gains "when ~ dies, return it to the battlefield tapped under its owner\'s control" and has the chosen base power and toughness.\n• galian beast — {0} — 3/2.\n• death gigas — {1} — 5/2.\n• hellmasker — {3} — 7/2': d => { const mode = (label: string, p: number, t: number) => ({ label, tslots: [{ who: 'perm' as const, f: YOUR_CREATURES }], effects: [{ op: 'becomes', who: 't0', until: 'eot' as const, n: p, m: t, ce: {} }, { op: 'watch', who: 't0', kind: 'dies', until: 'eot' as const, text: 'return it tapped', sub: [S('dieReturn')] }] }); d.tierCosts = [{ generic: 0 }, { generic: 1 }, { generic: 3 }]; d.spell = { effects: [], modes: { min: 1, max: 1, list: [mode('Galian Beast — 3/2', 3, 2), mode('Death Gigas — 5/2', 5, 2), mode('Hellmasker — 7/2', 7, 2)] } }; },
@@ -364,6 +373,7 @@ Object.assign(SCRIPTS, TREK_SCRIPTS);
 Object.assign(SCRIPTS, SOC_SCRIPTS);
 Object.assign(SCRIPTS, FIC_SCRIPTS);
 Object.assign(SCRIPTS, FIC_LEFTOVERS);
+Object.assign(SCRIPTS, ECC_SCRIPTS);
 
 /** Apply scripts for lines the compiler couldn't parse; covered lines are removed from `unparsed`. */
 export function applyScripts(name: string, d: CardDef, unparsed: string[]) {

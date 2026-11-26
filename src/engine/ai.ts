@@ -4,7 +4,7 @@ import { aiType, cmdKey, backCastable, flipFace, frontFace, canForetell, foretel
   setAutoTarget, setAI, pass, instantSpeed, isPermanentCard, CardDef, nextAlive, Decision, slotTargets, TCtx, spellSlots, abilitySlots, modeRange,
   maxX, locate, ctr, manaAvailable, castZone, costOf, planPayment,
   webRets, omniOn, abilitiesOf, canUnlockDoor, unlockDoor, spellReplicate,
-  isGoaded, goadBy } from './engine';
+  isGoaded, goadBy , evokeCost} from './engine';
 import type { Amt, ActAbility, Modes, TSlot } from './types';
 
 const num = (a: Amt | undefined, x = 0): number => (typeof a === 'number' ? a : a === 'X' ? x : 0);
@@ -155,7 +155,7 @@ function tryCast(g: Game, pid: number, c: Card, mandatory = false): boolean {
   const omni = p.hand.includes(c) && omniOn(g, pid) && canCast(g, pid, c, { omni: true });
   const surge = !!d.surge && p.spells?.turn === g.turn && p.spells.n >= 1 && canCast(g, pid, c, { surge: true });
   const free = !!d.freeCmdr && canCast(g, pid, c, { free: true, x: d.cost.x ? 1 : 0 });
-  const evoke = !free && !normal && !!d.evoke && canCast(g, pid, c, { evoke: true }) && (d.triggers ?? []).some(t => t.ev === 'etb' || t.ev === 'ltb' || t.ev === 'dies');
+  const evoke = !free && !normal && !!evokeCost(g, pid, c) && canCast(g, pid, c, { evoke: true }) && (d.triggers ?? []).some(t => t.ev === 'etb' || t.ev === 'ltb' || t.ev === 'dies');
   // web-slinging: return a tapped creature worth less than this one
   const webRet = !normal && !evoke && d.webSling && canCast(g, pid, c, { webSling: true }) ? webRets(g, pid).filter(q => !q.token && cmc(def(q)) < cmc(d)).sort((a, b) => cmc(def(a)) - cmc(def(b)))[0] : undefined;
   const exileAlt = !normal && !omni && !free && !!d.exileAlt && canCast(g, pid, c, { exileAlt: true });
