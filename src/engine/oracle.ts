@@ -65,6 +65,7 @@ export function parseFilter(s0: string): FP | null {
     [/ with counters on (?:it|them) $/, () => (f.anyCtr = true)],
     [/ that was put there from the battlefield this turn $/, () => (f.fromBfT = true)],
     [/ with (?:mana value|converted mana cost) x or less $/, () => (f.mvLEX = true)], [/ with (?:mana value|converted mana cost) x $/, () => (f.mvEqX = true)],
+    [/ with (?:mana value|converted mana cost) (\d+) $/, m => { f.mvLE = +m[1]; f.mvGE = +m[1]; }],
   ];
   for (let changed = true; changed;) { changed = false; for (const [re, fn] of SUF) { const m = re.exec(s); if (m) { fn(m); s = s.slice(0, m.index) + ' '; changed = true; } } }
   let w = s.trim().replace(/attacking or blocking/, 'atkblk').split(/\s+/).filter(Boolean);
@@ -194,6 +195,7 @@ function amount(s: string, cx: Cx): Amt | null {
   if (/^the number of opponents you have$/.test(eq)) return { opps: true };
   if (/^the number of opponents you attacked this turn$/.test(eq)) return { atkOpps: true };
   if (/^the number of differently named lands you control$/.test(eq)) return { uniqLands: true };
+  if (/^the number of spells you've cast this turn$/.test(eq)) return { spells: true };
   if (/^the greatest mana value among commanders you control$/.test(eq)) return { mvMaxCmd: true };
   if (/^the number of colors of mana spent to cast (?:this spell|~)$/.test(eq)) return { spentCols: true };
   if (/^the number of colors among permanents you control$/.test(eq)) return { permColors: true };
@@ -222,6 +224,7 @@ function forEach(s: string, cx: Cx): Amt | null {
   if (/^opponent you have$|^opponent$/.test(s)) return { opps: true };
   if (/^opponent you attacked this turn$/.test(s)) return { atkOpps: true };
   if (/^differently named land you control$/.test(s)) return { uniqLands: true };
+  if (/^spell you've cast this turn$/.test(s)) return { spells: true };
   if (/^basic land type among lands you control$/.test(s)) return { domain: true };
   if ((m = /^card in (your|target player's|target opponent's|that player's) hand$/.exec(s))) return { cards: 'hand', pl: playerRef(m[1], cx) ?? 'you' };
   if ((m = /^(.*?) ?card in (their|that player's|target player's|target opponent's) graveyard$/.exec(s))) { const fp = m[1] ? parseFilter(m[1]) : { f: {} }; const p = m[2] === 'their' || m[2] === "that player's" ? cx.lastPl ?? cx.thatPl : playerRef(m[2], cx); return fp && p ? { cards: 'graveyard', pl: p, f: fp.f } : null; }
@@ -250,12 +253,14 @@ export function cond(s: string, cx: Cx): Cond | null {
   if (/^~ is monstrous$/.test(s)) return { k: 'monstrous' };
   if (/^you control a commander$/.test(s)) return { k: 'ctlCommander' };
   if (/^it's not your turn$/.test(s)) return { k: 'notYourTurn' };
+  if (/^it was a creature$/.test(s)) return { k: 'srcType', f: { types: ['Creature'] } };
   if (/^you've cast a noncreature spell this turn$/.test(s)) return { k: 'castNoncThisTurn' };
   if (/^an opponent has cast a spell this turn$/.test(s)) return { k: 'oppCastThisTurn' };
   if (/^you're the monarch$|^you are the monarch$/.test(s)) return { k: 'monarch' };
   if (/^there is no monarch$/.test(s)) return { k: 'noMonarch' };
   if ((m = /^you control (\w+) or fewer other lands$/.exec(s)) && typeof num(m[1]) === 'number') return { k: 'otherLandsLE', n: num(m[1]) as number };
   if (/^(this spell|~|it) was kicked$/.test(s)) return { k: 'kicked' };
+  if (/^the gift was promised$/.test(s)) return { k: 'giftPromised' };
   if (/^(this spell was |you )?bargained$/.test(s) || /^you bargained$/.test(s) || /^it was bargained$/.test(s)) return { k: 'bargained' };
   if (/^tribute wasn'?t paid$/.test(s)) return { k: 'tributeUnpaid' };
   if ((m = /^you control (?:at least )?(a|an|another|one|two|three|four|five|six|seven|eight|nine|ten|\d+)(?: or more)? (.+)$/.exec(s))) { const fp = parseFilter(m[2].replace(/,? or (?:a|an) /g, ' or ')); if (fp) { if (m[1] === 'another') fp.f.other = true; return { k: 'control', f: { ...fp.f, ctrl: undefined }, n: m[1] === 'another' ? 1 : num(m[1]) as number }; } }
@@ -324,6 +329,9 @@ export function cond(s: string, cx: Cx): Cond | null {
   if (/^there are four or more card types among cards in your graveyard$/.test(s) || /^you have delirium$/.test(s)) return { k: 'delirium' };
   if ((m = /^there are (\w+) or more card types among cards in your graveyard$/.exec(s))) { const n0 = num(m[1]); return typeof n0 === 'number' ? { k: 'delirium', n: n0 } : null; }
   if (/^you control a creature with power 4 or greater$/.test(s)) return { k: 'control', f: { types: ['Creature'], powGE: 4 }, n: 1 };
+  if (/^you control seven or more lands with different names$/.test(s)) return { k: 'uniqLandsGE', n: 7 };
+  if (/^there are thirteen or more creatures on the battlefield$/.test(s)) return { k: 'creaturesGE', n: 13 };
+  if (/^you attacked with two or more creatures this turn$/.test(s)) return { k: 'atkGE', n: 2 };
   if (/^creatures you control have total power 8 or greater$/.test(s)) return { k: 'formidable' };
   if ((m = /^creatures you control have total power (\w+) or greater$/.exec(s))) { const n0 = num(m[1]); return typeof n0 === 'number' ? { k: 'powSumGE', n: n0 } : null; }
   if (/^you control three or more artifacts$/.test(s)) return { k: 'control', f: { types: ['Artifact'] }, n: 3 };
@@ -464,6 +472,8 @@ function becDesc(s0: string, cx: Cx): { ce: CEFx; n?: Amt; m?: Amt } | null {
 }
 const BEC_UNTIL = (a?: string, b?: string): Effect['until'] => { const u = a ?? b ?? ''; return /next turn/.test(u) ? 'yourNext' : /end of turn/.test(u) ? 'eot' : undefined; };
 const PATS: Pat[] = [
+  [/^§pact ((?:\{[^}]+\})+)$/, (m) => [{ op: 'pactPay', text: m[1].toUpperCase() }]],
+  [/^add ((?:\{[^}]+\})+) instead if (.+)$/, (m, cx) => { const r = manaAdd(m[1], newCx()); const c = cond(m[2], cx); return r && c ? [{ op: 'if', cond: c, sub: [{ op: 'addMana', mana: r.mana as string[], n: r.n ?? 1 }] }] : null; }],
   [/^you get ((?:\{e\})+)$/, (m) => { const n = (m[1].match(/\{e\}/g) || []).length; return n ? [{ op: 'energy', n, pl: 'you' }] : null; }],
   [/^get ((?:\{e\})+)$/, (m) => { const n = (m[1].match(/\{e\}/g) || []).length; return n ? [{ op: 'energy', n, pl: 'you' }] : null; }],
   [/^(?:you )?get (one|two|three|four|five|six|seven|eight|nine|ten|\d+) \{e\}$/, (m) => { const n = ({ one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10 } as Record<string, number>)[m[1]] ?? +m[1]; return n ? [{ op: 'energy', n, pl: 'you' }] : null; }],
@@ -608,6 +618,12 @@ const PATS: Pat[] = [
   [/^(?:you )?take (an|two|three) extra turns? after this one$/, m => [{ op: 'extraTurn', n: num(m[1]) as number }]],
   [/^target player takes (an|two|three) extra turns? after this one$/, (m, cx) => { const p = playerRef('target player', cx, false); return p ? [{ op: 'extraTurn', n: num(m[1]) as number, pl: p }] : null; }],
   [/^at the beginning of that turn's end step, you lose the game$/, () => [{ op: 'loseAtExtraEnd' }]],
+  [/^at the beginning of your next upkeep, pay ((?:\{[^}]+\})+)\. if you don't, you lose the game$/, (m) => { const c = parseCost(m[1].toUpperCase()); return c ? [{ op: 'pactPay', mana: Object.entries(c).flatMap(([k, v]) => k === 'generic' ? [] : Array(v as number).fill(k)), n: c.generic, text: m[1].toUpperCase() }] : null; }],
+  [/^your opponents can't cast spells this turn$/, () => [{ op: 'silence' }]],
+  [/^the next spell you cast this turn can't be countered$/, () => [{ op: 'nextUnc' }]],
+  [/^return it to the battlefield under its owner's control\. it's an enchantment$/, () => [{ op: 'retAsEnch', who: 'self' }]],
+  [/^add ((?:\{[^}]+\})+)\. threshold[-—] add ((?:\{[^}]+\})+) instead if there are seven or more cards in your graveyard$/, (m) => { const r1 = manaAdd(m[1], newCx()); const r2 = manaAdd(m[2], newCx()); return r1 && r2 ? [{ op: 'if', cond: { k: 'cardsInGyGE', n: 7 }, sub: [{ op: 'addMana', mana: r2.mana as string[], n: r2.n ?? 1 }], else: [{ op: 'addMana', mana: r1.mana as string[], n: r1.n ?? 1 }] }] : null; }],
+  [/^permanents your opponents control lose (.+) until end of turn$/, (m) => { const k = kwList(m[1]); return k ? [{ op: 'loseKwUntil', kw: k, who: 'opps' }] : null; }],
   [/^copy (target instant or sorcery spell(?: you control)?)$/, (m, cx) => { const o = obj(m[1], cx, true); return o ? [{ op: 'copyStack', who: o.ref }] : null; }],
   [/^when you next cast an instant or sorcery spell this turn, copy that spell$/, () => [{ op: 'nextCopyIS' }]],
 
@@ -670,6 +686,9 @@ const PATS: Pat[] = [
   [/^put (.+?) on (top|the bottom) of (?:its owner's|their owners'|your) librar(?:y|ies)$/, (m, cx) => { const o = obj(m[1], cx, m[2] !== 'top'); if (!o) return null; return o.card ? [{ op: 'ret', who: o.ref, dest: m[2] === 'top' ? 'top' : 'bottom', zone: 'graveyard' }] : [{ op: 'tuck', who: o.ref, dest: m[2] === 'top' ? 'top' : 'bottom' }]; }],
   [/^(tap|untap) (.+)$/, (m, cx) => { const o = obj(m[2], cx, m[1] === 'tap'); return o && !o.card ? [{ op: m[1], who: o.ref }] : null; }],
   [/^counter ((?:up to \w+ )?target .+)$/, (m, cx) => { const o = obj(m[1], cx, true); const w = cx.slots[cx.slots.length - 1]?.who; return o && (w === 'spell' || w === 'ability' || w === 'stack') ? [{ op: 'counter', who: o.ref }] : null; }],
+  [/^counter (target .+?)\. if that spell is countered this way, exile it instead of putting it into its owner's graveyard$/, (m, cx) => { const o = obj(m[1], cx, true); const w = cx.slots[cx.slots.length - 1]?.who; return o && (w === 'spell' || w === 'ability' || w === 'stack') ? [{ op: 'counter', who: o.ref, dest: 'exile' }] : null; }],
+  [/^counter target spell if it's blue$/, (m, cx) => { const o = obj('target spell', cx, true); return o ? [{ op: 'if', cond: { k: 'evIs', f: { colors: ['U'] } }, sub: [{ op: 'counter', who: o.ref }] }] : null; }],
+  [/^destroy target permanent if it's blue$/, (m, cx) => { const o = obj('target permanent', cx, true); return o ? [{ op: 'if', cond: { k: 'evIs', f: { colors: ['U'] } }, sub: [{ op: 'destroy', who: o.ref }] }] : null; }],
   [new RegExp(`^put (${N}|that many|x|an additional) ([+-]\\d\\/[+-]\\d|[a-z]+) counters? on (.+?)(?: for each (.+))?$`), (m, cx) => { const k = m[2]; const harm = k === '-1/-1'; const o = obj(m[3], cx, harm); const a = m[1] === 'an additional' ? 1 : num(m[1]) ?? 'ev'; const n = withForEach(a, m[4], cx); return o && !o.card && n !== null ? [{ op: 'addC', kind: k, n, who: o.ref }] : null; }],
   [/^remove (a|an|one|two|three|x|all) ([+-]\d\/[+-]\d|[a-z]+) counters? from (.+)$/, (m, cx) => { const o = obj(m[3], cx, false); return o ? [{ op: 'remC', kind: m[2], n: m[1] === 'all' ? 99 : num(m[1])!, who: o.ref }] : null; }],
   [/^proliferate$/, () => [{ op: 'proliferate' }]],
@@ -703,6 +722,7 @@ const PATS: Pat[] = [
   [/^create (?:a|one) token that's a copy of (.+?), except (?:it|the token) isn't legendary$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'copyTok', n: 1, who: o.ref, kind: 'nl' }] : null; }],
   [/^create (?:a|one) token that's a copy of (.+?)\. sacrifice (?:it|that token) at the beginning of the next end step$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'copyTok', n: 1, who: o.ref }, { op: 'delaySac', who: 'created' }] : null; }],
   [/^create (?:a|one) token that's a copy of (.+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'copyTok', n: 1, who: o.ref }] : null; }],
+  [/^(.+?) (?:gains?|gain) (.+?) and (?:gets?|get) ([+-](?:\d+|x))\/([+-](?:\d+|x)) until end of turn$/, (m, cx) => { const k = kwList(m[2]); const o = obj(m[1], cx, false); if (!k || !o) return null; const P = m[3] === '+x' ? 'X' : m[3] === '-x' ? { mul: -1, of: 'X' } : +m[3]; const T = m[4] === '+x' ? 'X' : m[4] === '-x' ? { mul: -1, of: 'X' } : +m[4]; return [{ op: 'grant', who: o.ref, kw: k }, { op: 'pump', who: o.ref, n: P as never, m: T as never }]; }],
   [/^(.+?) (?:each )?(?:gets?|get) ([+-](?:\d+|x))\/([+-](?:\d+|x))(?: and (?:gains?|gain) (.+?))? until end of turn(?: for each (.+))?$/, (m, cx) => pump(m, cx)],
   [/^(.+?) (?:gets?|get) ([+-](?:\d+|x))\/([+-](?:\d+|x)) for each (.+?) until end of turn$/, (m, cx) => pump([m[0], m[1], m[2], m[3], undefined, m[4]] as unknown as RegExpExecArray, cx)],
   [/^until end of turn, (.+?) (?:gets?|get) ([+-](?:\d+|x))\/([+-](?:\d+|x))(?: and (?:gains?|gain) (.+?))?$/, (m, cx) => pump(m, cx)],
@@ -758,6 +778,13 @@ const PATS: Pat[] = [
   [/^attach (?:~|it) to (.+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o ? [{ op: 'attach', who: 'self', other: o.ref }] : null; }],
   [/^you may choose new targets for target spell or ability$/, (m, cx) => { const o = obj('target spell or ability', cx, true); return o ? [{ op: 'retarget', who: o.ref }] : null; }],
   [/^choose new targets for target spell or ability$/, (m, cx) => { const o = obj('target spell or ability', cx, true); return o ? [{ op: 'retarget', who: o.ref }] : null; }],
+  [/^change the target of target spell or ability with a single target$/, (m, cx) => { const o = obj('target spell or ability', cx, true); if (o && cx.slots.length) (cx.slots[cx.slots.length - 1] as { single?: boolean }).single = true; return o ? [{ op: 'retarget', who: o.ref }] : null; }],
+  [/^one or two target creatures can't block this turn$/, (m, cx) => { const o1 = obj('target creature', cx, true); const o2 = obj('target creature', cx, true); if (!o1 || !o2) return null; cx.slots[cx.slots.length - 1].opt = true; return [{ op: 'grant', who: o1.ref, kw: ['_cantblock'] }, { op: 'grant', who: o2.ref, kw: ['_cantblock'] }]; }],
+  [/^you and permanents you control gain (.+) until end of turn$/, (m, cx) => { const k = kwList(m[1]); return k ? [{ op: 'grant', who: 'you', kw: k }, { op: 'grant', who: 'yours', kw: k }] : null; }],
+  [/^permanents you control also gain (.+) until end of turn$/, (m, cx) => { const k = kwList(m[1]); return k ? [{ op: 'grant', who: 'yours', kw: k }] : null; }],
+  [/^creatures your opponents control attack this turn if able$/, () => [{ op: 'grant', who: { all: { types: ['Creature'], ctrl: 'opp' } }, kw: ['_mustattack'] }]],
+  [/^target creature you control gains protection from the color(?: of your choice)? until end of turn$/, (_m, cx) => [{ op: 'protChoice', who: addSlot(cx, { who: 'perm', f: { types: ['Creature'], ctrl: 'you' }, harm: false }) }]],
+
   [/^you gain protection from everything until your next turn$/, () => [{ op: 'protAll', until: 'yourNext' }]],
   [/^each player discards their hand, then draws cards equal to the greatest number of cards a player discarded this way$/, () => [{ op: 'windfall' }]],
   [/^create a food token or a treasure token$/, () => [{ op: 'tokenOr', tok: { name: 'Food', colors: [], types: ['Artifact'], preset: 'Food' }, text: 'Treasure' }]],
@@ -768,12 +795,14 @@ const PATS: Pat[] = [
   [/^that player may search their library for a land card with a basic land type, put it onto the battlefield, then shuffle$/, () => [{ op: 'maySearch', pl: 'ctl:t0', f: { types: ['Land'], basicType: true }, dest: 'battlefield', text: 'land card with a basic land type' }]],
   [/^~ gains "([^"]+)"$/, (m) => { const ext = tokenAbil(m[1], CUR_NAME); return ext ? [{ op: 'gainAbil', who: 'self', ce: { grant: ext } }] : null; }],
   [/^(?:until end of turn, )?(that creature|it|~) gains "when ~ dies, return it to the battlefield tapped under its owner's control\."(?: until end of turn)?$/, (m, cx) => { const o = obj(m[1], cx, false); const ext = tokenAbil("when ~ dies, return it to the battlefield tapped under its owner's control", CUR_NAME); return o && ext ? [{ op: 'gainAbil', who: o.ref, ce: { grant: ext }, until: 'eot' }] : null; }],
+  [/^exile the top card of your library$/, () => [{ op: 'exileTop', n: 1 }]],
   [/^for each color among permanents you control, add one mana of that color$/, () => [{ op: 'addMana', mana: ['EACH_COLOR'] }]],
   [/^§devotionmana$/, () => [{ op: 'addMana', mana: ['CHOSEN'], n: { devotion: [] } }]],
   [/^choose a color\. add an amount of mana of that color equal to your devotion to that color$/, () => [{ op: 'addMana', mana: ['CHOSEN'], n: { devotion: [] } }]],
   [/^return the chosen cards to the battlefield tapped$/, (m, cx) => [{ op: 'ret', who: (cx.slots.length >= 2 ? `tr:0-${cx.slots.length - 1}` : (cx.it ?? 't0')) as import('./types').Ref, dest: 'battlefield', zone: 'graveyard', tapped: true }]],
-  [/^search your library for (a|an|one|two|three|any number of|up to (?:one|two|three|four|five|x)) (.+?) cards?(?: with (?:different names|the same name))?, (?:reveal (?:it|them|that card|those cards), )?(?:and )?put (?:it|them|that card|those cards|the card) (onto the battlefield( tapped)?|into your hand|on top of your library)(?:,? then shuffle| and shuffle)?$/, (m, cx) => search(m[1], m[2], m[3], !!m[4])],
-  [/^search your library for (a|an|one) card,? (?:then )?(?:reveal it, )?(?:then )?(?:shuffle(?: and|,)? )?(?:put|and put) (?:that card|it) (into your hand|on top(?: of your library)?)(?:,? then shuffle)?$/, m => search(m[1], 'card', m[2].startsWith('on top') ? 'on top of your library' : m[2], false)],
+  [/^search your library for (a|an|one|two|three|any number of|up to (?:one|two|three|four|five|x)) (.+?) cards?(?: with (?:different names|the same name))?, (?:reveal (?:it|them|that card|those cards), )?(?:and )?put (?:it|them|that card|those cards|the card) (onto the battlefield( tapped)?|into your hand|into your graveyard|on top of your library)(?:,? then shuffle| and shuffle)?$/, (m, cx) => search(m[1], m[2], m[3], !!m[4])],
+  [/^search your library for (a|an|one) card,? (?:then )?(?:reveal it, )?(?:then )?(?:shuffle(?: and|,)? )?(?:put|and put) (?:that card|it) (into your hand|into your graveyard|on top(?: of your library)?)(?:,? then shuffle)?$/, m => search(m[1], 'card', m[2].startsWith('on top') ? 'on top of your library' : m[2], false)],
+  [/^search your library for a card, put that card into your graveyard, then shuffle$/, () => search('a', 'card', 'into your graveyard', false)],
   [/^search your library for (a|an|one|two|three|up to (?:one|two|three)) (.+?) cards?, (?:reveal (?:it|them|those cards), )?(?:then )?shuffle,? and put (?:that card|the card|it|them) (on top|into your hand|onto the battlefield)(?: of your library)?$/, (m, cx) => search(m[1], m[2], m[3] === 'on top' ? 'on top of your library' : m[3], false)],
   [/^search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand(?:, then shuffle)?$/, () => [{ op: 'search', n: 2, f: { types: ['Land'], basic: true }, dest: 'battlefield', tapped: true, take: 1, rest: 'hand', text: 'basic land card' }]],
 ];
@@ -785,7 +814,7 @@ function gyObj(s: string, cx: Cx): Ref | null {
 function search(nw: string, noun = 'card', dest: string, tapped: boolean): Effect[] | null {
   const n = nw === 'any number of' ? 99 : /up to/.test(nw) ? num(nw.replace('up to ', '')) : num(nw); if (n === null) return null;
   const fp = parseFilter(noun === 'card' ? 'card' : / with /.test(noun) ? noun.replace(' with ', ' card with ') : noun + ' card'); if (!fp) return null;
-  return [{ op: 'search', n, f: fp.f, dest: dest.startsWith('onto') ? 'battlefield' : dest.startsWith('on top') ? 'top' : 'hand', tapped, text: noun === 'card' ? 'card' : / with /.test(noun) ? noun.replace(' with ', ' card with ').replace(/\bx\b/, 'X') : `${noun} card` }];
+  return [{ op: 'search', n, f: fp.f, dest: dest.startsWith('onto') ? 'battlefield' : dest.startsWith('on top') ? 'top' : dest.includes('graveyard') ? 'graveyard' : 'hand', tapped, text: noun === 'card' ? 'card' : / with /.test(noun) ? noun.replace(' with ', ' card with ').replace(/\bx\b/, 'X') : `${noun} card` }];
 }
 function pump(m: RegExpExecArray, cx: Cx): Effect[] | null {
   const P = m[2] === '+x' ? 'X' : m[2] === '-x' ? { mul: -1, of: 'X' } : +m[2]; const T = m[3] === '+x' ? 'X' : m[3] === '-x' ? { mul: -1, of: 'X' } : +m[3];
@@ -913,6 +942,7 @@ export function effects(text: string, cx: Cx): Effect[] | null {
     .replace(/ and investigate(?=\.|$)/g, '. investigate');
   t = t.replace(/\."(\s+)/g, '".$1');
   // CR 732 / The Celestus: collapse the common toggle into one effect (also scored by the AI).
+  t = t.replace(/at the beginning of your next upkeep, pay ((?:\{[^}]+\})+)\. if you don't, you lose the game/, '§pact $1');
   if (/^if it's night, it becomes day\. otherwise, it becomes night$/.test(t)) return [{ op: 'toggleDayNight' }];
   // sentences
   const sents = t.split(/\.\s+/); let lastStart = 0;
@@ -928,6 +958,10 @@ export function effects(text: string, cx: Cx): Effect[] | null {
     const ret = /^return (?:it|that card|that creature|them|those cards|the exiled card|the exiled cards) to the battlefield under (?:its owner's|their owners'|your) control( at the beginning of the next end step| at the beginning of (?:that player's|its owner's|their owner's) next end step)?$/.exec(s.replace(/\.$/, ''));
     if (ret && out.length && out[out.length - 1].op === 'exile') { const ex = out.pop()!; out.push({ op: 'flicker', who: ex.who, ret: !ret[1] ? 'now' : /next end step$/.test(ret[1]) && !/the next/.test(ret[1]) ? 'ownerEnd' : 'eot' }); continue; }
     if (/^(?:it|they) can't be regenerated$/.test(s)) continue;
+    if (/^a creature destroyed this way can't be regenerated$/.test(s.replace(/\.$/, ''))) { if (out.length && out[out.length - 1].op === 'destroy') out[out.length - 1].kind = 'noRegen'; continue; }
+    if (/^if that spell is countered this way, exile it instead of putting it into its owner's graveyard$/.test(s.replace(/\.$/, ''))) { if (out.length && out[out.length - 1].op === 'counter') out[out.length - 1].dest = 'exile'; continue; }
+    if (/^it's an enchantment$/.test(s.replace(/\.$/, ''))) { const prev = out[out.length - 1]; if (prev && (prev.op === 'ret' || prev.op === 'retAsEnch')) { out[out.length - 1] = { op: 'retAsEnch', who: prev.who ?? 'self' }; continue; } out.push({ op: 'retAsEnch', who: 'self' }); continue; }
+
     if (/^you may choose new targets for the cop(?:y|ies)$/.test(s.replace(/\.$/, ''))) continue;
     const sacNext = /^sacrifice (?:it|that token) at the beginning of the next end step$/.exec(s.replace(/\.$/, ''));
     if (sacNext && out.length && out[out.length - 1].op === 'copyTok') { out.push({ op: 'delaySac', who: 'created' }); continue; }
@@ -976,6 +1010,8 @@ export function parseCosts(s: string, name: string): ParsedCost | null {
     else if ((m = /^exile (a|an|one|two|three|\d+) (.*?) ?cards? from your graveyard$/.exec(p))) { const fp = m[2] ? parseFilter(m[2] + ' card') : { f: {} }; if (!fp) return null; ab.exileGy = { f: fp.f, n: num(m[1]) as number }; }
     else if ((m = /^tap (a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d+) untapped (.+?) you control$/.exec(p))) { const fp = parseFilter(m[2]); if (!fp) return null; const n = num(m[1]); if (typeof n !== 'number') return null; ab.tapF = { f: fp.f, n }; }
     else if (p === 'exile ~') ab.exileSelf = true;
+    else if (/^exile (?:this card|~) from your hand$/.test(p)) { ab.zone = 'hand'; ab.exileSelf = true; }
+    else if (/^exert (?:~|this land|this artifact|this creature)$/.test(p)) ab.exert = true;
     else if ((m = /^waterbend \{(\d+)\}$/.exec(p))) { ab.mana = { generic: +m[1] }; ab.wb = +m[1]; }
     else return null;
   }
@@ -1005,6 +1041,7 @@ export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partia
   const self = (ev: string, extra: Partial<TriggerDef> = {}) => ({ defs: [{ ev, subj: 'self' as const, ...extra }], cx: { it: 'self' } });
   if (/^~ enters untapped$/.test(h)) return { defs: [{ ev: 'etb', subj: 'self', ifc: { k: 'enteredUntapped' } }], cx: { it: 'self' } };
   if (/^~ enters$/.test(h)) return self('etb');
+  if (/^~ or another land you control enters$/.test(h)) return { defs: [{ ev: 'etb', subj: 'any', f: { types: ['Land'], ctrl: 'you' } }], cx: { it: 'ev' } };
   if (/^~ enters or attacks$|^~ attacks or enters$/.test(h)) return { defs: [{ ev: 'etb', subj: 'self' }, { ev: 'attacks', subj: 'self' }], cx: { it: 'self' } };
   if ((m = /^~ enters and whenever (.+)$/.exec(h))) { const a = trigger('~ enters'); const b = trigger(m[1]); if (a && b) return { defs: [...a.defs, ...b.defs], cx: a.cx }; }
   if (/^~ dies$|^~ is put into a graveyard from the battlefield$/.test(h)) return self('dies');
@@ -1078,6 +1115,9 @@ export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partia
   if (/^you draw a card$/.test(h)) return { defs: [{ ev: 'drawCard', pl: 'you' }], cx: { it: 'self' } };
   if (/^a player draws a card$/.test(h)) return { defs: [{ ev: 'drawCard', pl: 'any' }], cx: { it: 'self', thatPl: 'evp' } };
   if (/^an opponent draws a card$/.test(h)) return { defs: [{ ev: 'drawCard', pl: 'notyou' }], cx: { it: 'self', thatPl: 'evp' } };
+  if (/^an opponent draws a card except the first one they draw in each of their draw steps$/.test(h)) return { defs: [{ ev: 'drawCard', pl: 'notyou', exceptFirstDraw: true }], cx: { it: 'self', thatPl: 'evp' } };
+  if (/^a player casts their second spell each turn$/.test(h)) return { defs: [{ ev: 'cast', pl: 'any', nth: { k: 'n', n: 2 } }], cx: { it: 'self', thatPl: 'evp' } };
+  if (/^you cast a spell$/.test(h)) return { defs: [{ ev: 'cast', pl: 'you' }], cx: { it: 'self', that: 'ev' } };
   if (/^you discard a card$/.test(h)) return { defs: [{ ev: 'discard', pl: 'you' }], cx: { it: 'self' } };
   if (/^one or more creatures you control deal combat damage to a player$/.test(h)) return { defs: [{ ev: 'combatBatch', pl: 'you' }], cx: { it: 'self' } };
   if ((m = /^one or more (.+?) you control deal combat damage to a player$/.exec(h))) { const fp = parseFilter(m[1]); return fp ? { defs: [{ ev: 'combatBatch', pl: 'you', f: { ...fp.f, ctrl: 'you' } }], cx: { it: 'self' } } : null; }
@@ -1289,7 +1329,7 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       body = body.replace(/\. this ability triggers only once each turn$/, () => { once = true; return ''; });
       body = body.replace(/\. do this only once each turn$/, () => { once = true; return ''; });
       const tr = trigger(tm[1] === 'at' ? head : head);
-      if (!tr) { fail(raw); continue; }
+      if (!tr) { if (staticLine(l, d, statics, kws)) continue; fail(raw); continue; }
       const cx = newCx(tr.cx);
       let ifc: Cond | undefined;
       const im = /^if (.+?), (.+)$/s.exec(body);
@@ -1326,10 +1366,11 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       let only: string | undefined; let manaUnc = false;
       body = body.replace(/, and that spell can't be countered$/, () => { manaUnc = true; return ''; });
       body = body.replace(/\. if that mana is spent on a dragon creature spell, it gains haste until end of turn$/, () => { only = 'dragonHaste'; return ''; });
+      body = body.replace(/\. if any of that mana is spent on a creature spell, it gains haste until end of turn$/, () => { only = 'creatureHaste'; return ''; });
       body = body.replace(/\. (?:spend this mana only to (.+)|this mana can't be spent to (?:cast (?:a )?nonartifact spells?|pay generic mana costs))$/, (_, w?: string) => { only = !w ? (/generic mana costs/.test(body) ? 'nongeneric' : 'artifact') : ({ 'cast a creature spell of the chosen type': 'ctypeSpell', 'cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type': 'ctypeAny', 'cast a hero spell or to activate an ability of a hero source': 'hero', 'cast a villain spell or to activate an ability of a villain source': 'villain', 'cast a legendary spell': 'legendary', 'cast an instant or sorcery spell': 'is', 'cast artifact spells or activate abilities of artifacts': undefined, 'cast a creature spell': 'creature', 'cast elemental spells or activate abilities of elemental sources': 'elemental', 'cast an elemental spell or activate an ability of an elemental': 'elemental', 'cast elemental spells or activate abilities of elementals': 'elemental', 'cast an angel spell': 'angel', 'cast a dragon creature spell': 'dragonCreature', 'cast dragon spells or activate abilities of dragons': 'dragon' } as Record<string, string | undefined>)[w] ?? '§'; return ''; });
       body = body.replace(/^(add one mana of any color in your commander's color identity)\. when that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1$/, (_, x) => { only = 'path'; return x; });
       if (only === '§') { fail(raw); continue; }
-      if (only) { const r = /^add (.+)$/.exec(body) && manaAdd(body.slice(4), newCx()); if (!r || !ab.tap || Object.keys(pc.ab).length !== 1) { fail(raw); continue; } manaLines.push({ add: r.mana, n: r.n, only, uncounter: manaUnc || undefined }); continue; }
+      if (only) { const r = /^add (.+)$/.exec(body) && manaAdd(body.slice(4), newCx()); if (!r || !ab.tap) { fail(raw); continue; } manaLines.push({ add: r.mana, n: r.n, only, cost: ab.mana, skipNextUntap: ab.exert || undefined, uncounter: manaUnc || undefined }); continue; }
       if (/^add \{c\}\. if ~ has a luck counter on it, instead add one mana of any color$/.test(body) && ab.tap && Object.keys(pc.ab).length === 1) { manaLines.push({ add: ['C'], luckAny: true }); continue; }
       const pm = /^add (.+?)\. ~ deals (\d) damage to you$/.exec(body);
       if (pm && ab.tap && Object.keys(pc.ab).length === 1) { const r = manaAdd(pm[1], newCx()); if (r) { manaLines.push({ add: r.mana, n: r.n, pain: +pm[2] }); continue; } }
@@ -1357,11 +1398,19 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
       const cx = newCx({ spell: true });
       const fx = effects(l, { ...cx, slots: spellSlots, it: spellSlots.length ? 't0' : 'self' });
       if (!fx) { fail(raw); continue; }
+      if (fx.length === 1 && fx[0].op === 'if' && !fx[0].else && spellFx.length && /instead if/.test(l)) { const prev = spellFx.splice(0); spellFx.push({ op: 'if', cond: fx[0].cond, sub: fx[0].sub, else: prev }); continue; }
       spellFx.push(...fx); continue;
     }
     // statics
     if (staticLine(l, d, statics, kws)) continue;
     fail(raw);
+  }
+  if (isSpell && spellFx.length >= 2) {
+    const last = spellFx[spellFx.length - 1];
+    if (last.op === 'if' && !last.else && spellFx.slice(0, -1).every(e => e.op === 'addMana')) {
+      const prev = spellFx.slice(0, -1);
+      spellFx = [{ op: 'if', cond: last.cond, sub: last.sub, else: prev }];
+    }
   }
   // merge mana lines
   if (manaLines.length) {
@@ -1647,11 +1696,15 @@ export function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: Ac
 }
 function parseAltCost(s: string, d: CardDef): boolean {
   let m: RegExpExecArray | null;
-  const tail = / rather than pay (?:this spell's|~'s) mana cost$/;
+  const tail = / rather than pay (?:this spell's|~'s) mana cost(?: if .+)?$/;
   if (!tail.test(s) && !/ rather than pay the mana cost for /.test(s)) return false;
   if ((m = /^you may exile (a|an|one|two|three|\d+) (white|blue|black|red|green) cards? from your hand rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
     const n0 = num(m[1]); if (typeof n0 !== 'number') return false;
     d.exileAlt = { n: n0, color: COLOR_OF[m[2]] }; return true;
+  }
+  if ((m = /^if it's not your turn, you may exile (a|an|one|two|three|\d+) (white|blue|black|red|green) cards? from your hand rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
+    const n0 = num(m[1]); if (typeof n0 !== 'number') return false;
+    d.exileAlt = { n: n0, color: COLOR_OF[m[2]], cond: { k: 'notYourTurn' } }; return true;
   }
   if ((m = /^you may pay (\d+) life and exile (a|an|one|two|three|\d+) (white|blue|black|red|green) cards? from your hand rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
     const life = +m[1]; const n0 = num(m[2]); if (typeof n0 !== 'number') return false;
@@ -1659,6 +1712,9 @@ function parseAltCost(s: string, d: CardDef): boolean {
   }
   if ((m = /^you may pay (\{[^}]+\}(?:\{[^}]+\})*) rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
     const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.altCost = { mana: c }; return true;
+  }
+  if ((m = /^you may pay (\{[^}]+\}(?:\{[^}]+\})*) rather than pay (?:this spell's|~'s) mana cost if (.+)$/.exec(s))) {
+    const c = parseCost(m[1].toUpperCase()); const cc = cond(m[2], newCx()); if (!c || !cc) return false; d.altCost = { mana: c, cond: cc }; return true;
   }
   if ((m = /^you may pay (\{[^}]+\}(?:\{[^}]+\})*) and return (a|an|one|two|three|\d+) (.+?) you control to (?:its|their) owner's hand rather than pay (?:this spell's|~'s) mana cost$/.exec(s))) {
     const c = parseCost(m[1].toUpperCase()); const n0 = num(m[2]); const fp = parseFilter(m[3]);
@@ -1927,6 +1983,7 @@ export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<st
   if (/^you may look at the top card of your library any time$/.test(s) && !c) { statics.push({ k: 'topLook', who: 'self' }); return true; }
   if (/^play with the top card of your library revealed$/.test(s) && !c) { statics.push({ k: 'topLook', who: 'self' }); return true; }
   if (/^lands you control enter untapped$/.test(s) && !c) { statics.push({ k: 'landsUntapped', who: 'self' }); return true; }
+  if (/^you may cast artifact spells and colorless spells from the top of your library$/.test(s) && !c) { statics.push({ k: 'topCast', who: 'self', spellF: { artOrColorless: true } }); return true; }
   if ((m = /^you may cast (.+?) spells from the top of your library$/.exec(s)) && !c) { const fp = parseFilter(m[1] + ' spell'); if (!fp) return false; statics.push({ k: 'topCast', who: 'self', spellF: fp.f }); return true; }
   if ((m = /^spells your opponents cast that target a (.+?) you control cost \{(\d+)\} more to cast$/.exec(s)) && !c) { const fp = parseFilter(m[1]); if (!fp) return false; statics.push({ k: 'taxSpell', who: 'self', n: +m[2], spellF: fp.f }); return true; }
   if ((m = /^abilities your opponents activate that target a (.+?) you control cost \{(\d+)\} more to activate$/.exec(s)) && !c) { const fp = parseFilter(m[1]); if (!fp) return false; statics.push({ k: 'taxAct', who: 'self', n: +m[2], spellF: fp.f }); return true; }
@@ -1963,6 +2020,7 @@ export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<st
     const n0 = num(m[2]); if (typeof n0 !== "number") return false; const n = n0;
     if (m[1] === 'pay' && /^life$/.test(m[3])) { d.extraCost = { life: +m[2] }; return true; }
     if (m[1] === 'discard' && /^cards?$/.test(m[3])) { d.extraCost = { discard: n }; return true; }
+    if (m[1] === 'sacrifice' && / or discard a card$/.test(m[3])) { const fp = parseFilter(m[3].replace(/ or discard a card$/, '')); if (!fp || fp.card) return false; d.extraCost = { sacOrDiscard: { f: fp.f } }; return true; }
     if (m[1] === 'sacrifice') { const fp = parseFilter(m[3]); if (!fp || fp.card) return false; d.extraCost = { sacF: { f: fp.f, n } }; return true; }
     return false;
   }
@@ -2023,6 +2081,21 @@ if ((m = /^(?:you may pay|pay) (\d+) life rather than pay (?:this spell's|~'s) m
   if (/^~ gets \+1\/\+1 for each unspent mana you have$/.test(s)) { statics.push({ k: 'pt', who: 'self', p: { pool: true }, t: { pool: true } }); return true; }
   if (/^creatures you control with toxic have lifelink$/.test(s)) { statics.push({ k: 'toxicLink', who: 'self', cond: c }); return true; }
   if (/^you may play an additional land on each of your turns$/.test(s)) { statics.push({ k: 'noMaxHand', who: 'self', n: -1 }); return true; }
+  if (/^you may play two additional lands on each of your turns$/.test(s)) { statics.push({ k: 'noMaxHand', who: 'self', n: -2 }); return true; }
+  if (/^lands you control are every basic land type in addition to their other types$/.test(s)) { statics.push({ k: 'addLandType', who: 'all', f: { types: ['Land'], ctrl: 'you' }, add: ['Plains', 'Island', 'Swamp', 'Mountain', 'Forest'] }); return true; }
+  if (/^untap all permanents you control during each other player's untap step$/.test(s)) { statics.push({ k: 'oppUntapAll', who: 'self' }); return true; }
+  if (/^untap (?:~|this artifact) during each other player's untap step$/.test(s)) { statics.push({ k: 'oppUntapSelf', who: 'self' }); return true; }
+  if (/^if an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time$/.test(s) && !c) { d.etbACTrigTwice = true; return true; }
+  if (/^if you would create a clue, food, or treasure token, instead create one of each$/.test(s) && !c) { d.manufactor = true; return true; }
+  if (/^each nonland card in your graveyard has escape\. the escape cost is equal to the card's mana cost plus exile three other cards from your graveyard$/.test(s) && !c) { d.gyEscape = true; return true; }
+  if (/^you may play lands and cast spells from the top of your library\. if you cast a spell this way, pay life equal to its mana value rather than pay its mana cost$/.test(s) && !c) { statics.push({ k: 'topCast', who: 'self' }, { k: 'topPlayLand', who: 'self' }); d.citadelLife = true; return true; }
+  if (/^you may cast artifact spells and colorless spells from the top of your library$/.test(s) && !c) { statics.push({ k: 'topCast', who: 'self', spellF: { artOrColorless: true } }); return true; }
+  if (/^your opponents can't cast spells during your turn$/.test(s) && !c) { statics.push({ k: 'oppsCantCast', who: 'self' }); return true; }
+  if (/^creature spells of the chosen type cost \{(\d+)\} less to cast$/.test(s) && !c) { const mm = /^creature spells of the chosen type cost \{(\d+)\} less to cast$/.exec(s)!; statics.push({ k: 'costLess', who: 'all', n: +mm[1], spellF: { types: ['Creature'], chosenType: true } }); return true; }
+  if (/^creatures you control have "\{t\}: add one mana of any color\."$/.test(s) && !c) { statics.push({ k: 'grantMana', who: 'all', f: { types: ['Creature'], ctrl: 'you' }, mana: [{ add: ['ANY'], tap: true }] }); return true; }
+  if (/^creatures you control are every creature type\. the same is true for creature spells you control and creature cards you own that aren't on the battlefield$/.test(s) && !c) { statics.push({ k: 'allCreatureTypes', who: 'self' }); return true; }
+  if (/^equipped creature gets \+(\d+)\/\+(\d+) and has protection from each color that's not in your commander's color identity$/.test(s) && !c) { const mm = /^equipped creature gets \+(\d+)\/\+(\d+) and has protection from each color that's not in your commander's color identity$/.exec(s)!; statics.push({ k: 'pt', who: 'attached', p: +mm[1], t: +mm[2] }, { k: 'protNotIdent', who: 'attached' }); return true; }
+  if ((m = /^whenever enchanted forest is tapped for mana, its controller adds an additional one mana of the chosen color$/.exec(s))) { statics.push({ k: 'manaExtra', who: 'attached', add: ['CHOSEN'] }); return true; }
   if (/^you may play lands from your graveyard$/.test(s) && !c) { d.landsFromGy = true; return true; }
   if ((m = /^when (?:~|this artifact) has (\w+) or more charge counters on it, you win the game$/.exec(s))) { const n0 = num(m[1]); if (typeof n0 !== 'number') return false; d.winAtCharge = n0; return true; }
   if (/^you may play lands from the top of your library$/.test(s) && !c) { statics.push({ k: 'topPlayLand', who: 'self' }); return true; }
@@ -2042,7 +2115,6 @@ if ((m = /^(?:you may pay|pay) (\d+) life rather than pay (?:this spell's|~'s) m
   if (/^if one or more charge counters would be put on an artifact you control, that many plus one charge counters are put on it instead$/.test(s) && !c) { statics.push({ k: 'plusCharge', who: 'self' }); return true; }
   if (/^players can't activate planeswalkers' loyalty abilities$/.test(s) && !c) { statics.push({ k: 'noLoyalty', who: 'self' }); return true; }
   if (/^untap all artifacts you control during each other player's untap step$/.test(s) && !c) { statics.push({ k: 'oppUntapArts', who: 'self' }); return true; }
-  if (/^whenever you tap a permanent for \{c\}, add an additional \{c\}$/.test(s) && !c) { statics.push({ k: 'extraC', who: 'self' }); return true; }
 
   if ((m = /^if one or more \+1\/\+1 counters would be put on (?:another |an? )?(.+?), that many plus one \+1\/\+1 counters are put on (?:it|that permanent) instead$/.exec(s)) && !c) {
     const who = m[1];

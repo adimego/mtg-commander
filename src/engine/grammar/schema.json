@@ -335,7 +335,13 @@
             "tokenOr",
             "delayMain",
             "gainAbil",
-            "maySearch"
+            "maySearch",
+            "silence",
+            "nextUnc",
+            "pactPay",
+            "retAsEnch",
+            "loseKwUntil",
+            "protChoice"
           ]
         },
         "id": {
@@ -617,7 +623,12 @@
             "extraBlock",
             "mustBlock",
             "addLandType",
-            "oppsCantAct"
+            "oppsCantAct",
+            "extraLands",
+            "allCreatureTypes",
+            "oppUntapAll",
+            "oppUntapSelf",
+            "protNotIdent"
           ]
         },
         "who": {

@@ -82,7 +82,13 @@ function collect(g: Game, ev: ReplEvt): ReplInst[] {
         out.push({ id: `s:${src.uid}:dd`, r: { ev: 'draw', instead: { k: 'mul', n: 2 } }, src, ctl: ctl(src), synthetic: true, label: `${nm(src)} (double draw)` });
     }
   }
-  if (ev.ev === 'token' && ev.player !== undefined && g.players[ev.player].tokDouble === g.turn)
+  if (ev.ev === 'token') {
+    for (const src of liveSources(g)) {
+      if (def(src).manufactor && ctl(src) === ev.player)
+        out.push({ id: `s:${src.uid}:mf`, r: { ev: 'token', instead: { k: 'oneOfEachCFT' } }, src, ctl: ctl(src), synthetic: true, label: `${nm(src)} (one of each)` });
+    }
+  }
+    if (ev.ev === 'token' && ev.player !== undefined && g.players[ev.player].tokDouble === g.turn)
     out.push({ id: `g:${ev.player}:tokd:${g.turn}`, r: { ev: 'token', instead: { k: 'mul', n: 2 } }, src: undefined, ctl: ev.player, synthetic: true, label: 'token doubling (this turn)' });
   for (const t of g.tempRepls ?? []) {
     if (t.until === 'eot' && t.turn !== g.turn) continue;
@@ -272,6 +278,16 @@ function applyOne(g: Game, ev: ReplEvt, inst: ReplInst): ReplEvt {
     case 'plusCount':
       log(g, `${who}: ${k.n} additional.`);
       return { ...ev, n: ev.n + k.n };
+    case 'oneOfEachCFT': {
+      const kinds = ['Clue', 'Food', 'Treasure'] as const;
+      const nameOf = (s: TokenSpec | string | undefined) => !s ? '' : typeof s === 'string' ? s : (s.preset ?? s.name);
+      const have = nameOf(ev.tokenSpec);
+      if (!kinds.includes(have as typeof kinds[number])) return ev;
+      const extra = ev.extraTokens ? [...ev.extraTokens] : [];
+      for (const k of kinds) if (k !== have) for (let i = 0; i < ev.n; i++) extra.push({ name: k, colors: [], types: ['Artifact'], sub: [k], preset: k });
+      log(g, `${who}: create one of each Clue, Food, and Treasure instead.`);
+      return { ...ev, extraTokens: extra };
+    }
     case 'plusToken': {
       // Same-kind additional tokens join the event (so a later “twice as many” compounds).
       if (tokenMatches({} as Game, ev.tokenSpec, { types: [k.preset] })) {
@@ -286,6 +302,9 @@ function applyOne(g: Game, ev: ReplEvt, inst: ReplInst): ReplEvt {
     case 'exile':
       log(g, `${who}: ${ev.card ? nm(ev.card) : 'it'} is exiled instead.`);
       return { ...ev, dest: 'exile' };
+    case 'exileVoid':
+      log(g, `${who}: ${ev.card ? nm(ev.card) : 'it'} is exiled with a void counter instead.`);
+      return { ...ev, dest: 'exile' as const, ctrKind: 'void' };
     case 'shuffle':
       log(g, `${who}: ${ev.card ? nm(ev.card) : 'it'} is shuffled into its owner's library instead.`);
       return { ...ev, dest: 'library' };

@@ -2,7 +2,7 @@
 
 Living list of Oracle wording and mechanics that are **not** modelled yet, or were only modelled in a simple form and still leave cards Limited. Counts are from the same Scryfall Oracle Cards bulk and `classify()` method used for support reports (unique `oracle_id`, commander-legal, excluding tokens, emblems, dungeons, planes, phenomena, schemes, vanguards, conspiracies, and commander-banned cards). Corpus size: **32,643**.
 
-**Last updated:** 2026-11-26, after the popular-card Batch 1 PR [#40](https://github.com/adimego/mtg-commander/pull/40). Support is **17,846 / 32,643 (54.7%)** — auto 17,685, builtin 161, Limited 14,797. After the day/night and shared-piece sweep PR [#39](https://github.com/adimego/mtg-commander/pull/39) it was 17,783 / 32,643 (54.5%). After the second P4 PR [#38](https://github.com/adimego/mtg-commander/pull/38) it was 17,665 / 32,643 (54.1%); after the first P4 replacements PR [#37](https://github.com/adimego/mtg-commander/pull/37) it was 17,566 / 32,643 (53.8%); after the second P3 PR [#36](https://github.com/adimego/mtg-commander/pull/36) it was 17,516 / 32,643 (53.7%); after the first P3 PR [#35](https://github.com/adimego/mtg-commander/pull/35) it was 17,389 / 32,643 (53.3%); after P2 [#34](https://github.com/adimego/mtg-commander/pull/34) it was 17,260 / 32,643 (52.9%).
+**Last updated:** 2026-11-26, after the popular-card Batch 2 PR [PRN](https://github.com/adimego/mtg-commander/pull/PRN). Support is **17,983 / 32,643 (55.1%)** — auto 17,822, builtin 161, Limited 14,660. After the popular-card Batch 1 PR [#40](https://github.com/adimego/mtg-commander/pull/40) it was 17,846 / 32,643 (54.7%). After the day/night and shared-piece sweep PR [#39](https://github.com/adimego/mtg-commander/pull/39) it was 17,783 / 32,643 (54.5%). After the second P4 PR [#38](https://github.com/adimego/mtg-commander/pull/38) it was 17,665 / 32,643 (54.1%); after the first P4 replacements PR [#37](https://github.com/adimego/mtg-commander/pull/37) it was 17,566 / 32,643 (53.8%); after the second P3 PR [#36](https://github.com/adimego/mtg-commander/pull/36) it was 17,516 / 32,643 (53.7%); after the first P3 PR [#35](https://github.com/adimego/mtg-commander/pull/35) it was 17,389 / 32,643 (53.3%); after P2 [#34](https://github.com/adimego/mtg-commander/pull/34) it was 17,260 / 32,643 (52.9%).
 
 **How to read a row.** *Involved* is how many current Limited cards have at least one leftover line in the family. *Exclusive* is how many of those cards have every leftover line in that family, so modelling the family *could* flip the card if the inner effect is also exact. Families overlap; do not add rows. Plan-era figures are labelled when a current recount was not the source.
 
@@ -193,4 +193,32 @@ Shared hooks (hand-written compiler + engine, no AI-written scripts):
 - Force of Will `exileAlt.life`; “choose new targets for target spell or ability” (`retarget`, CR 115.7d — current targets stay legal); bounce a spell or a permanent (Sink into Stupor); Food-or-Treasure (`tokenOr`); granting a dies-return ability (`gainAbil`) with an LKI snapshot so the trigger still exists after `leave()` clears CEs (Malakir Rebirth); Grand Abolisher (`oppsCantAct`) also shutting off auto mana abilities of artifacts, creatures, and enchantments via `tapForMana` / `planPayment`.
 
 The AI has sensible defaults for each of those may/pick/search/retarget decisions. Script-kind `retarget` / `commandeer` still dispatch through `scriptOp` so Redirect Lightning and Commandeer keep working.
+
+
+### Done in popular Batch 2
+
+Popular-card Batch 2 PR [PRN](https://github.com/adimego/mtg-commander/pull/PRN) (the 51 remaining Limited cards in the positional top 500 by `edhrec_rank`), 2026-11-26. Support +137 to **17,983 / 32,643 (55.1%)**. Official precons stayed 100/100. 820 tests. No card from this batch was deferred.
+
+Top-N (positional among ranked commander-legal cards, same corpus as the support reports):
+
+- Top 100: **100/100 (100%)** (unchanged)
+- Top 250: **250/250 (100%)** (unchanged)
+- Top 500: 449/500 (89.8%) → **500/500 (100%)**
+- Top 1,000: 817/1,000 (81.7%) → **874/1,000 (87.4%)**
+
+All 51 Batch 2 cards classify `auto` from official Oracle. The extra +86 corpus flips are spill from the shared hooks (Panharmonicon-likes, play-from-top, additional lands, pacts, Enduring typeline, mana-with-cost, and so on). Tempt with Discovery (rank 909) was already parked for vote/offer UI and was not in this batch.
+
+Shared hooks (hand-written compiler + engine, no AI-written scripts):
+
+- Panharmonicon (`etbACTrigTwice`): an artifact or creature entering causes a trigger of a permanent you control an additional time.
+- Play from the top (Bolas's Citadel, Mystic Forge): lands and spells from library top; Citadel pays life equal to mana value rather than the mana cost.
+- Seedborn Muse / Dryad / Azusa: opponents' untap steps (`oppUntapAll` / `oppUntapSelf` / `oppUntapArts`) and additional land drops (`noMaxHand` with negative n).
+- Academy Manufactor (`manufactor` / `oneOfEachCFT`): a Clue, Food, or Treasure becomes one of each.
+- Maskwood Nexus (`allCreatureTypes` / changeling) without recursing `def()` on the subject.
+- Enduring (`retAsEnch` / `asEnch`): returns from the graveyard as a noncreature enchantment; a second death does not return it. Dies `ifc` uses LKI/`evCard` when the source has left the battlefield.
+- Pacts (`pactPay` delayed upkeep; pay or lose), Silence (`silenceT`), Force of Negation exile-if-countered, Damn no-regenerate, Mental Misstep exact MV, Entomb to graveyard.
+- Arena of Glory and other mana abilities with an extra cost / exert (`autoMana` pays `m.cost`; grammar and compile agree).
+- Cabal Ritual threshold is compiled as if/else so the 5-mana add replaces, rather than stacks with, the 3-mana add.
+- Underworld Breach grants escape dynamically (`gyEscape`) to nonland cards in the owner's graveyard.
+- Unique handwritten CardScripts: Sylvan Library, Syr Konrad, Etali, Ragavan, Finale of Devastation, The Ozolith, Dauthi Voidwalker (`exileVoid`), Kutzil, Living Death, Thassa's Oracle, Entish Restoration.
 
