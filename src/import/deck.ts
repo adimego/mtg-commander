@@ -96,3 +96,9 @@ export function exportText(d: SavedDeck): string {
   const nm = (id: string) => (CARDS[id] ?? d.defs.find(x => x.id === id))?.name ?? id;
   return [`1 ${nm(d.commander)} *CMDR*`, ...[...counts].map(([id, q]) => `${q} ${nm(id)}`)].join('\n') + '\n';
 }
+
+/** Strict import is allowed only when every card is fully supported (auto or builtin). */
+export function canStrictSave(stats: { limited: number } | { lim: number }): boolean {
+  const lim = 'limited' in stats ? stats.limited : stats.lim;
+  return lim === 0;
+}

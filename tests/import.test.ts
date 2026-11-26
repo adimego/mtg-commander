@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parseDecklist, parseLine } from '../src/import/parse';
 import { lookupCards, ScryCard, FetchLike } from '../src/import/scryfall';
 import { classify, parseManaLine } from '../src/import/classify';
-import { resolve, checkLegality, buildDeck, commanderOptions, defaultCommanders, exportText, toDeckDef } from '../src/import/deck';
+import { resolve, checkLegality, buildDeck, commanderOptions, defaultCommanders, exportText, toDeckDef, canStrictSave } from '../src/import/deck';
 import { newGame, registerCards, registerDeck, CARDS, playLand, castSpell, findPayment } from '../src/engine/engine';
 import '../src/engine/ai';
 
@@ -153,5 +153,14 @@ describe('imported decks play in the engine', () => {
     const blade = { uid: g.nextUid++, id: 'x-opt', owner: 0, tapped: false, sick: false, damage: 0, pp: 0, pt: 0 };
     g.players[0].hand.push(blade); g.players[0].battlefield.push({ uid: g.nextUid++, id: 'island', owner: 0, tapped: false, sick: false, damage: 0, pp: 0, pt: 0 });
     expect(castSpell(g, 0, blade.uid)).toBe(true);
+  });
+});
+
+describe('strict import save', () => {
+  it('is allowed only when every card is fully supported', () => {
+    expect(canStrictSave({ lim: 0 })).toBe(true);
+    expect(canStrictSave({ limited: 0 })).toBe(true);
+    expect(canStrictSave({ lim: 1 })).toBe(false);
+    expect(canStrictSave({ limited: 3 })).toBe(false);
   });
 });
