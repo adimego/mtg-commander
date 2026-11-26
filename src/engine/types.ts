@@ -105,7 +105,7 @@ export interface CardDef {
   /** Saga: choose a chapter and start with that many lore counters. */ readAhead?: boolean;
   /** Cast this from your graveyard if you control this typal (Gravecrawler). */ gyCast?: 'zombie';
   /** Sephara alternative cost: {W} and tap four fliers. */ sepharaAlt?: boolean;
-  /** First/second/third turn restriction (Serra Avenger). */ noCastTurns?: number; /** Begin the game with this in play if it is in your opening hand. */ leyline?: boolean; /** Timing restriction on casting this spell. */ castOnly?: 'declareAttackers' | 'afterOppUpkeep'; /** Can't attack unless the defending player controls a matching permanent. */ atkUnlessDef?: Filter; /** Bloodthirst N */ bloodthirst?: number; modular?: number; graft?: number; fabricate?: number; amplify?: number; dash?: Cost; offspring?: Cost; extort?: boolean; unleash?: boolean; forMirrodin?: boolean;
+  /** First/second/third turn restriction (Serra Avenger). */ noCastTurns?: number; /** Begin the game with this in play if it is in your opening hand. */ leyline?: boolean; /** Timing restriction on casting this spell. */ castOnly?: 'declareAttackers' | 'afterOppUpkeep'; /** Can't attack unless the defending player controls a matching permanent. */ atkUnlessDef?: Filter; /** Bloodthirst N */ bloodthirst?: number; modular?: number; graft?: number; fabricate?: number; amplify?: number; dash?: Cost; offspring?: Cost; extort?: boolean; unleash?: boolean; forMirrodin?: boolean; buyback?: Cost; jumpStart?: boolean; madness?: Cost; miracle?: Cost; entwine?: Cost; conspire?: boolean; assist?: boolean; soulshift?: number; bargain?: boolean; exploit?: boolean; splitSecond?: boolean; storm?: boolean;
 
 
   /** Riot: ETB choose a +1/+1 counter or haste. */ riot?: boolean;

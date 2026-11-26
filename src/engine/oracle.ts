@@ -981,6 +981,8 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
     if (l === 'demonstrate') { triggers.push({ on: 'x', label: 'Demonstrate', ev: 'castSelf', subj: 'self', effects: [{ op: 'script', kind: 'demonstrate' }] } as TriggerDef); continue; }
     if (l === 'myriad') { kws.add('myriad'); continue; }
     if (l === 'gravestorm') { triggers.push({ on: 'x', label: 'Gravestorm', ev: 'castSelf', subj: 'self', effects: [{ op: 'script', kind: 'gravestorm' }] } as TriggerDef); continue; }
+    if (l === 'storm') { d.storm = true; triggers.push({ on: 'x', label: 'Storm', ev: 'castSelf', subj: 'self', effects: [{ op: 'script', kind: 'storm' }] } as TriggerDef); continue; }
+    if (l === 'split second') { d.splitSecond = true; kws.add('split second'); continue; }
     { const an = /^annihilator (\d+)$/.exec(l); if (an) { triggers.push({ on: 'x', label: `Annihilator ${an[1]}`, ev: 'attacks', subj: 'self', effects: [{ op: 'script', kind: 'annihilator', n: +an[1] }] } as TriggerDef); continue; } }
     { const eh = /^echo (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(l); if (eh) { const c = parseCost(eh[1].toUpperCase()); if (!c) { fail(raw); continue; } d.echo = c; triggers.push({ on: 'x', label: 'Echo', ev: 'upkeep', pl: 'you', effects: [{ op: 'script', kind: 'echo' }] } as TriggerDef); continue; } }
     { const es = /^escape[—\-]?(\{[^}]+\}(?:\{[^}]+\})*), exile (\w+) other cards? from your graveyard$/.exec(l); if (es) { const c = parseCost(es[1].toUpperCase()); if (!c) { fail(raw); continue; } d.escape = { cost: c, n: (num(es[2]) as number) }; continue; } }
@@ -1114,6 +1116,9 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   if (kws.has('provoke')) triggers.push({ on: 'x', ev: 'attacks', subj: 'self', label: 'Provoke', tslots: [{ who: 'perm', f: { types: ['Creature'], defP: true }, harm: false, opt: true }], effects: [{ op: 'script', kind: 'provoke' }] } as TriggerDef);
   if (kws.has('ingest')) triggers.push({ on: 'x', ev: 'combatDamagePlayer', subj: 'self', label: 'Ingest', effects: [{ op: 'script', kind: 'ingest' }] } as TriggerDef);
   if (d.forMirrodin) triggers.push({ on: 'x', ev: 'etb', subj: 'self', label: 'For Mirrodin!', effects: [{ op: 'script', kind: 'forMirrodin' }] } as TriggerDef);
+  if (d.soulshift) triggers.push({ on: 'x', ev: 'dies', subj: 'self', label: `Soulshift ${d.soulshift}`, tslots: [{ who: 'card', f: { types: ['Creature', 'Spirit'], mvLE: d.soulshift }, zoneOwner: 'you', harm: false, opt: true }], effects: [{ op: 'ret', who: 't0', dest: 'hand', zone: 'graveyard' }] } as TriggerDef);
+  if (d.exploit) triggers.push({ on: 'x', ev: 'etb', subj: 'self', label: 'Exploit', effects: [{ op: 'script', kind: 'exploit' }] } as TriggerDef);
+  if (d.storm && !triggers.some(t => t.label === 'Storm')) triggers.push({ on: 'x', label: 'Storm', ev: 'castSelf', subj: 'self', effects: [{ op: 'script', kind: 'storm' }] } as TriggerDef);
   if (abilities.length) d.abilities = [...(d.abilities ?? []), ...abilities];
   if (triggers.length) d.triggers = [...(d.triggers ?? []), ...triggers];
   if (statics.length) d.statics = statics;
@@ -1242,6 +1247,18 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
   if (p === 'ingest') { kws.add('ingest'); return true; }
   if ((m = /^amplify (\d+)$/.exec(p))) { d.amplify = +m[1]; return true; }
   if (p === 'for mirrodin!') { d.forMirrodin = true; return true; }
+  if ((m = /^buyback (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.buyback = c; return true; }
+  if (p === 'jump-start') { d.jumpStart = true; return true; }
+  if ((m = /^madness (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.madness = c; return true; }
+  if ((m = /^miracle (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.miracle = c; return true; }
+  if ((m = /^entwine (\{[^}]+\}(?:\{[^}]+\})*)$/.exec(p))) { const c = parseCost(m[1].toUpperCase()); if (!c) return false; d.entwine = c; return true; }
+  if (p === 'conspire') { d.conspire = true; return true; }
+  if (p === 'assist') { d.assist = true; return true; }
+  if ((m = /^soulshift (\d+)$/.exec(p))) { d.soulshift = +m[1]; return true; }
+  if (p === 'bargain') { d.bargain = true; return true; }
+  if (p === 'exploit') { d.exploit = true; return true; }
+  if (p === 'split second') { d.splitSecond = true; kws.add('split second'); return true; }
+  if (p === 'storm') { d.storm = true; return true; }
   if (p === 'imprint') { d.imprint = true; return true; }
   if (p === 'read ahead') { d.readAhead = true; return true; }
   { const em = /^escalate \{([wubrgc])\}$/.exec(p); if (em) { const k = em[1].toUpperCase() as 'W'|'U'|'B'|'R'|'G'|'C'; d.escalateCost = { generic: 0, [k]: 1 }; return true; } }
