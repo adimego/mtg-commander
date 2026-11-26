@@ -1,0 +1,964 @@
+{
+  "$id": "mtg-commander.card-script.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CardScript",
+  "description": "Versioned IR for compiled Magic: The Gathering Oracle text in mtg-commander. TypeScript types in src/engine/grammar/types.ts are canonical; this schema is the published contract for validators, repo caches, and a future AI writer. v1 effects map mechanically to today's Effect/TriggerDef/Static so exec() and layer() can run lowered IR.",
+  "$ref": "#/$defs/CardScript",
+  "$defs": {
+    "Color": {
+      "type": "string",
+      "enum": [
+        "W",
+        "U",
+        "B",
+        "R",
+        "G"
+      ]
+    },
+    "Cost": {
+      "type": "object",
+      "required": [
+        "generic"
+      ],
+      "properties": {
+        "generic": {
+          "type": "number"
+        },
+        "W": {
+          "type": "number"
+        },
+        "U": {
+          "type": "number"
+        },
+        "B": {
+          "type": "number"
+        },
+        "R": {
+          "type": "number"
+        },
+        "G": {
+          "type": "number"
+        },
+        "C": {
+          "type": "number"
+        },
+        "x": {
+          "type": "number"
+        },
+        "hyb": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "phy": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "W",
+              "U",
+              "B",
+              "R",
+              "G"
+            ]
+          }
+        },
+        "life": {
+          "type": "number"
+        },
+        "E": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Keyword": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cost": {
+          "$ref": "#/$defs/Cost"
+        },
+        "n": {
+          "type": "number"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Span": {
+      "type": "object",
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "type": "number"
+        },
+        "end": {
+          "type": "number"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ParseFailure": {
+      "type": "object",
+      "required": [
+        "text",
+        "reason"
+      ],
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "clause": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Filter": {
+      "type": "object"
+    },
+    "Cond": {
+      "type": "object"
+    },
+    "TSlot": {
+      "type": "object"
+    },
+    "Amount": {},
+    "Effect": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "addC",
+            "addMana",
+            "addManaOne",
+            "addType",
+            "amass",
+            "animAll",
+            "animate",
+            "arcaneDraws",
+            "assimilate",
+            "assimilateBlink",
+            "assimilateExBy",
+            "attach",
+            "becomes",
+            "bite",
+            "blight",
+            "bounce",
+            "champion",
+            "championBack",
+            "chooseColor",
+            "chooseType",
+            "chosenReset",
+            "classLevel",
+            "cmdrToHand",
+            "connive",
+            "copyTok",
+            "counter",
+            "crewed",
+            "damage",
+            "damageAtk",
+            "damageEachOpp",
+            "damageEventPlayer",
+            "delayExile",
+            "delayRet",
+            "delaySac",
+            "destroy",
+            "discard",
+            "discardChosen",
+            "discover",
+            "dmg",
+            "dmgPlayerAndCreatures",
+            "doubleCtr",
+            "drain",
+            "draw",
+            "drawEventAmount",
+            "earthReturn",
+            "earthbend",
+            "echoEons",
+            "emblem",
+            "empower",
+            "encore",
+            "endure",
+            "energy",
+            "eventPlayerDrawsEventAmount",
+            "exchange",
+            "exile",
+            "exileCastIf",
+            "exileGainPower",
+            "exileGrave",
+            "exileLibrary",
+            "exileLinkTok",
+            "exilePath",
+            "exileRetT",
+            "exileTop",
+            "exileTopCast",
+            "exileUid",
+            "explore",
+            "extraCombat",
+            "extraLand",
+            "extraTurn",
+            "fight",
+            "fireMana",
+            "flashSorc",
+            "flicker",
+            "flip",
+            "floodIsland",
+            "freeze",
+            "gain",
+            "gainLife",
+            "goad",
+            "grant",
+            "highTide",
+            "if",
+            "ifDid",
+            "keepEachType",
+            "keepOneEach",
+            "lifeBecomes",
+            "linkHand",
+            "look",
+            "lookTopMayBottom",
+            "lose",
+            "loseEachLost",
+            "loseGame",
+            "loseLife",
+            "may",
+            "mayCastFree",
+            "mayShuffle",
+            "melee",
+            "mill",
+            "monarch",
+            "monstrosity",
+            "move",
+            "ninjutsu",
+            "noop",
+            "piles",
+            "poison",
+            "poisonTo",
+            "prep",
+            "prevent",
+            "proliferate",
+            "pump",
+            "pumpSelf",
+            "putBack",
+            "putBackExBy",
+            "putLand",
+            "rebound",
+            "reflex",
+            "regen",
+            "remC",
+            "reorder",
+            "repeat",
+            "repeatWhile",
+            "ret",
+            "retPick",
+            "revealTop",
+            "revealUntil",
+            "ring",
+            "sac",
+            "sacThis",
+            "sacUid",
+            "saddled",
+            "script",
+            "scry",
+            "search",
+            "searchBasic",
+            "shuffleHandIn",
+            "silenceSrc",
+            "soulPair",
+            "steal",
+            "surveil",
+            "tap",
+            "tapToggle",
+            "thirst",
+            "tokDouble",
+            "token",
+            "transform",
+            "tuck",
+            "uncCreatures",
+            "undying",
+            "unearth",
+            "unless",
+            "unlessDmg",
+            "untap",
+            "untapLands",
+            "warpExile",
+            "watch",
+            "watchCombatUntap",
+            "winGame"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Required when kind is script: approved runtime hook id."
+        },
+        "tag": {
+          "type": "string",
+          "description": "Payload that today lives on Effect.kind (counter type, prevent variant, …)."
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "n": {},
+        "m": {},
+        "toHand": {
+          "type": "boolean"
+        },
+        "who": {},
+        "pl": {
+          "type": "string"
+        },
+        "f": {
+          "$ref": "#/$defs/Filter"
+        },
+        "kw": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tok": {
+          "$ref": "#/$defs/TokenSpec"
+        },
+        "dest": {
+          "type": "string"
+        },
+        "tapped": {
+          "type": "boolean"
+        },
+        "attacking": {
+          "type": "boolean"
+        },
+        "sub": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Effect"
+          }
+        },
+        "cond": {
+          "$ref": "#/$defs/Cond"
+        },
+        "text": {
+          "type": "string"
+        },
+        "mana": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rest": {
+          "type": "string"
+        },
+        "take": {},
+        "eot": {
+          "type": "boolean"
+        },
+        "random": {
+          "type": "boolean"
+        },
+        "upTo": {
+          "type": "boolean"
+        },
+        "zone": {
+          "type": "string"
+        },
+        "reveal": {
+          "type": "boolean"
+        },
+        "sh": {
+          "type": "boolean"
+        },
+        "other": {},
+        "until": {
+          "type": "string"
+        },
+        "ctl": {
+          "type": "string"
+        },
+        "ret": {
+          "type": "string"
+        },
+        "ifPaid": {
+          "$ref": "#/$defs/Cost"
+        },
+        "ce": {
+          "$ref": "#/$defs/CEFx"
+        },
+        "rt": {
+          "type": "object"
+        },
+        "free": {
+          "type": "boolean"
+        },
+        "emb": {
+          "$ref": "#/$defs/CardScript"
+        },
+        "else": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Effect"
+          }
+        }
+      }
+    },
+    "Spell": {
+      "type": "object",
+      "required": [
+        "effects"
+      ],
+      "properties": {
+        "target": {
+          "type": "string"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Effect"
+          }
+        },
+        "tslots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TSlot"
+          }
+        },
+        "modes": {
+          "$ref": "#/$defs/Modes"
+        }
+      }
+    },
+    "Trigger": {
+      "type": "object",
+      "required": [
+        "on",
+        "label",
+        "effects"
+      ],
+      "properties": {
+        "on": {
+          "type": "string"
+        },
+        "ev": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Effect"
+          }
+        },
+        "modes": {
+          "$ref": "#/$defs/Modes"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        }
+      }
+    },
+    "Static": {
+      "type": "object",
+      "required": [
+        "kind",
+        "who"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "asThoughWither",
+            "noLifeGainAll",
+            "flashIfTapped",
+            "flashIfOppCast",
+            "ramonda",
+            "propaganda",
+            "atkMostLife",
+            "angelTokens",
+            "noLegendRule",
+            "pt",
+            "kw",
+            "goad",
+            "cantBlock",
+            "cantAttack",
+            "costLess",
+            "costMore",
+            "unblockable",
+            "mustAttack",
+            "noMaxHand",
+            "cantBeBlockedBy",
+            "doesntUntap",
+            "playerHexproof",
+            "drawLimit",
+            "oppsSorcery",
+            "noSearch",
+            "winOnEmptyDraw",
+            "tokenDouble",
+            "tokenTriple",
+            "pwInstant",
+            "manaExtra",
+            "cantBeAttacked",
+            "atkLimit1",
+            "etbExtra",
+            "grantMana",
+            "dmgPlus1",
+            "dmgPlusCtr",
+            "preventToAttachedCtr",
+            "preventOppToYou",
+            "preventAttackers",
+            "basePT",
+            "wardN",
+            "wardLifeN",
+            "areIsland",
+            "omni",
+            "topLook",
+            "topCast",
+            "taxSpell",
+            "taxAct",
+            "pipLess",
+            "soulDraw",
+            "devotionNotCreature",
+            "convokeSpells",
+            "oppsCantCast",
+            "spellsUncounterable",
+            "noSacWarriors",
+            "cowardBlock",
+            "noGameEnd",
+            "noLifeGain",
+            "noMinus",
+            "manaPersist",
+            "toxicLink",
+            "noPrevent",
+            "noCounter",
+            "grantAbil",
+            "topPlayLand",
+            "doubleLife",
+            "doubleDraw",
+            "plusCharge",
+            "plusP1P1",
+            "lifePlus1",
+            "addSub",
+            "cantAtkYou",
+            "taxAtkCtr",
+            "oppUntapCreatures",
+            "darksteel",
+            "noLoyalty",
+            "oppUntapArts",
+            "extraC",
+            "etbTappedOpp",
+            "improviseSpells",
+            "loseKw",
+            "equip0Metalcraft",
+            "secondSpellLess",
+            "landsUntapped",
+            "prolifTwice",
+            "flashSpell",
+            "manaPersistColor",
+            "etbTypalCtr",
+            "blockMax1",
+            "controlAttached",
+            "blockOnlyBy",
+            "blockMin2",
+            "goadedCantBlock",
+            "cantActivate",
+            "extraBlock",
+            "mustBlock"
+          ]
+        },
+        "who": {
+          "type": "string",
+          "enum": [
+            "self",
+            "attached",
+            "others",
+            "all"
+          ]
+        },
+        "grant": {
+          "$ref": "#/$defs/Grant"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        }
+      }
+    },
+    "ActAbility": {
+      "type": "object",
+      "required": [
+        "label",
+        "effects"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Effect"
+          }
+        },
+        "modes": {
+          "$ref": "#/$defs/Modes"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        }
+      }
+    },
+    "Modes": {
+      "type": "object",
+      "required": [
+        "min",
+        "max",
+        "list"
+      ],
+      "properties": {
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "list": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "effects"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "tslots": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/TSlot"
+                }
+              },
+              "effects": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/Effect"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "TokenSpec": {
+      "type": "object"
+    },
+    "CEFx": {
+      "type": "object"
+    },
+    "Grant": {
+      "type": "object"
+    },
+    "RoomDoor": {
+      "type": "object",
+      "required": [
+        "name",
+        "cost"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "cost": {
+          "$ref": "#/$defs/Cost"
+        },
+        "text": {
+          "type": "string"
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Keyword"
+          }
+        },
+        "abilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ActAbility"
+          }
+        },
+        "triggers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Trigger"
+          }
+        },
+        "statics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Static"
+          }
+        },
+        "mana": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "img": {
+          "type": "string"
+        },
+        "art": {
+          "type": "string"
+        }
+      }
+    },
+    "CardScript": {
+      "type": "object",
+      "required": [
+        "schema",
+        "source",
+        "id",
+        "name",
+        "types",
+        "cost",
+        "colors"
+      ],
+      "properties": {
+        "schema": {
+          "type": "string",
+          "const": "mtg-commander.card-script.v1"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "parser",
+            "override",
+            "ai",
+            "lift"
+          ]
+        },
+        "oracleId": {
+          "type": "string"
+        },
+        "oracleTextHash": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "layout": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "transform",
+            "modal_dfc",
+            "adventure",
+            "split",
+            "flip",
+            "prepare",
+            "room"
+          ]
+        },
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "typeLine": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "cost": {
+          "$ref": "#/$defs/Cost"
+        },
+        "colors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Color"
+          }
+        },
+        "identity": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Color"
+          }
+        },
+        "power": {
+          "type": "number"
+        },
+        "toughness": {
+          "type": "number"
+        },
+        "legendary": {
+          "type": "boolean"
+        },
+        "basic": {
+          "type": "boolean"
+        },
+        "token": {
+          "type": "boolean"
+        },
+        "loyalty": {
+          "type": "number"
+        },
+        "img": {
+          "type": "string"
+        },
+        "art": {
+          "type": "string"
+        },
+        "sub": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Keyword"
+          }
+        },
+        "mana": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "abilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ActAbility"
+          }
+        },
+        "triggers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Trigger"
+          }
+        },
+        "statics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Static"
+          }
+        },
+        "static": {
+          "type": "object"
+        },
+        "spell": {
+          "$ref": "#/$defs/Spell"
+        },
+        "replacements": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "faces": {
+          "type": "object",
+          "properties": {
+            "back": {
+              "$ref": "#/$defs/CardScript"
+            },
+            "prepare": {
+              "$ref": "#/$defs/CardScript"
+            }
+          },
+          "additionalProperties": false
+        },
+        "room": {
+          "type": "object",
+          "required": [
+            "doors"
+          ],
+          "properties": {
+            "doors": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RoomDoor"
+              }
+            }
+          }
+        },
+        "mdfc": {
+          "type": "boolean"
+        },
+        "adventure": {
+          "type": "boolean"
+        },
+        "split": {
+          "type": "boolean"
+        },
+        "fuse": {
+          "type": "boolean"
+        },
+        "aftermath": {
+          "type": "boolean"
+        },
+        "flip": {
+          "type": "boolean"
+        },
+        "partner": {
+          "type": "boolean"
+        },
+        "canBeCommander": {
+          "type": "boolean"
+        },
+        "limited": {
+          "type": "string"
+        },
+        "compiled": {
+          "type": "boolean"
+        },
+        "castRules": {
+          "type": "object",
+          "description": "Remaining CardDef flags not yet first-class (kicker, flashback, ward, …)."
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ParseFailure"
+          }
+        }
+      }
+    }
+  }
+}
