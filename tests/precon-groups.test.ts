@@ -14,11 +14,12 @@ describe('groupOfficialPrecons', () => {
       ['FRC', 'Reality Fracture Commander', '2026-10-02', 1],
       ['MSC', 'Marvel Super Heroes Commander', '2026-06-26', 4],
       ['SOC', 'Secrets of Strixhaven Commander', '2026-04-24', 5],
+      ['ECC', 'Lorwyn Eclipsed Commander', '2026-01-23', 2],
       ['FIC', 'Final Fantasy Commander', '2025-06-13', 4],
     ]);
     expect(groups.flatMap(g => g.decks).every(isOfficialPrecon)).toBe(true);
     expect(groups.flatMap(g => g.decks).map(d => d.name).sort()).toEqual([
-      'Avengers Assemble', 'Counter Blitz', 'Doom Prevails', 'Federation Fleet', 'Klingon Fury',
+      'Avengers Assemble', 'Blight Curse', 'Counter Blitz', 'Dance of the Elements', 'Doom Prevails', 'Federation Fleet', 'Klingon Fury',
       'Landing Party', 'Limit Break', 'Lorehold Spirit', 'Multiverse Reforged', 'Prismari Artistry', 'Quandrix Unlimited',
       'Revival Trance', 'Scions & Spellcraft', 'Silverquill Influence', 'The Fantastic Four', 'Wakanda Forever', 'We Are the Borg', 'Witherbloom Pestilence',
     ]);
@@ -33,6 +34,6 @@ describe('groupOfficialPrecons', () => {
     const groups = groupOfficialPrecons([...loadPrecons(), extra]);
     expect(groups[0]).toMatchObject({ set: 'ZZZ', setName: 'Future Commander', released: '2027-01-01' });
     expect(groups[0].decks.map(d => d.name)).toEqual(['Future Precon']);
-    expect(groups.map(g => g.set)).toEqual(['ZZZ', 'TRC', 'FRC', 'MSC', 'SOC', 'FIC']);
+    expect(groups.map(g => g.set)).toEqual(['ZZZ', 'TRC', 'FRC', 'MSC', 'SOC', 'ECC', 'FIC']);
   });
 });
