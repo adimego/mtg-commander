@@ -59,3 +59,49 @@ export function diffValue(a: unknown, b: unknown, path = '$', out: string[] = []
 export function diffCardDef(a: CardDef, b: CardDef, cap = 20): string[] {
   return diffValue(a, b, '$', [], cap);
 }
+
+/** Amount / small-shape equivalences the parser may emit vs the old compiler. */
+export function equivValue(a: unknown, b: unknown): boolean {
+  if (sameValue(a, b)) return true;
+  const na = normalizeValue(a);
+  const nb = normalizeValue(b);
+  return equivNormalized(na, nb);
+}
+
+function equivNormalized(a: unknown, b: unknown): boolean {
+  if (sameValue(a, b)) return true;
+  if (a === undefined && b === undefined) return true;
+  if (a === undefined || b === undefined || a === null || b === null) return a === b;
+  // 2 and { plus: 0, of: 2 } / { mul: 1, of: 2 }
+  if (typeof a === 'number' && isObj(b)) return amountEquals(a, b) || amountEquals(b, a);
+  if (typeof b === 'number' && isObj(a)) return amountEquals(a, b);
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((x, i) => equivNormalized(x, b[i]));
+  }
+  if (isObj(a) && isObj(b)) {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    for (const k of keys) if (!equivNormalized(a[k], b[k])) return false;
+    return true;
+  }
+  return false;
+}
+
+function isObj(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === 'object' && !Array.isArray(v);
+}
+
+function amountEquals(a: unknown, b: unknown): boolean {
+  if (sameValue(a, b)) return true;
+  if (typeof a === 'number' && isObj(b)) {
+    if (Object.keys(b).length === 1 && typeof b.plus === 'number' && amountEquals(a - (b.plus as number), b.of)) return true;
+    if (Object.keys(b).length === 1 && b.mul === 1 && amountEquals(a, b.of)) return true;
+    if (Object.keys(b).length === 1 && b.plus === 0 && amountEquals(a, b.of)) return true;
+  }
+  if (typeof b === 'number' && isObj(a)) return amountEquals(b, a);
+  return false;
+}
+
+export function equivCardDef(a: CardDef, b: CardDef): boolean {
+  return equivValue(a, b);
+}

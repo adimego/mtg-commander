@@ -10,7 +10,7 @@ import { compile, parseCost, pretty, type ScryLike } from '../engine/oracle';
 
 export { KWS as ENGINE_KW } from '../engine/oracle';
 export type Support = 'builtin' | 'auto' | 'limited';
-export interface Classified { def: CardDef; support: Support; reason?: string; unparsed?: string[] }
+export interface Classified { def: CardDef; support: Support; reason?: string; unparsed?: string[]; failures?: ParseFailure[] }
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const BUILTIN_BY_NAME: Record<string, CardDef> = Object.fromEntries(Object.values(CARDS).filter(d => !d.limited && !d.id.startsWith('x-')).map(d => [d.name.toLowerCase(), d]));
@@ -53,7 +53,7 @@ function faces(c: ScryCard) { return c.card_faces?.length ? c.card_faces : null;
 export function images(c: ScryCard) { const f = faces(c); const iu = c.image_uris ?? f?.[0]?.image_uris; return { img: iu?.normal, art: iu?.art_crop }; }
 
 import { applyScripts } from '../engine/scripts';
-import { maybeApplyGrammar, type GrammarOpts } from '../engine/grammar';
+import { maybeApplyGrammar, parseCard, equivCardDef, grammarRequested, type GrammarOpts, type ParseFailure } from '../engine/grammar';
 export function classify(c: ScryCard, opts?: GrammarOpts): Classified {
   const b = builtinByName(c.name); if (b) return maybeApplyGrammar({ def: b, support: 'builtin' }, opts);
   return compileScry(c, opts);
@@ -111,10 +111,30 @@ export function compileScry(c: ScryCard, opts?: GrammarOpts): Classified {
   }
   else if (f) problems.push(`${c.layout ?? 'multi-face'} card: only the front face is used`);
   if (!exact && front.mana_cost && !d.room) problems.push(`mana cost ${front.mana_cost} simplified to ${costStr(d.cost)}`);
-  const res = d.room
-    ? { unparsed: [] as string[] }
-    : compile({ ...front, name: f ? front.name ?? c.name : c.name, oracle_text: front.oracle_text ?? (f ? '' : c.oracle_text) } as ScryLike, d);
-  applyScripts(c.name, d, res.unparsed);
+  const scryLike = { ...front, name: f ? front.name ?? c.name : c.name, oracle_text: front.oracle_text ?? (f ? '' : c.oracle_text) } as ScryLike;
+  let failures: ParseFailure[] | undefined;
+  let res: { unparsed: string[] };
+  if (d.room) {
+    res = { unparsed: [] as string[] };
+  } else if (grammarRequested(opts)) {
+    const seed = cloneDef(d);
+    const parsed = parseCard(scryLike, d, c.name);
+    failures = parsed.failures;
+    res = { unparsed: parsed.unparsed };
+    if (opts?.fallback !== false) {
+      const dOld = cloneDef(seed);
+      const old = compile(scryLike, dOld);
+      applyScripts(c.name, dOld, old.unparsed);
+      if (!equivCardDef(d, dOld)) {
+        replaceDef(d, dOld);
+        res = { unparsed: old.unparsed };
+        failures = undefined;
+      }
+    }
+  } else {
+    res = compile(scryLike, d);
+    applyScripts(c.name, d, res.unparsed);
+  }
   if (pStar && !d.statics?.some(s => s.k === 'pt' && s.who === 'self' && (typeof s.p !== 'number' || typeof s.t !== 'number'))) { if (!d.toughness) d.toughness = 1; problems.push(`variable power/toughness (${front.power}/${front.toughness}) played as ${d.power}/${d.toughness}`); }
   const basicT: Record<string, string> = { Plains: 'W', Island: 'U', Swamp: 'B', Mountain: 'R', Forest: 'G' };
   const intrinsic = (d.sub ?? []).map(t => basicT[t]).filter(Boolean);
@@ -124,11 +144,11 @@ export function compileScry(c: ScryCard, opts?: GrammarOpts): Classified {
   }
   if ((d.sub?.includes('Saga') && !d.saga) || (d.sub?.includes('Vehicle') && /\bcrew \d/i.test(d.text ?? '') && !d.abilities?.some(a => a.crew !== undefined))) problems.push(`${d.sub?.includes('Saga') ? 'Saga chapters' : 'crewing'} not modelled`);
   res.unparsed.push(...prepUn);
-  if (!res.unparsed.length && !problems.length) return maybeApplyGrammar({ def: d, support: 'auto' }, opts);
+  if (!res.unparsed.length && !problems.length) return maybeApplyGrammar({ def: d, support: 'auto', failures }, opts);
   const works = describeWorks(d);
   const why = [res.unparsed.length ? `not modelled: "${res.unparsed.slice(0, 3).map(x => pretty(x, c.name)).map(x => x.length > 70 ? x.slice(0, 67) + '…' : x).join('" / "')}"${res.unparsed.length > 3 ? ` (+${res.unparsed.length - 3} more)` : ''}` : '', ...problems].filter(Boolean).join('; ');
   d.limited = `Limited support: ${works}. ${why[0].toUpperCase() + why.slice(1)}.`;
-  return maybeApplyGrammar({ def: d, support: 'limited', reason: `${works[0].toUpperCase() + works.slice(1)}. ${why[0].toUpperCase() + why.slice(1)}.`, unparsed: res.unparsed }, opts);
+  return maybeApplyGrammar({ def: d, support: 'limited', reason: `${works[0].toUpperCase() + works.slice(1)}. ${why[0].toUpperCase() + why.slice(1)}.`, unparsed: res.unparsed, failures }, opts);
 }
 function describeWorks(d: CardDef): string {
   const parts: string[] = [];
@@ -140,3 +160,14 @@ function describeWorks(d: CardDef): string {
   return parts.join(', ');
 }
 export const costStr = (c: Cost) => `${c.generic ? `{${c.generic}}` : ''}${COLORS.map(k => `{${k}}`.repeat(c[k] || 0)).join('')}` || '{0}';
+
+function cloneDef(d: CardDef): CardDef { return JSON.parse(JSON.stringify(d)) as CardDef; }
+function replaceDef(dst: CardDef, src: CardDef): void {
+  for (const k of Object.keys(dst) as (keyof CardDef)[]) delete dst[k];
+  Object.assign(dst, src);
+}
+
+/** Compile a Scryfall card through the grammar parser with no old-compiler fallback. */
+export function parseScry(c: ScryCard): Classified {
+  return compileScry(c, { grammar: true, fallback: false });
+}

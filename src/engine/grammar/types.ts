@@ -17,6 +17,9 @@ export interface ParseFailure {
   reason: string;
   span?: Span;
   clause?: string;
+  line?: number;
+  production?: string;
+  partial?: { parsed?: string[]; failedAfter?: string };
 }
 
 export type CardLayout = 'normal' | 'transform' | 'modal_dfc' | 'adventure' | 'split' | 'flip' | 'prepare' | 'room';

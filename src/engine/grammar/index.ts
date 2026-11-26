@@ -43,3 +43,9 @@ export function maybeApplyGrammar<T extends { def: CardDef }>(cl: T, opts?: Gram
   const { def, usedGrammar } = grammarRoundtripDef(cl.def);
   return usedGrammar ? { ...cl, def } : cl;
 }
+
+export { tokenize, splitTokenLines, guessProduction, tokensText } from './tokenize';
+export type { Token, TokKind, Production } from './tokenize';
+export { parseCard, parseInto } from './parse';
+export type { ParseCardResult } from './parse';
+export { equivValue, equivCardDef } from './compare';

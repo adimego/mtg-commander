@@ -4,7 +4,7 @@
 import SUBTYPES from './subtypes.json';
 import type { ActAbility, Amt, CardDef, CEFx, Color, Cond, Cost, Effect, Filter, ManaAbility, ManaSym, Modes, PRef, Ref, Static, TokenSpec, TriggerDef, TSlot } from './types';
 
-const SUB = new Map<string, string>((SUBTYPES as string[]).map(s => [s.toLowerCase(), s]));
+export const SUB = new Map<string, string>((SUBTYPES as string[]).map(s => [s.toLowerCase(), s]));
 const TYPES: Record<string, string> = { creature: 'Creature', artifact: 'Artifact', enchantment: 'Enchantment', land: 'Land', planeswalker: 'Planeswalker', instant: 'Instant', sorcery: 'Sorcery', battle: 'Battle', permanent: 'Permanent', legendary: 'Legendary', historic: 'Historic', outlaw: 'Outlaw' };
 const COLOR_OF: Record<string, Color> = { white: 'W', blue: 'U', black: 'B', red: 'R', green: 'G' };
 export const KWS = ['compleated', 'wither', 'persist', 'myriad', 'flying', 'trample', 'haste', 'vigilance', 'lifelink', 'deathtouch', 'first strike', 'double strike', 'reach', 'menace', 'defender', 'flash', 'hexproof', 'prowess', 'melee', 'indestructible', 'shroud', 'protection from white', 'protection from blue', 'protection from black', 'protection from red', 'protection from green', 'changeling', 'devoid', 'fear', 'intimidate', 'shadow', 'horsemanship', 'plainswalk', 'islandwalk', 'swampwalk', 'mountainwalk', 'forestwalk', 'exalted', 'riot', 'protection from creatures', 'protection from multicolored'];
@@ -17,7 +17,7 @@ function typeWord(w: string | undefined): string | null {
 }
 const NUMW: Record<string, number> = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, another: 1 };
 const N = '(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|x|\\d+)';
-function num(s: string | undefined): number | 'X' | null { if (!s) return null; if (s === 'x') return 'X'; if (/^\d+$/.test(s)) return +s; return NUMW[s] ?? null; }
+export function num(s: string | undefined): number | 'X' | null { if (!s) return null; if (s === 'x') return 'X'; if (/^\d+$/.test(s)) return +s; return NUMW[s] ?? null; }
 
 // ---------- costs ----------
 export function parseCost(mc = ''): Cost | null {
@@ -100,8 +100,8 @@ export function parseFilter(s0: string): FP | null {
 }
 
 // ---------- context ----------
-interface Cx { slots: TSlot[]; it?: Ref; that?: Ref; thatPl?: PRef; spell?: boolean; lastPl?: PRef; /** "that many" in this effect counts mana symbols of this color in the spell's mana cost */ pips?: Color; xAmt?: Amt }
-const newCx = (o: Partial<Cx> = {}): Cx => ({ slots: [], it: 'self', ...o });
+export interface Cx { slots: TSlot[]; it?: Ref; that?: Ref; thatPl?: PRef; spell?: boolean; lastPl?: PRef; /** "that many" in this effect counts mana symbols of this color in the spell's mana cost */ pips?: Color; xAmt?: Amt }
+export const newCx = (o: Partial<Cx> = {}): Cx => ({ slots: [], it: 'self', ...o });
 function addSlot(cx: Cx, s: TSlot): string { cx.slots.push(s); return 't' + (cx.slots.length - 1); }
 
 function playerRef(s: string, cx: Cx, harm = true): PRef | null {
@@ -225,7 +225,7 @@ function withForEach(base: Amt, s: string | undefined, cx: Cx): Amt | null {
 }
 
 // ---------- conditions ----------
-function cond(s: string, cx: Cx): Cond | null {
+export function cond(s: string, cx: Cx): Cond | null {
   s = s.trim(); let m: RegExpExecArray | null;
   if (/^it's your turn$/.test(s)) return { k: 'yourTurn' };
   if (/^~ is monstrous$/.test(s)) return { k: 'monstrous' };
@@ -339,7 +339,7 @@ function kwList(s: string): string[] | null {
 }
 
 // ---------- mana ----------
-function manaAdd(s: string, cx: Cx): { mana: ManaSym[]; n?: Amt } | null {
+export function manaAdd(s: string, cx: Cx): { mana: ManaSym[]; n?: Amt } | null {
   let m: RegExpExecArray | null; s = s.trim();
   if ((m = /^(.+?) for each (.+)$/.exec(s))) { const b = manaAdd(m[1], cx); const fe = forEach(m[2], cx); if (!b || !fe || b.n) return null; return { mana: b.mana, n: fe }; }
   if ((m = /^an amount of (\{[wubrgc]\}) equal to (.+)$/.exec(s))) { const a = amount(m[2], cx); return a === null ? null : { mana: [m[1][1].toUpperCase() as ManaSym], n: a }; }
@@ -802,7 +802,7 @@ export function effects(text: string, cx: Cx): Effect[] | null {
 
 // ---------- abilities ----------
 interface ParsedCost { ab: Partial<ActAbility> }
-function parseCosts(s: string, name: string): ParsedCost | null {
+export function parseCosts(s: string, name: string): ParsedCost | null {
   const ab: Partial<ActAbility> = {};
   const parts = s.split(/,\s*/);
   for (const p0 of parts) {
@@ -828,7 +828,7 @@ function parseCosts(s: string, name: string): ParsedCost | null {
   }
   void name; return { ab };
 }
-function cleanLine(l: string): string { return l.replace(/^[a-z' ,-]+ — /, s => (/^(choose|when|whenever|at)\b/.test(s) ? s : '')); }
+export function cleanLine(l: string): string { return l.replace(/^[a-z' ,-]+ — /, s => (/^(choose|when|whenever|at)\b/.test(s) ? s : '')); }
 
 export interface CompileResult { unparsed: string[]; notes: string[]; ok: boolean }
 export interface ScryLike { name: string; oracle_text?: string; type_line?: string; mana_cost?: string; power?: string; toughness?: string; loyalty?: string; keywords?: string[] }
@@ -846,7 +846,7 @@ export function normalize(text: string, name: string): string {
   return t;
 }
 
-function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> } | null {
+export function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> } | null {
   let m: RegExpExecArray | null; const h = head.trim().replace(/ under your control$/, ' you control').replace(/^~ deal /, '~ deals ');
   if ((m = /^(an? |another |one or more )(.+?) enters or attacks$/.exec(h))) { const a = trigger(`${m[1]}${m[2]} enters`); const b = trigger(`${m[1]}${m[2]} attacks`); if (a && b) return { defs: [...a.defs, ...b.defs], cx: a.cx }; }
   const self = (ev: string, extra: Partial<TriggerDef> = {}) => ({ defs: [{ ev, subj: 'self' as const, ...extra }], cx: { it: 'self' } });
@@ -936,7 +936,7 @@ function trigger(head: string): { defs: Partial<TriggerDef>[]; cx: Partial<Cx> }
   if ((m = /^a land enters you control$/.exec(h))) return { defs: [{ ev: 'etb', subj: 'any', f: { types: ['Land'], ctrl: 'you' } }], cx: { it: 'self', that: 'ev' } };
   return null;
 }
-const pl2: Record<string, TriggerDef['pl']> = { you: 'you', any: 'any', notyou: 'opp' };
+export const pl2: Record<string, TriggerDef['pl']> = { you: 'you', any: 'any', notyou: 'opp' };
 const ORD: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4 };
 
 export function compile(sc: ScryLike, d: CardDef): CompileResult {
@@ -1189,10 +1189,13 @@ export function compile(sc: ScryLike, d: CardDef): CompileResult {
   return { unparsed, notes, ok: unparsed.length === 0 };
 }
 let CUR_NAME = '';
+/** Set the card name used by pretty() / token ability compilation. */
+export function setOracleName(name: string): void { CUR_NAME = name; }
+export function oracleName(): string { return CUR_NAME; }
 /** Make normalized text readable: card name back in, sentences capitalized. */
 export function pretty(s: string, name = CUR_NAME): string { const short = name.split(',')[0]; return s.replace(/~/g, short || 'this').replace(/(^|[.!?]\s+|\n•?\s*|: |— )([a-z])/g, (_, a, b) => a + b.toUpperCase()).replace(/\b(i|ii|iii|iv)\b(?= —)/g, m => m.toUpperCase()); }
-function shortLabel(s: string) { const t = pretty(s.replace(/\([^)]*\)/g, '').trim()); return t.length > 90 ? t.slice(0, 87) + '…' : t; }
-function parseModes(head: string, rest: string, cx: Cx): Modes | null {
+export function shortLabel(s: string) { const t = pretty(s.replace(/\([^)]*\)/g, '').trim()); return t.length > 90 ? t.slice(0, 87) + '…' : t; }
+export function parseModes(head: string, rest: string, cx: Cx): Modes | null {
   const items = rest.split('\n').map(x => x.replace(/^•\s*/, '').trim()).filter(Boolean); if (items.length < 2) return null;
   const range: Record<string, [number, number]> = { one: [1, 1], two: [2, 2], three: [3, 3], 'one or both': [1, 2], 'one or more': [1, items.length], 'any number': [0, items.length], 'up to one': [0, 1], 'up to two': [0, 2], 'up to three': [0, 3] };
   const [min, max] = range[head] ?? [1, 1];
@@ -1203,7 +1206,7 @@ function parseModes(head: string, rest: string, cx: Cx): Modes | null {
   }
   return { min, max, list };
 }
-function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbility[], sc: ScryLike): boolean {
+export function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbility[], sc: ScryLike): boolean {
   let m: RegExpExecArray | null;
   if (KWS.includes(p)) { kws.add(p); return true; }
   if ((m = /^protection from (white|blue|black|red|green)(?: and from (white|blue|black|red|green))?$/.exec(p))) { kws.add('protection from ' + m[1]); if (m[2]) kws.add('protection from ' + m[2]); return true; }
@@ -1409,7 +1412,7 @@ function isKeyword(p: string, d: CardDef, kws: Set<string>, abilities: ActAbilit
   if (p === 'demonstrate' || p === 'myriad' || p === 'gravestorm' || /^annihilator \d+$/.test(p) || p === 'populate') return false;
   void sc; return false;
 }
-function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>): boolean {
+export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>): boolean {
   let m: RegExpExecArray | null; let c: Cond | undefined; let s = l;
   if (/^gift a card$/.test(s)) { d.gift = 'card'; return true; }
   { const em = /^escalate \{([wubrgc])\}$/.exec(s); if (em) { const k = em[1].toUpperCase() as 'W'|'U'|'B'|'R'|'G'|'C'; d.escalateCost = { generic: 0, [k]: 1 }; return true; } }

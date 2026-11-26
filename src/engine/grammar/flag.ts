@@ -1,4 +1,4 @@
-/** Feature flag for the CardScript grammar compile path. Default off (P0: no parser yet). */
+/** Feature flag for the CardScript grammar compile path. Default off. On = parser path, with the old compiler as fallback unless fallback is false. */
 let enabled = false;
 
 /** Whether compile/classify should run the IR lift/lower path. Default false. */
@@ -13,8 +13,10 @@ export function setGrammarEnabled(on: boolean): void {
 
 /** Options accepted by classify() / compileScry(). */
 export interface GrammarOpts {
-  /** When true, lift the compiled CardDef to CardScript and lower it back (fallback if not lossless). */
+  /** When true, run the grammar parser (and, by default, fall back to the old compiler if the result is not equivalent). */
   grammar?: boolean;
+  /** When grammar is on, use the old compiler if the parser's CardDef is not equivalent. Default true. */
+  fallback?: boolean;
 }
 
 export function grammarRequested(opts?: GrammarOpts): boolean {
