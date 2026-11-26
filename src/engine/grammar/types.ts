@@ -87,7 +87,7 @@ export type IrRoomDoor = Omit<RoomDoor, 'triggers' | 'abilities' | 'statics' | '
 export const CARD_SCRIPT_FACE_KEYS = [
   'id', 'name', 'types', 'legendary', 'basic', 'cost', 'colors', 'power', 'toughness',
   'keywords', 'text', 'typeLine', 'img', 'art', 'sub', 'mana', 'abilities', 'triggers',
-  'spell', 'static', 'statics', 'limited', 'identity', 'token', 'partner', 'canBeCommander',
+  'spell', 'static', 'statics', 'replacements', 'limited', 'identity', 'token', 'partner', 'canBeCommander',
   'loyalty', 'back', 'mdfc', 'adventure', 'split', 'fuse', 'aftermath', 'flip', 'prepDef',
   'room', 'compiled',
 ] as const;

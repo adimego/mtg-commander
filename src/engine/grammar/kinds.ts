@@ -23,7 +23,7 @@ export const EFFECT_KINDS = [
   'repeatWhile', 'ret', 'retPick', 'revealTop', 'revealUntil', 'ring',
   'sac', 'sacThis', 'sacUid', 'saddled', 'script', 'scry',
   'search', 'searchBasic', 'shuffleHandIn', 'silenceSrc', 'soulPair', 'steal',
-  'surveil', 'tap', 'tapToggle', 'thirst', 'tokDouble', 'token',
+  'surveil', 'tap', 'tapToggle', 'tempRepl', 'thirst', 'tokDouble', 'token',
   'transform', 'tuck', 'uncCreatures', 'undying', 'unearth', 'unless', 'unlessAct',
   'unlessDmg', 'untap', 'untapLands', 'warpExile', 'watch', 'watchCombatUntap',
   'winGame',

@@ -2,7 +2,7 @@
 
 Living list of Oracle wording and mechanics that are **not** modelled yet, or were only modelled in a simple form and still leave cards Limited. Counts are from the same Scryfall Oracle Cards bulk and `classify()` method used for support reports (unique `oracle_id`, commander-legal, excluding tokens, emblems, dungeons, planes, phenomena, schemes, vanguards, conspiracies, and commander-banned cards). Corpus size: **32,643**.
 
-**Last updated:** 2026-11-26, after the second P3 compose-frames PR. Support is **17,516 / 32,643 (53.7%)** — auto 17,355, builtin 161, Limited 15,127. After the first P3 PR [#35](https://github.com/adimego/mtg-commander/pull/35) it was 17,389 / 32,643 (53.3%); after P2 [#34](https://github.com/adimego/mtg-commander/pull/34) it was 17,260 / 32,643 (52.9%).
+**Last updated:** 2026-11-26, after the first P4 replacements PR. Support is **17,566 / 32,643 (53.8%)** — auto 17,405, builtin 161, Limited 15,077. After the second P3 PR [#36](https://github.com/adimego/mtg-commander/pull/36) it was 17,516 / 32,643 (53.7%); after the first P3 PR [#35](https://github.com/adimego/mtg-commander/pull/35) it was 17,389 / 32,643 (53.3%); after P2 [#34](https://github.com/adimego/mtg-commander/pull/34) it was 17,260 / 32,643 (52.9%).
 
 **How to read a row.** *Involved* is how many current Limited cards have at least one leftover line in the family. *Exclusive* is how many of those cards have every leftover line in that family, so modelling the family *could* flip the card if the inner effect is also exact. Families overlap; do not add rows. Plan-era figures are labelled when a current recount was not the source.
 
@@ -89,7 +89,7 @@ These are listed so they are not mistaken for P3 work. P3 will not ship a wrong,
 
 | Wording / mechanic | Approx. cards | Why it waits | Waits on |
 |---|---:|---|---|
-| Replacement effects (“would … instead”) | 398 exclusive / 556 involved | Needs a replacement engine, not a compose wrapper | P4 replacements |
+| Replacement effects (“would … instead”) — leftovers | ~301 exclusive / ~394 involved (down from 351 / 490 among Limited just before this PR) | The replacement engine shipped (see Done in P4). Leftovers are unusual events or riders: next-N-damage redirect (en-Kor), “would enter, sacrifice lands”, dice rolls, “would be destroyed, instead…”, “when you do, create a token”, empty-library / no-hand draw conds, explore-twice, and similar unique tails | Further P4 replacement wording, or stay Limited |
 | “As though” | Present in the hard bucket of the grammar plan | Permission / timing fiction | P4 |
 | Day/night and phasing | See §1 | Shared turn-level systems | Batch 3 / P4 |
 | Enter-as-copy / become-a-copy | See §1 | Copiable values | P4 copy |
@@ -138,3 +138,17 @@ Second P3 PR, 2026-11-26. Support +127 to **17,516 / 32,643 (53.7%)**. Official 
 - Repeated base-P/T CDAs: “loses all abilities and is a [color] [type] creature with base power and toughness N/N”, “loses all abilities and has base P/T”, “has base P/T”, “enchanted artifact is a creature with base P/T in addition to its other types”. `basePT` layering now applies `applyCEs` (lose-all, set color, set creature types, add types).
 - “~ can’t attack alone”, “~ can’t block alone”, and “~ can’t attack or block alone” (`noAtkAlone` / `noBlockAlone`), enforced at declare-attackers / declare-blockers.
 - For-each / costs-less: “for each creature that died this turn” (`Amt` `{ died: true }`, the global `g.died` count).
+
+### Done in P4
+
+First P4 PR (replacement effects), 2026-11-26. Support +50 to **17,566 / 32,643 (53.8%)**. Official precons stayed 100/100. 747 tests.
+
+- A replacement-effect system (`CardDef.replacements`, `Game.tempRepls`, CR 614 apply-once and CR 616 buckets: self-replacements, then zone-changing, then the rest). The affected object’s controller (or owner / affected player) would choose; the AI picks a sensible option (maximize tokens/counters/life/draw, prevent or redirect incoming damage, apply plus-then-multiply so doubling compounds, prefer shuffle over exile for your own card, skip an opponent’s extra turn). `Game.pickRepl` is a test hook.
+- Hooked events: would-die / would-be-put-into-a-graveyard (including mill and a spell leaving the stack), damage, draws (per card), token creation, counters, life gain, and beginning an extra turn. Existing `tokenDouble` / `plusP1P1` / `plusCharge` / `doubleLife` / `doubleDraw` statics participate as synthetics in the same 616 loop where those events now go through it. `noPrevent` still blocks prevention replacements.
+- Parsed continuous wordings: “if ~ would be put into a graveyard from anywhere, exile / reveal and shuffle into its owner’s library instead”; “if ~ would die, exile it instead”; “if a [filter] would die, exile it instead” (including “a creature an opponent controls” and “a creature dealt damage by ~ this turn”); Rest in Peace–style “card or token … from anywhere, exile instead”; twice-as-many +1/+1 or any counters; additional Treasure token; floor life at 1; redirect damage to ~ / enchanted creature / you and other permanents you control; double damage; another [color] source you control deals plus 1; skip extra turns; “if you would gain life, draw that many cards instead”; “if you would draw a card, draw two instead”.
+- Wording variant: “if an effect would create one or more tokens under your control, it creates twice that many…” now hits the existing `tokenDouble` static (Doubling Season, Anointed Procession, Parallel Lives). `doubleLife` / `plusCharge` actually apply at the event (they previously compiled but had no engine hook).
+- Spell tails: “deals N to any target / target creature or planeswalker. If [that / a creature dealt damage this way] would die this turn, exile it instead”; “if a creature would die this turn, exile it instead” as a this-turn `tempRepl`.
+
+Not in this PR (still in the P4 order): enter-as-a-copy / clones (118 exclusive), end-of-combat triggers and keeping `blockedBy` until they resolve (89 exclusive), combat damage to a creature with a recipient in the emit (29 exclusive), day/night and phasing.
+
+

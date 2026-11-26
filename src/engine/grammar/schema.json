@@ -299,6 +299,7 @@
             "surveil",
             "tap",
             "tapToggle",
+            "tempRepl",
             "thirst",
             "tokDouble",
             "token",

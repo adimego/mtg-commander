@@ -2,7 +2,7 @@
  *  Every rules line either compiles into an exact engine representation or is reported as unparsed;
  *  callers use that to badge cards honestly ("Supported" vs "Limited"). */
 import SUBTYPES from './subtypes.json';
-import type { ActAbility, Amt, CardDef, CEFx, Color, Cond, Cost, Effect, Filter, ManaAbility, ManaSym, Modes, PRef, Ref, Static, TokenSpec, TriggerDef, TSlot } from './types';
+import type { ActAbility, Amt, CardDef, CEFx, Color, Cond, Cost, Effect, Filter, ManaAbility, ManaSym, Modes, PRef, Ref, Replacement, Static, TokenSpec, TriggerDef, TSlot } from './types';
 
 export const SUB = new Map<string, string>((SUBTYPES as string[]).map(s => [s.toLowerCase(), s]));
 const TYPES: Record<string, string> = { creature: 'Creature', artifact: 'Artifact', enchantment: 'Enchantment', land: 'Land', planeswalker: 'Planeswalker', instant: 'Instant', sorcery: 'Sorcery', battle: 'Battle', permanent: 'Permanent', legendary: 'Legendary', historic: 'Historic', outlaw: 'Outlaw' };
@@ -684,6 +684,9 @@ const PATS: Pat[] = [
   [/^adapt (\d+)$/, (m) => [{ op: 'script', kind: 'adapt', n: +m[1] }]],
   [/^learn$/, () => [{ op: 'script', kind: 'learn' }]],
   [/^~ deals (\d+) damage to target creature\. if that creature would die this turn, exile it instead$/, (m, cx) => { obj('target creature', cx, true); return [{ op: 'damage', n: +m[1], who: 't0' }, { op: 'script', kind: 'exileIfDies', who: 't0' }]; }],
+  [/^~ deals (\d+) damage to any target\. if a creature dealt damage this way would die this turn, exile it instead$/, (m, cx) => { obj('any target', cx, true); return [{ op: 'damage', n: +m[1], who: 't0' }, { op: 'script', kind: 'exileIfDies', who: 't0' }]; }],
+  [/^~ deals (\d+) damage to target creature or planeswalker\. if that creature or planeswalker would die this turn, exile it instead$/, (m, cx) => { obj('target creature or planeswalker', cx, true); return [{ op: 'damage', n: +m[1], who: 't0' }, { op: 'script', kind: 'exileIfDies', who: 't0' }]; }],
+
   [new RegExp(`^(?:${P_RE} )?sacrifices? (${N}|another) (.+)$`), (m, cx) => { const p = pl(m[1], cx); const n = m[2] === 'another' ? 1 : num(m[2]); const fp = parseFilter(m[3]); if (!p || n === null || !fp) return null; if (m[2] === 'another') fp.f.other = true; return [{ op: 'sac', n, pl: p, f: fp.f, text: m[3] }]; }],
   [/^(?:you may )?play an additional land (?:this turn|on each of your turns)$/, () => [{ op: 'extraLand', n: 1 }]],
   [/^put (a|an|up to (?:one|two|three|four|five|six|seven)|any number of) (.+?) cards? from your hand onto the battlefield( tapped)?$/, (m, cx) => { const fp = parseFilter(m[2]); return fp ? [{ op: 'putLand', f: fp.f, n: m[1] === 'any number of' ? 99 : /^up to /.test(m[1]) ? num(m[1].slice(6)) as number : 1, tapped: !!m[3], text: `${m[1]} ${m[2]} card` }] : null; }],
@@ -844,7 +847,9 @@ export function effects(text: string, cx: Cx): Effect[] | null {
     if (twoInstead && out.length && out[out.length - 1].op === 'token') { out.push({ op: 'if', cond: { k: 'evPowGE', n: +twoInstead[1] }, sub: [{ ...out[out.length - 1], n: 1 }] }); continue; }
     const hasteAtk = /^(?:that token|those tokens|it) gains? haste until end of turn and attacks? this (?:combat|turn) if able$/.exec(s.replace(/\.$/, ''));
     if (hasteAtk && out.length && out[out.length - 1].op === 'token') { out.push({ op: 'grant', who: 'created', kw: ['haste', '_mustattack'] }); continue; }
-    if (/^if that creature would die this turn, exile it instead$/.test(s.replace(/\.$/, '')) && out.length) { out.push({ op: 'script', kind: 'exileIfDies', who: 't0' }); continue; }
+    if (/^if (?:that creature|that creature or planeswalker|a creature dealt damage this way) would die this turn, exile (?:it|that creature|that creature or planeswalker) instead$/.test(s.replace(/\.$/, '')) && out.length) { out.push({ op: 'script', kind: 'exileIfDies', who: 't0' }); continue; }
+    if (/^if a creature would die this turn, exile it instead$/.test(s.replace(/\.$/, '')) && out.length) { out.push({ op: 'tempRepl', repl: { ev: 'die', f: { types: ['Creature'] }, thisTurn: true, until: 'eot', zoneChange: true, instead: { k: 'exile' }, text: s } }); continue; }
+    if (/^if a card would be put into your graveyard from anywhere this turn, exile that card instead$/.test(s.replace(/\.$/, '')) && out.length) { out.push({ op: 'tempRepl', repl: { ev: 'toGy', fromAnywhere: true, pl: 'you', cardsOnly: true, until: 'eot', zoneChange: true, instead: { k: 'exile' }, text: s } }); continue; }
     const ins = /^if (.+?), (.+) instead$/.exec(s.replace(/\.$/, ''));
     if (ins && out.length) { const c = cond(ins[1], cx); const sub = c && clause(ins[2], cx); if (!c || !sub) return null; const prev = out.pop()!; out.push({ op: 'if', cond: c, sub, else: [prev] }); continue; }
     const e = clause(s, cx); if (!e) return null;
@@ -1552,6 +1557,109 @@ function parseAltCost(s: string, d: CardDef): boolean {
 }
 
 
+
+/** Parse a standalone “if … would …, … instead” line. Fail-closed on unknown events or tails. */
+function parseReplacement(s: string, cond?: Cond): Replacement | null {
+  let m: RegExpExecArray | null;
+  const withCond = (r: Replacement): Replacement => cond ? { ...r, cond } : r;
+
+  // self: if ~ would be put into a graveyard from anywhere, exile it instead
+  if (/^if ~ would be put into a graveyard from anywhere, exile it instead$/.test(s))
+    return withCond({ ev: 'toGy', self: true, fromAnywhere: true, zoneChange: true, instead: { k: 'exile' }, text: s });
+  if (/^if ~ would be put into a graveyard from anywhere, reveal ~ and shuffle it into its owner's library instead$/.test(s))
+    return withCond({ ev: 'toGy', self: true, fromAnywhere: true, zoneChange: true, instead: { k: 'shuffle' }, text: s });
+  if (/^if ~ would die, exile it instead$/.test(s))
+    return withCond({ ev: 'die', self: true, zoneChange: true, instead: { k: 'exile' }, text: s });
+
+  // a creature dealt damage by ~ this turn would die, exile it instead
+  if (/^if a creature dealt damage by ~ this turn would die, exile it instead$/.test(s))
+    return withCond({ ev: 'die', f: { types: ['Creature'] }, bySrc: true, zoneChange: true, instead: { k: 'exile' }, text: s });
+  // a [filter] would die, exile it instead
+  if ((m = /^if ((?:an?|one) .+?) would die, exile (?:it|that creature|that permanent) instead$/.exec(s))) {
+    if (/dealt damage/.test(m[1])) return null;
+    const fp = parseFilter(m[1].replace(/^(?:an?|one) /, '')); if (!fp) return null;
+    return withCond({ ev: 'die', f: fp.f, zoneChange: true, instead: { k: 'exile' }, text: s });
+  }
+
+  // cards/tokens into a graveyard from anywhere
+  if (/^if a card or token would be put into your graveyard from anywhere, exile it instead$/.test(s)
+    || /^if a card or token would be put into a graveyard from anywhere, exile it instead$/.test(s)) {
+    const pl: Replacement['pl'] = /your graveyard/.test(s) ? 'you' : 'any';
+    return withCond({ ev: 'toGy', fromAnywhere: true, pl, zoneChange: true, instead: { k: 'exile' }, text: s });
+  }
+  if (/^if a card would be put into your graveyard from anywhere(?: this turn)?, exile that card instead$/.test(s))
+    return withCond({ ev: 'toGy', fromAnywhere: true, pl: 'you', cardsOnly: true, zoneChange: true, instead: { k: 'exile' }, thisTurn: /this turn/.test(s), text: s });
+
+  // tokens (plain “twice that many tokens” stays on the tokenDouble static so every tokMul caller still sees it)
+  if (/^if you would create one or more treasure tokens, instead create those tokens plus an additional treasure token$/.test(s))
+    return withCond({ ev: 'token', pl: 'you', tokenF: { types: ['Treasure'] }, instead: { k: 'plusToken', preset: 'Treasure' }, text: s });
+
+  // counters
+  if ((m = /^if one or more \+1\/\+1 counters would be put on (?:a |an )?(.+?), twice that many \+1\/\+1 counters are put on that (?:creature|permanent) instead$/.exec(s))) {
+    const fp = parseFilter(m[1]); if (!fp) return null;
+    return withCond({ ev: 'counters', f: fp.f, ctrKind: '+1/+1', instead: { k: 'mul', n: 2 }, text: s });
+  }
+  if (/^if an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead$/.test(s))
+    return withCond({ ev: 'counters', f: { ctrl: 'you' }, instead: { k: 'mul', n: 2 }, text: s });
+  if (/^if you would put one or more counters on a permanent or player, put twice that many of each of those kinds of counters on that permanent or player instead$/.test(s))
+    return withCond({ ev: 'counters', ctrYou: true, instead: { k: 'mul', n: 2 }, text: s });
+  if (/^if you would put one or more counters on a creature you control, put twice that many of each of those kinds of counters on that creature instead$/.test(s))
+    return withCond({ ev: 'counters', f: { types: ['Creature'], ctrl: 'you' }, ctrYou: true, instead: { k: 'mul', n: 2 }, text: s });
+
+  // life / draw
+  if (/^if you would gain life, you gain twice that much life instead$/.test(s))
+    return withCond({ ev: 'gainLife', pl: 'you', instead: { k: 'mul', n: 2 }, text: s });
+  if (/^if you would gain life, draw that many cards instead$/.test(s))
+    return withCond({ ev: 'gainLife', pl: 'you', instead: { k: 'drawInstead' }, text: s });
+  if (/^if you would draw a card, draw two cards instead$/.test(s))
+    return withCond({ ev: 'draw', pl: 'you', instead: { k: 'mul', n: 2 }, text: s });
+  if (/^if you would draw a card except the first one you draw in each of your draw steps, draw two cards instead$/.test(s))
+    return null; // kept as the existing doubleDraw static (first-draw-step exception)
+
+  // damage
+  if (/^damage that would reduce your life total to less than 1 reduces it to 1 instead$/.test(s))
+    return withCond({ ev: 'damage', pl: 'you', instead: { k: 'floorLife', n: 1 }, text: s });
+  if (/^all damage that would be dealt to you is dealt to ~ instead$/.test(s))
+    return withCond({ ev: 'damage', pl: 'you', instead: { k: 'redirect', to: 'self' }, text: s });
+  if (/^all damage that would be dealt to you is dealt to enchanted creature instead$/.test(s))
+    return withCond({ ev: 'damage', pl: 'you', instead: { k: 'redirect', to: 'attached' }, text: s });
+  if (/^all damage that would be dealt to you and other permanents you control is dealt to ~ instead$/.test(s))
+    return withCond({ ev: 'damage', pl: 'you', instead: { k: 'redirect', to: 'self' }, text: s }); // permanents-you-control half: also match via f on the permanent
+  // Handle "you and other permanents you control" as two replacements
+  if (/^all damage that would be dealt to you and other permanents you control is dealt to ~ instead$/.test(s))
+    return withCond({ ev: 'damage', pl: 'you', instead: { k: 'redirect', to: 'self' }, text: s });
+  if (/^if a source would deal damage to a permanent or player, it deals double that damage to that permanent or player instead$/.test(s))
+    return withCond({ ev: 'damage', instead: { k: 'mul', n: 2 }, text: s });
+  if ((m = /^if another ([a-z]+) source you control would deal damage to a permanent or player, it deals that much damage plus 1 to that permanent or player instead$/.exec(s))) {
+    const col = COLOR_OF[m[1]]; if (!col) return null;
+    return withCond({ ev: 'damage', srcYou: true, srcOther: true, colors: [col], instead: { k: 'plus', n: 1 }, text: s });
+  }
+  if (/^if another source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus 1 instead$/.test(s))
+    return null; // existing dmgPlus1 static
+
+  // extra turns
+  if (/^if a player would begin an extra turn, that player skips that turn instead$/.test(s))
+    return withCond({ ev: 'extraTurn', pl: 'any', instead: { k: 'skip' }, text: s });
+  if (/^if an opponent would begin an extra turn, that player skips that turn instead$/.test(s))
+    return withCond({ ev: 'extraTurn', pl: 'opp', instead: { k: 'skip' }, text: s });
+
+  return null;
+}
+
+function parseReplacementLine(s: string, d: CardDef, cond?: Cond): boolean {
+  // “you and other permanents you control” is two replacements (player + permanents).
+  if (/^all damage that would be dealt to you and other permanents you control is dealt to ~ instead$/.test(s)) {
+    const a: Replacement = { ev: 'damage', pl: 'you', instead: { k: 'redirect', to: 'self' }, text: s, cond };
+    const b: Replacement = { ev: 'damage', f: { ctrl: 'you', other: true }, instead: { k: 'redirect', to: 'self' }, text: s, cond };
+    (d.replacements ??= []).push(a, b);
+    return true;
+  }
+  const r = parseReplacement(s, cond);
+  if (!r) return false;
+  (d.replacements ??= []).push(r);
+  return true;
+}
+
 export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>): boolean {
   let m: RegExpExecArray | null; let c: Cond | undefined; let s = l;
   if (parseAltCost(s, d)) return true;
@@ -1598,6 +1706,7 @@ export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<st
   const cm = /^(.+?) as long as (.+)$/.exec(s) ?? /^as long as (.+?), (.+)$/.exec(s);
   if (cm) { const [body, cs] = s.startsWith('as long as') ? [cm[2], cm[1]] : [cm[1], cm[2]]; const cc = cond(cs, newCx()); if (!cc) return false; c = cc; s = body.replace(/^it (has|gets|can't)\b/, '~ $1'); }
   const dm = /^during your turn, (.+)$/.exec(s); if (dm) { c = { k: 'yourTurn' }; s = dm[1]; }
+  if (parseReplacementLine(s, d, c)) return true;
   { const um = /^(~ can't attack or block|~ can't attack|~ can't block) unless (.+)$/.exec(s); if (um && !c) { const cc = cond(um[2], newCx()); if (!cc) return false; const nc: Cond = { k: 'not', c: cc } as Cond; const ks: Static['k'][] = um[1].endsWith('attack or block') ? ['cantAttack', 'cantBlock'] : um[1].endsWith('attack') ? ['cantAttack'] : ['cantBlock']; for (const k of ks) statics.push({ k, who: 'self', cond: nc }); return true; } }
   if (/^~ enters tapped$/.test(s) && !c) { d.etbTapped = true; return true; }
   if ((m = /^(?:~|this (?:creature|artifact|permanent)) enters tapped with (a|an|one|two|three|four|five|six|\d+) ([a-z+-\/]+) counters? on it$/.exec(s))) {
@@ -1683,7 +1792,7 @@ export function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<st
     [/^each opponent can cast spells only any time they could cast a sorcery$/, 'oppsSorcery', 'self'],
     [/^spells and abilities your opponents control can't cause their controller to search their library$/, 'noSearch', 'self'],
     [/^if you would draw a card while your library has no cards in it, you win the game instead$/, 'winOnEmptyDraw', 'self'],
-    [/^if one or more tokens would be created under your control, twice that many of those tokens are created instead$/, 'tokenDouble', 'self'],
+    [/^if (?:one or more tokens would be created under your control, twice that many of those tokens are created|an effect would create one or more tokens under your control, it creates twice that many of those tokens) instead$/, 'tokenDouble', 'self'],
     [/^you may activate (?:her|his|its|~'s) loyalty abilities any time you could cast an instant$|^you may activate loyalty abilities of ~ on any player's turn any time you could cast an instant$/, 'pwInstant', 'self'],
     [/^you may activate loyalty abilities of planeswalkers you control on any player's turn any time you could cast an instant$/, 'pwInstant', 'all'],
   ];
