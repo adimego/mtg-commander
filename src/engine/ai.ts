@@ -72,9 +72,18 @@ export function decide(g: Game, d: Decision): unknown {
         return manaAvailable(p) >= 3 || g.active !== d.pid || !top;
       }
       if (/Pay \d+ life/.test(d.text)) return p.life > 12;
+      if (/Begin the game with/.test(d.text)) return true;
       return !/sacrifice|discard|lose \d+ life/.test(d.text) || p.life > 10;
     }
     case 'pick': {
+      if (/choose a card/.test(d.text) && d.min === 1 && d.max === 1) {
+        const ranked = [...d.cards].sort((a, b) => {
+          const cm = (isCommander(g, b) ? 100 : 0) - (isCommander(g, a) ? 100 : 0);
+          if (cm) return cm;
+          return cmc(def(b)) - cmc(def(a)) || value(g, b) - value(g, a);
+        });
+        return [ranked[0].uid];
+      }
       const worstFirst = (d.zone === 'hand' || d.zone === 'battlefield') && d.min > 0;
       const sorted = [...d.cards].sort((a, b) => worstFirst ? value(g, a) - value(g, b) : landNeed(g, p, b) - landNeed(g, p, a) || value(g, b) - value(g, a));
       return sorted.slice(0, worstFirst ? d.min : d.max).map(c => c.uid);
@@ -135,6 +144,18 @@ function scoreFx(g: Game, pid: number, fx: Effect[], x = 0): number {
       case 'may': case 'if': case 'repeat': case 'unless': s += scoreFx(g, pid, e.sub ?? [], x); break;
       case 'sac': s += e.pl === 'you' ? -3 : 3; break;
       case 'discard': s += e.pl === 'you' ? -1 : 2; break;
+      case 'discardChosen': s += 4; break;
+      case 'steal': s += 5; break;
+      case 'prevent': {
+        const inc = incomingCombat(g, pid);
+        if (e.kind === 'combat' || e.kind === 'all' || e.kind === 'fromCreatures' || e.kind === 'combatYou' || e.kind === 'toYou') {
+          const combat = ['attackers', 'blockers', 'firstStrike', 'damage'].includes(g.step);
+          if (combat && (inc >= 6 || inc >= g.players[pid].life)) s += 8;
+          else if (combat && inc > 0) s += 2;
+          else s -= 4;
+        } else s += 1;
+        break;
+      }
       case 'addMana': case 'untap': case 'tap': if (e.who === 'self' || e.op === 'addMana') break; s += e.op === 'tap' ? 1 : 0.5; break;
       default: s += 0.5;
     }
@@ -336,6 +357,20 @@ function ninjutsuAI(g: Game, pid: number): boolean {
   }
   return false;
 }
+function incomingCombat(g: Game, pid: number): number {
+  return attackers(g).filter(a => a.attacking === pid && !(a.blockedBy ?? []).length).reduce((s, a) => s + power(g, a), 0)
+    + attackers(g).filter(a => a.attacking === pid).reduce((s, a) => {
+      const blk = (a.blockedBy ?? []).map(u => findCard(g, u)).filter(Boolean) as Card[];
+      if (!blk.length) return s;
+      return s + Math.max(0, power(g, a) - blk.reduce((t, b) => t + toughness(g, b), 0));
+    }, 0);
+}
+function tryFog(g: Game, pid: number): boolean {
+  const inc = incomingCombat(g, pid);
+  if (inc < 4 && inc < g.players[pid].life) return false;
+  const fog = g.players[pid].hand.find(c => (def(c).spell?.effects ?? []).some(e => e.op === 'prevent' && (e.kind === 'combat' || e.kind === 'all' || e.kind === 'fromCreatures' || e.kind === 'combatYou' || e.kind === 'toYou')) && canCast(g, pid, c));
+  return !!fog && tryCast(g, pid, fog, true);
+}
 /** The AI has priority: do at most one thing, or pass. */
 export function aiPriority(g: Game, pid: number) {
   const p = g.players[pid]; const top = g.stack[g.stack.length - 1];
@@ -350,6 +385,7 @@ export function aiPriority(g: Game, pid: number) {
   if (g.active === pid && isMain(g) && mainPhase(g, pid)) return;
   if (g.step === 'blockers' && g.active === pid && sneak(g, pid)) return;
   if (g.step === 'blockers' && g.active === pid && ninjutsuAI(g, pid)) return;
+  if ((g.step === 'attackers' || g.step === 'blockers' || g.step === 'damage' || g.step === 'firstStrike') && tryFog(g, pid)) return;
   if (g.step === 'blockers' && (combatTrick(g, pid) || (p.battlefield.some(c => c.attacking !== undefined || c.blocking !== undefined) && useAbilities(g, pid, 'combat')))) return;
   // End of an opponent's turn (right before ours): use instants and abilities.
   if (g.step === 'end' && g.active !== pid && nextAlive(g, g.active) === pid) {

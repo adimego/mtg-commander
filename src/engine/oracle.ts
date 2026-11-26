@@ -473,6 +473,20 @@ const PATS: Pat[] = [
   [/^add (\w+) mana of any one color$/, (mm, cx) => { const k = mm[1] === 'x' ? (cx.xAmt ?? 'X') : num(mm[1]); return k !== null && k !== undefined ? [{ op: 'addManaOne', n: k }] : null; }],
   [/^(you|target opponent|target player|each opponent) gets? emblem#(\d+)$/, (m, cx) => { const d = emblemDef(EMB[+m[2]]); const p = m[1] === 'you' ? 'you' : playerRef(m[1], cx, m[1] !== 'target player'); return d && p ? [{ op: 'emblem', pl: p, emb: d }] : null; }],
   [/^gain control of (.+?)( until end of turn| until the end of your next turn)?$/, (m, cx) => { const o = obj(m[1], cx, true); return o && !o.card ? [{ op: 'steal', who: o.ref, until: !m[2] ? undefined : /next turn/.test(m[2]) ? 'yourNext' : 'eot' }] : null; }],
+  [/^untap (.+)$/, (m, cx) => { const o = obj(m[1], cx, false); return o && !o.card ? [{ op: 'untap', who: o.ref }] : null; }],
+  [/^tap (.+)$/, (m, cx) => { const o = obj(m[1], cx, true); return o && !o.card ? [{ op: 'tap', who: o.ref }] : null; }],
+  [/^sacrifice (?:it|that creature|that permanent) at the beginning of the next end step$/, (m, cx) => [{ op: 'delaySac', who: cx.it ?? cx.that ?? 't0' }]],
+  [/^prevent all combat damage that would be dealt this turn$/, () => [{ op: 'prevent', kind: 'combat' }]],
+  [/^prevent all damage that would be dealt this turn$/, () => [{ op: 'prevent', kind: 'all' }]],
+  [/^prevent all damage that would be dealt by creatures this turn$/, () => [{ op: 'prevent', kind: 'fromCreatures' }]],
+  [/^prevent all damage that would be dealt to you this turn$/, () => [{ op: 'prevent', kind: 'toYou' }]],
+  [/^prevent all combat damage that would be dealt to you this turn$/, () => [{ op: 'prevent', kind: 'combatYou' }]],
+  [/^prevent all (combat )?damage that would be dealt to (.+?) this turn$/, (m, cx) => { const o = obj(m[2], cx, false); return o ? [{ op: 'prevent', kind: m[1] ? 'toPermCombat' : 'toPerm', who: o.ref }] : null; }],
+  [/^prevent the next (\w+) damage that would be dealt to (.+?) this turn$/, (m, cx) => { const n0 = num(m[1]); const o = obj(m[2], cx, false); return typeof n0 === 'number' && o ? [{ op: 'prevent', kind: 'nextN', n: n0, who: o.ref }] : null; }],
+  [/^§seize (target (?:player|opponent))\|(.+)\|(graveyard|exile|exile\+gy)$/, (m, cx) => { const pl = playerRef(m[1], cx, true); const fp = parseFilter(m[2]); return pl && fp ? [{ op: 'discardChosen', pl, f: fp.f, dest: m[3].startsWith('exile') ? 'exile' : 'graveyard', zone: m[3] === 'exile+gy' ? 'handOrGy' : 'hand' }] : null; }],
+  [/^draw a card at the beginning of the next turn's upkeep$/, () => [{ op: 'arcaneDraws', kind: 'you' }]],
+  [/^investigate twice$/, () => [{ op: 'token', n: 2, pl: 'you', tok: { name: 'Clue', colors: [], types: ['Artifact'], preset: 'Clue' } }]],
+  [/^investigate (x|\w+) times(?:, where x is (.+))?$/, (m, cx) => { const a = m[1] === 'x' && m[2] ? amount(m[2], cx) : num(m[1]); return a !== null ? [{ op: 'token', n: a, pl: 'you', tok: { name: 'Clue', colors: [], types: ['Artifact'], preset: 'Clue' } }] : null; }],
   [/^(?:you )?take (an|two|three) extra turns? after this one$/, m => [{ op: 'extraTurn', n: num(m[1]) as number }]],
   [/^destroy all other permanents except for lands and tokens$/, () => [{ op: 'destroy', who: { all: { other: true, notTypes: ['Land'], nontoken: true } } }]],
   [/^(~|it) deals (\d+) damage to (.+?) and (\d+) damage to (.+)$/, (m, cx) => { const a = dmg(m[1], +m[2], m[3], cx); const b = a && dmg(m[1], +m[4], m[5], cx); return a && b ? [...a, ...b] : null; }],
@@ -721,6 +735,17 @@ export function effects(text: string, cx: Cx): Effect[] | null {
     .replace(/put a flood counter on (.+?)\. (?:that land|it)(?:'s| is) an island in addition to its other types for as long as it has a flood counter on it/g, '§flood $1')
     .replace(/exile the top card of (your|that player's|their) library\. if it's an? ([^.]+?) card, you may cast (?:that card|it) until the end of your next turn/, '§exilecastif $1|$2')
     .replace(/look at the top (\w+) cards of your library, then put them back in any order\. you may shuffle/g, 'look at the top $1 cards of your library, then put them back in any order. §mayshuffle');
+  t = t.replace(
+    /(target (?:player|opponent)) reveals (?:their|his or her) hand\. you choose (?:a|an) ([^.]+?) from it\. (?:that (?:player|opponent)|they) discards that card/g,
+    '§seize $1|$2|graveyard')
+    .replace(
+    /(target (?:player|opponent)) reveals (?:their|his or her) hand\. you choose (?:a|an) ([^.]+?) from it and exile that card/g,
+    '§seize $1|$2|exile')
+    .replace(
+    /(target (?:player|opponent)) reveals (?:their|his or her) hand\. you choose (?:a|an) ([^.]+?) from it or (?:a card|an? [^.]+?) from (?:their|his or her) graveyard\. exile that card/g,
+    '§seize $1|$2|exile+gy')
+    .replace(/, then investigate(?=\.|$)/g, '. investigate')
+    .replace(/ and investigate(?=\.|$)/g, '. investigate');
   t = t.replace(/\."(\s+)/g, '".$1');
   // sentences
   const sents = t.split(/\.\s+/); let lastStart = 0;
@@ -1194,6 +1219,23 @@ function staticLine(l: string, d: CardDef, statics: Static[], kws: Set<string>):
   if (/^you don't lose unspent red mana as steps and phases end$/.test(s)) { statics.push({ k: 'manaPersistColor', who: 'self', color: 'R' }); return true; }
   if (/^you may cast green creature spells as though they had flash$/.test(s)) { statics.push({ k: 'flashSpell', who: 'self', spellF: { types: ['Creature'], colors: ['G'] } }); return true; }
   if (/^you may cast artifact spells as though they had flash$/.test(s)) { statics.push({ k: 'flashSpell', who: 'self', spellF: { types: ['Artifact'] } }); return true; }
+  if (/^you may cast (?:this spell|~) as though it had flash$/.test(s)) { kws.add('flash'); d.keywords = [...kws]; return true; }
+  if ((m = /^you may cast (.+?) spells as though they had flash$/.exec(s))) {
+    const fp = parseFilter(m[1]); if (!fp || fp.card) return false;
+    statics.push({ k: 'flashSpell', who: 'self', spellF: fp.f }); return true;
+  }
+  if (/^you control enchanted (?:creature|permanent|land|artifact|planeswalker)$/.test(s)) { statics.push({ k: 'controlAttached', who: 'attached' }); return true; }
+  if (/^if (?:~|this card) is in your opening hand, you may begin the game with (?:it|this card|~) on the battlefield$/.test(s)) { d.leyline = true; return true; }
+  if (/^cast (?:this spell|~) only during the declare attackers step(?: and only if you've been attacked this step)?$/.test(s)) { d.castOnly = 'declareAttackers'; return true; }
+  if (/^cast (?:this spell|reset|~) only during an opponent's turn after (?:their|his or her) upkeep step$/.test(s)) { d.castOnly = 'afterOppUpkeep'; return true; }
+  if (/^goaded creatures can't block$/.test(s)) { statics.push({ k: 'goadedCantBlock', who: 'all' }); return true; }
+  if ((m = /^~ can't be blocked except by two or more creatures$/.exec(s))) { statics.push({ k: 'blockMin2', who: 'self', cond: c }); return true; }
+  if ((m = /^~ can't be blocked except by (.+)$/.exec(s))) { const fp = parseFilter(m[1].replace(/^creatures /, 'creature ')); if (!fp) return false; statics.push({ k: 'blockOnlyBy', who: 'self', spellF: fp.f, cond: c }); return true; }
+  if ((m = /^~ can't attack unless (?:the )?defending player controls (?:an? )?(.+)$/.exec(s))) { const fp = parseFilter(m[1]); if (!fp) return false; d.atkUnlessDef = fp.f; return true; }
+  if ((m = /^(.+) can't be blocked by more than one creature$/.exec(s))) {
+    if (m[1] === '~') { statics.push({ k: 'blockMax1', who: 'self', cond: c }); return true; }
+    const fp = parseFilter(m[1]); if (!fp) return false; statics.push({ k: 'blockMax1', who: 'all', f: fp.f, cond: c }); return true;
+  }
   if ((m = /^you can't cast ~ during your first, second, or third turns of the game$/.exec(s))) { d.noCastTurns = 3; return true; }
   if ((m = /^each other ([a-z]+) you control enters with an additional \+1\/\+1 counter on it for each \1 you already control$/.exec(s))) {
     const ty = m[1][0].toUpperCase() + m[1].slice(1);
