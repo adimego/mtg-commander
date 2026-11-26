@@ -2,7 +2,7 @@
 
 Living list of Oracle wording and mechanics that are **not** modelled yet, or were only modelled in a simple form and still leave cards Limited. Counts are from the same Scryfall Oracle Cards bulk and `classify()` method used for support reports (unique `oracle_id`, commander-legal, excluding tokens, emblems, dungeons, planes, phenomena, schemes, vanguards, conspiracies, and commander-banned cards). Corpus size: **32,643**.
 
-**Last updated:** 2026-11-26, after the day/night and shared-piece sweep PR [#39](https://github.com/adimego/mtg-commander/pull/39). Support is **17,783 / 32,643 (54.5%)** — auto 17,622, builtin 161, Limited 14,860. After the second P4 PR [#38](https://github.com/adimego/mtg-commander/pull/38) it was 17,665 / 32,643 (54.1%); after the first P4 replacements PR [#37](https://github.com/adimego/mtg-commander/pull/37) it was 17,566 / 32,643 (53.8%); after the second P3 PR [#36](https://github.com/adimego/mtg-commander/pull/36) it was 17,516 / 32,643 (53.7%); after the first P3 PR [#35](https://github.com/adimego/mtg-commander/pull/35) it was 17,389 / 32,643 (53.3%); after P2 [#34](https://github.com/adimego/mtg-commander/pull/34) it was 17,260 / 32,643 (52.9%).
+**Last updated:** 2026-11-26, after the popular-card Batch 1 PR [#40](https://github.com/adimego/mtg-commander/pull/40). Support is **17,846 / 32,643 (54.7%)** — auto 17,685, builtin 161, Limited 14,797. After the day/night and shared-piece sweep PR [#39](https://github.com/adimego/mtg-commander/pull/39) it was 17,783 / 32,643 (54.5%). After the second P4 PR [#38](https://github.com/adimego/mtg-commander/pull/38) it was 17,665 / 32,643 (54.1%); after the first P4 replacements PR [#37](https://github.com/adimego/mtg-commander/pull/37) it was 17,566 / 32,643 (53.8%); after the second P3 PR [#36](https://github.com/adimego/mtg-commander/pull/36) it was 17,516 / 32,643 (53.7%); after the first P3 PR [#35](https://github.com/adimego/mtg-commander/pull/35) it was 17,389 / 32,643 (53.3%); after P2 [#34](https://github.com/adimego/mtg-commander/pull/34) it was 17,260 / 32,643 (52.9%).
 
 **How to read a row.** *Involved* is how many current Limited cards have at least one leftover line in the family. *Exclusive* is how many of those cards have every leftover line in that family, so modelling the family *could* flip the card if the inner effect is also exact. Families overlap; do not add rows. Plan-era figures are labelled when a current recount was not the source.
 
@@ -103,7 +103,7 @@ This is the approved next phase. The compiler already has wrappers for several o
 | Frame | Involved / exclusive (current, loose) | Notes |
 |---|---:|---|
 | `if` conditions (including “if you do”) | 4,034 / 3,221 `if`; 754 / 597 “if you do” / “when you do” | Mostly unchanged this pass. Remaining leftover `if` lines still fail a cond or wrap a verb that doesn’t parse |
-| `you may` | 2,836 / 2,149 | Down from 2,888 / 2,183, largely because “you may … rather than pay” alt costs shipped. The may *wrapper* already exists; leftover `you may` almost always fails on the trigger head or the inner verb. Honest wrapper-only leftovers are things like “you may choose not to untap ~ during your untap step” (needs an untap-step choice), “you may play that card”, and “choose new targets for the copy” |
+| `you may` | 2,836 / 2,149 | Down from 2,888 / 2,183, largely because “you may … rather than pay” alt costs shipped. The may *wrapper* already exists; leftover `you may` almost always fails on the trigger head or the inner verb. Honest wrapper-only leftovers are things like “you may choose not to untap ~ during your untap step” (needs an untap-step choice) and “you may play that card”. “Choose new targets for target spell or ability” (and “for it” via the Commandeer script) now parse; leftover choose-new-targets lines are mostly “for the copy” or unique riders |
 | `unless` | 360 / 301 | Down from 420 / 351 after “sacrifice/exile unless you [action]” and “unless [cond]”. Leftovers are mostly “can’t … unless [pay for each / unique cond]” and unique tails |
 | Modes / choose one | 347 / 319 | Unchanged. The mode frame exists; leftovers are unmodelled effects *inside* a mode. Honest “all mode inners already parse” cases are rare (~7 lines) |
 | Additional costs | 162 / 92 | Unchanged this pass (discard-X shipped in #35) |
@@ -167,4 +167,30 @@ Day/night and shared-piece sweep PR [#39](https://github.com/adimego/mtg-command
 
 Not in this PR: the P5 AI card-script hook (plan only, in the work notes); remaining unique copy-except, EOC, would/instead, phase, stack-copy, and extra-turn tails.
 
+
+
+### Done in popular Batch 1
+
+Popular-card Batch 1 PR [#40](https://github.com/adimego/mtg-commander/pull/40) (the 29 Limited cards in the positional top 250 by `edhrec_rank`), 2026-11-26. Support +63 to **17,846 / 32,643 (54.7%)**. Official precons stayed 100/100. 804 tests.
+
+Top-N (positional among ranked commander-legal cards, same corpus as the support reports):
+
+- Top 100: 93/100 (93.0%) → **100/100 (100%)**
+- Top 250: 221/250 (88.4%) → **250/250 (100%)**
+- Top 500: 419/500 (83.8%) → **449/500 (89.8%)**
+- Top 1,000: 786/1,000 (78.6%) → **817/1,000 (81.7%)**
+
+All 29 Batch 1 cards classify `auto` from official Oracle. The extra +34 corpus flips are spill from the shared hooks (channel-for-legendaries, land-type grants, imprint mana, exile-from-hand alt costs, and so on).
+
+Shared hooks (hand-written compiler + engine, no AI-written scripts):
+
+- “Each land is a Swamp/Forest in addition to its other land types” (`addLandType`), composing with printed types and with each other (Urborg, Yavimaya).
+- Channel cost reduction “this ability costs {1} less to activate for each legendary creature you control” (`lessLegend`) — Boseiju, Otawara, Takenuma, and the other channel lands.
+- Protection from everything as a player flag (`protAll`) that stops targeting and damage but does not lock life or phase permanents (The One Ring; distinct from Teferi’s Protection).
+- Mana-drain “at the beginning of your next main phase, add {C} equal to that spell’s mana value” (`delayMain`), snapshotting MV when the spell is countered.
+- Windfall; Victimize’s two-target / sacrifice / return; imprint exile from hand plus `IMPRINT` mana (Chrome Mox); Mox Diamond’s “discard a land or it never enters”; Gemstone Caverns luck counters (`leylineLuck`, `luckAny`).
+- `LEGEND_CP` / `EACH_COLOR` mana (Mox Amber, Bloom Tender, Nykthos devotion with `{2}, {T}`); uncounterable typal/legendary mana (`*Unc`, Delighted Halfling, Cavern of Souls, Rhythm of the Wild).
+- Force of Will `exileAlt.life`; “choose new targets for target spell or ability” (`retarget`, CR 115.7d — current targets stay legal); bounce a spell or a permanent (Sink into Stupor); Food-or-Treasure (`tokenOr`); granting a dies-return ability (`gainAbil`) with an LKI snapshot so the trigger still exists after `leave()` clears CEs (Malakir Rebirth); Grand Abolisher (`oppsCantAct`) also shutting off auto mana abilities of artifacts, creatures, and enchantments via `tapForMana` / `planPayment`.
+
+The AI has sensible defaults for each of those may/pick/search/retarget decisions. Script-kind `retarget` / `commandeer` still dispatch through `scriptOp` so Redirect Lightning and Commandeer keep working.
 

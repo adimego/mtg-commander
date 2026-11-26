@@ -64,6 +64,7 @@ export function parseInto(sc: ScryLike, d: CardDef, failures: ParseFailure[] = [
     const prod = guessProduction(lineToks);
     const failAt = (reason: string, production: Production = prod) => failAt_(raw, lineNo, lineToks, production, reason);
     let l = cleanLine(raw).replace(/\.$/, '');
+    if (/^imprint[ \u2014\u2013-]/.test(raw)) d.imprint = true;
     { const fm = /^(?:forecast[ \u2014\u2013-]+)?((?:\{[^}]+\})+), reveal (?:this card|~) from your hand: (.+)$/i.exec(l);
       if (fm) {
         const c = parseCost(fm[1].toUpperCase());
@@ -148,6 +149,7 @@ export function parseInto(sc: ScryLike, d: CardDef, failures: ParseFailure[] = [
     }
     { let x: RegExpExecArray | null;
       if ((x = /^whenever you tap an? ([a-z ]+?) for mana, add an additional \{([wubrgc])\}$/.exec(l))) { const fp = parseFilter(x[1]); if (fp) { statics.push({ k: 'manaExtra', who: 'all', f: { ...fp.f, ctrl: 'you' }, add: [x[2].toUpperCase()] }); continue; } }
+      if ((x = /^whenever enchanted land is tapped for mana, its controller adds an additional \{([wubrgc])\}$/.exec(l))) { statics.push({ k: 'manaExtra', who: 'attached', add: [x[1].toUpperCase()] }); continue; }
       if (/^~ enters prepared$/.test(l)) { d.etbPrepared = true; continue; }
       if ((x = /^as long as ~ isn't on the battlefield, it's an? (\d+)\/(\d+) ([a-z]+) creature in addition to its other types$/.exec(l))) { const sb = SUB.get(x[3]) ?? x[3][0].toUpperCase() + x[3].slice(1); d.offBf = { addTypes: ['Creature'], addSub: [sb], p: +x[1], t: +x[2] }; continue; }
       if (/^as long as ~ is attached to a creature, ~ can't be attacked and has "whenever equipped creature deals combat damage during your turn, put that many loyalty counters on ~\.?"$/.test(l)) {
@@ -189,17 +191,20 @@ export function parseInto(sc: ScryLike, d: CardDef, failures: ParseFailure[] = [
         if (cop) { const C: Record<string, string> = { white: 'W', blue: 'U', black: 'B', red: 'R', green: 'G' }; ab.effects = [{ op: 'script', kind: 'preventColor', text: C[cop[1]] }]; abilities.push(ab); continue; }
       }
       body = body.replace(/\. activate (?:this ability )?only as a sorcery$/, () => { ab.sorcery = true; return ''; })
+        .replace(/\. this ability costs \{1\} less to activate for each legendary creature you control$/, () => { ab.lessLegend = true; return ''; })
         .replace(/\. activate (?:this ability )?only once each turn$/, () => { ab.once = true; return ''; })
         .replace(/\. activate (?:this ability )?only during your turn$/, () => { ab.cond = { k: 'yourTurn' }; return ''; })
         .replace(/\. activate (?:this ability )?only if (.+)$/, (_, c) => { const cc = cond(c, newCx()); if (!cc) return '§FAIL'; ab.cond = cc; return ''; });
       if (body.includes('§FAIL')) { failAt(`unparsed ${prod} line`); continue; }
       // mana abilities
-      let only: string | undefined;
+      let only: string | undefined; let manaUnc = false;
+      body = body.replace(/, and that spell can't be countered$/, () => { manaUnc = true; return ''; });
       body = body.replace(/\. if that mana is spent on a dragon creature spell, it gains haste until end of turn$/, () => { only = 'dragonHaste'; return ''; });
       body = body.replace(/\. (?:spend this mana only to (.+)|this mana can't be spent to (?:cast (?:a )?nonartifact spells?|pay generic mana costs))$/, (_, w?: string) => { only = !w ? (/generic mana costs/.test(body) ? 'nongeneric' : 'artifact') : ({ 'cast a creature spell of the chosen type': 'ctypeSpell', 'cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type': 'ctypeAny', 'cast a hero spell or to activate an ability of a hero source': 'hero', 'cast a villain spell or to activate an ability of a villain source': 'villain', 'cast a legendary spell': 'legendary', 'cast an instant or sorcery spell': 'is', 'cast artifact spells or activate abilities of artifacts': undefined, 'cast a creature spell': 'creature', 'cast elemental spells or activate abilities of elemental sources': 'elemental', 'cast an elemental spell or activate an ability of an elemental': 'elemental', 'cast elemental spells or activate abilities of elementals': 'elemental', 'cast an angel spell': 'angel', 'cast a dragon creature spell': 'dragonCreature', 'cast dragon spells or activate abilities of dragons': 'dragon' } as Record<string, string | undefined>)[w] ?? '§'; return ''; });
       body = body.replace(/^(add one mana of any color in your commander's color identity)\. when that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1$/, (_, x) => { only = 'path'; return x; });
       if (only === '§') { failAt(`unparsed ${prod} line`); continue; }
-      if (only) { const r = /^add (.+)$/.exec(body) && manaAdd(body.slice(4), newCx()); if (!r || !ab.tap || Object.keys(pc.ab).length !== 1) { failAt(`unparsed ${prod} line`); continue; } manaLines.push({ add: r.mana, n: r.n, only }); continue; }
+      if (only) { const r = /^add (.+)$/.exec(body) && manaAdd(body.slice(4), newCx()); if (!r || !ab.tap || Object.keys(pc.ab).length !== 1) { failAt(`unparsed ${prod} line`); continue; } manaLines.push({ add: r.mana, n: r.n, only, uncounter: manaUnc || undefined }); continue; }
+      if (/^add \{c\}\. if ~ has a luck counter on it, instead add one mana of any color$/.test(body) && ab.tap && Object.keys(pc.ab).length === 1) { manaLines.push({ add: ['C'], luckAny: true }); continue; }
       const pm = /^add (.+?)\. ~ deals (\d) damage to you$/.exec(body);
       if (pm && ab.tap && Object.keys(pc.ab).length === 1) { const r = manaAdd(pm[1], newCx()); if (r) { manaLines.push({ add: r.mana, n: r.n, pain: +pm[2] }); continue; } }
       const fm = /^add (\{[wubrg]\}\{[wubrg]\}), (\{[wubrg]\}\{[wubrg]\}), or (\{[wubrg]\}\{[wubrg]\})$/.exec(body);
@@ -217,6 +222,7 @@ export function parseInto(sc: ScryLike, d: CardDef, failures: ParseFailure[] = [
       if (md) { const ms = parseModes(md[1], md[2], cx); if (!ms) { failAt(`unparsed ${prod} line`); continue; } ab.modes = ms; abilities.push(ab); continue; }
       const fx = effects(body, cx); if (!fx) { failAt(`unparsed ${prod} line`); continue; }
       ab.effects = fx; if (cx.slots.length) ab.tslots = cx.slots;
+      if (fx.length && fx.every(e => e.op === 'addMana') && !cx.slots.length) ab.manaAb = true;
       abilities.push(ab); continue;
     }
     // spell text
