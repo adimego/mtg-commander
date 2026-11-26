@@ -14,6 +14,7 @@ import { applyScripts } from '../scripts';
 import { liftCardDef } from './lift';
 import type { CardScript, ParseFailure, Span } from './types';
 import { tokenize, splitTokenLines, guessProduction, type Production, type Token } from './tokenize';
+import { retryNativeLeftovers } from './native';
 
 export interface ParseCardResult {
   script: CardScript;
@@ -26,7 +27,7 @@ export interface ParseCardResult {
 
 function failureFor(raw: string, line: number, toks: Token[] | undefined, production: Production, reason: string): ParseFailure {
   const span: Span | undefined = toks?.length ? { start: toks[0].start, end: toks[toks.length - 1].end, text: raw } : undefined;
-  return { text: raw, reason, line, production, clause: production, span };
+  return { text: raw, reason, line, production, clause: raw, span };
 }
 
 /** Parse Oracle text, mutating `d` the way `compile()` does. Records structured failures. */
@@ -276,6 +277,7 @@ export function parseInto(sc: ScryLike, d: CardDef, failures: ParseFailure[] = [
     spellFx.push({ op: 'script', kind: 'learn' });
   }
 
+  retryNativeLeftovers({ d, isSpell, sc, spellFx, spellSlots, triggers, abilities, unparsed, failures });
   if (abilities.length) d.abilities = [...(d.abilities ?? []), ...abilities];
   if (triggers.length) d.triggers = [...(d.triggers ?? []), ...triggers];
   if (statics.length) d.statics = statics;
@@ -294,11 +296,11 @@ export function parseInto(sc: ScryLike, d: CardDef, failures: ParseFailure[] = [
 
 
 /** Parse a card and merge hand-written line overrides into the IR (applyScripts, then lift). */
-export function parseCard(sc: ScryLike, d: CardDef, scriptName = sc.name): ParseCardResult {
+export function parseCard(sc: ScryLike, d: CardDef, scriptName = sc.name, oracleId?: string): ParseCardResult {
   const failures: ParseFailure[] = [];
   const res = parseInto(sc, d, failures);
   const unparsed = res.unparsed;
-  applyScripts(scriptName, d, unparsed);
+  applyScripts(scriptName, d, unparsed, oracleId ?? sc.oracle_id);
   const still = new Set(unparsed);
   const leftover = failures.filter(f => still.has(f.text));
   const script = liftCardDef(d, { source: 'parser' });

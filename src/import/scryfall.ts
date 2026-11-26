@@ -2,7 +2,7 @@
 export interface ScryFace { name: string; mana_cost?: string; type_line?: string; oracle_text?: string; power?: string; toughness?: string; loyalty?: string; colors?: string[]; image_uris?: { normal: string; art_crop: string } }
 export interface ScryCard extends ScryFace {
   name: string; layout?: string; cmc?: number; type_line: string; colors?: string[]; color_identity: string[]; keywords: string[];
-  legalities?: Record<string, string>; produced_mana?: string[]; card_faces?: ScryFace[];
+  legalities?: Record<string, string>; produced_mana?: string[]; card_faces?: ScryFace[]; oracle_id?: string;
 }
 export type FetchLike = (url: string, init?: RequestInit) => Promise<{ ok: boolean; status: number; json(): Promise<any> }>;
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));

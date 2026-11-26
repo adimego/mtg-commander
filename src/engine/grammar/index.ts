@@ -49,3 +49,12 @@ export type { Token, TokKind, Production } from './tokenize';
 export { parseCard, parseInto } from './parse';
 export type { ParseCardResult } from './parse';
 export { equivValue, equivCardDef } from './compare';
+
+export { Cursor, cursorFrom } from './cursor';
+export { parseAmount, parseDuration, parsePlayerRef, parseFilterPhrase, parseTarget, parseWrappers, applyWrappers, parseOptionalYouMay } from './leaves';
+export type { Duration, ParsedTarget, Wrapper } from './leaves';
+export { lineHash, registerLineOverride, clearLineOverrides, lookupLineOverride } from './overrides';
+export type { LinePatch } from './overrides';
+export { parseNativeLine, retryNativeLeftovers } from './native';
+export { parseNativeVerb } from './verbs';
+export type { VerbHit, VerbCtx } from './verbs';
